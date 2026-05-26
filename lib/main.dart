@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app.dart';
 
 /// App entry point.
 ///
-/// [runApp] hands our root widget to Flutter's rendering engine.
-/// In later steps we'll wrap this in a [ProviderScope] (Riverpod's
-/// requirement) and pass in the database instance.
+/// [ProviderScope] is Riverpod's required wrapper — it is the container
+/// that stores every provider's state.  Without it, any `ref.watch()` call
+/// would throw at runtime.  It wraps the entire widget tree so all widgets
+/// have access to providers.
 void main() {
-  runApp(const LifeTrackerApp());
+  runApp(
+    const ProviderScope(
+      child: LifeTrackerApp(),
+    ),
+  );
 }
