@@ -1,0 +1,16 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  language:
+    # Requires every variable to be explicitly typed when the type isn't obvious.
+    strict-inference: true
+    # Flags cases where a non-nullable type is used where a nullable one was expected.
+    strict-raw-types: true
+
+linter:
+  rules:
+    prefer_single_quotes: true
+    avoid_print: true
+    prefer_const_constructors: true
+    prefer_const_declarations: true
+    use_super_parameters: true

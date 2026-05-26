@@ -1,0 +1,60 @@
+name: life_tracker
+description: "Personal habit tracker, task manager, and life planner."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.12.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # --- State management ---
+  # Riverpod: lets widgets "watch" data and rebuild automatically when it changes.
+  flutter_riverpod: ^2.6.1
+  # The @riverpod annotation we write on our own code (used at compile time).
+  riverpod_annotation: ^2.6.1
+
+  # --- Navigation ---
+  # go_router: maps URL-like paths (/habits, /habits/add) to screens,
+  # and supports a persistent bottom-nav "shell" around groups of routes.
+  go_router: ^14.6.3
+
+  # --- Local database ---
+  # drift: a type-safe wrapper around SQLite. We define tables in Dart;
+  # it generates all the SQL so we never write raw query strings.
+  drift: ^2.22.1
+  # Bundles the actual SQLite binary for Android (required by drift).
+  sqlite3_flutter_libs: ^0.5.28
+  # Finds the correct on-device folder to store the database file.
+  path_provider: ^2.1.5
+  # Utility for joining file paths (e.g. "documents/life_tracker.db").
+  path: ^1.9.1
+
+  # --- Data classes ---
+  # The @freezed annotation we write on our model classes (runtime half).
+  # freezed generates copyWith(), ==, hashCode — making models immutable.
+  freezed_annotation: ^2.4.4
+
+  # --- Utilities ---
+  # Date formatting — turns DateTime into readable strings like "2026-05-26".
+  intl: ^0.19.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  # Runs all code generators in one pass (drift, riverpod, freezed).
+  build_runner: ^2.4.13
+  # Generates the xxxProvider variable from our @riverpod-annotated code.
+  riverpod_generator: ^2.6.3
+  # Generates the immutable data class body from our @freezed-annotated code.
+  freezed: ^2.5.7
+  # drift's generator plugin — must match the drift runtime version above.
+  drift_dev: ^2.22.1
+
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
