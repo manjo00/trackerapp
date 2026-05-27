@@ -126,7 +126,7 @@ class TodayScreen extends ConsumerWidget {
   }
 }
 
-// ── Overdue banner ────────────────────────────────────────────────────────────
+// ── Overdue section header ────────────────────────────────────────────────────
 
 class _OverdueSectionHeader extends StatelessWidget {
   const _OverdueSectionHeader({required this.count});
@@ -135,26 +135,36 @@ class _OverdueSectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ColorScheme cs = Theme.of(context).colorScheme;
+    // A muted amber-red — visible but not jarring.
+    const Color overdueColor = Color(0xFFB85C5C);
 
-    return Container(
-      margin: const EdgeInsets.fromLTRB(12, 4, 12, 4),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: BoxDecoration(
-        color: cs.errorContainer.withAlpha(160),
-        borderRadius: BorderRadius.circular(12),
-      ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
       child: Row(
         children: [
-          Icon(Icons.warning_amber_rounded,
-              size: 18, color: cs.onErrorContainer),
+          const Icon(Icons.warning_amber_rounded,
+              size: 16, color: overdueColor),
+          const SizedBox(width: 6),
+          Text(
+            'OVERDUE',
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: overdueColor,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.8,
+                ),
+          ),
           const SizedBox(width: 8),
-          Expanded(
+          Container(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+            decoration: BoxDecoration(
+              color: overdueColor.withAlpha(25),
+              borderRadius: BorderRadius.circular(20),
+            ),
             child: Text(
-              '$count overdue ${count == 1 ? 'task' : 'tasks'} — tackle these first',
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: cs.onErrorContainer,
-                    fontWeight: FontWeight.w600,
+              '$count',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: overdueColor,
                   ),
             ),
           ),
