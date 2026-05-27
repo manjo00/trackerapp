@@ -1,24 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
 /// Wraps [FlutterLocalNotificationsPlugin] with everything the app needs.
 ///
-/// ## Concept: local notifications
-/// A "local" notification lives entirely on the device — no server or internet
-/// needed. We tell the OS "fire this notification at 9 AM every day" and
-/// Android handles it even when the app is closed.
+/// ## How daily notifications work
+/// [zonedSchedule] + [DateTimeComponents.time] tells the OS: "fire this
+/// notification at HH:mm every day." The OS handles repeating — no background
+/// service needed.
 ///
-/// ## Concept: timezones
-/// [zonedSchedule] requires a [tz.TZDateTime] (timezone-aware DateTime).
-/// We call [tz.initializeTimeZones()] once at startup and then always use
-/// [tz.local] so the alarm fires at the right local time, not UTC.
+/// ## Why we use inexact scheduling
+/// Android 12+ (API 31+) requires an extra system-settings permission for
+/// *exact* alarms ([SCHEDULE_EXACT_ALARM]). Without it, exact alarms silently
+/// fail. Inexact alarms need no extra permission and fire within a few minutes
+/// of the target time — perfectly fine for a daily habit reminder.
 ///
-/// ## Notification IDs
-/// Each scheduled notification gets a unique integer ID.
-/// Using the same ID to re-schedule silently replaces the old alarm.
-///   0 — daily habit + task reminder
+/// ## Timezone fix
+/// [tz.local] defaults to UTC until we explicitly set it. We use
+/// [FlutterTimezone.getLocalTimezone()] to get the device's IANA name
+/// (e.g. "Asia/Riyadh") and pass it to [tz.setLocalLocation], so "9 AM"
+/// means 9 AM in the user's actual timezone.
 class NotificationService {
   NotificationService._();
   static final NotificationService instance = NotificationService._();
@@ -26,8 +29,8 @@ class NotificationService {
   static const int _dailyReminderId = 0;
 
   static const AndroidNotificationChannel _channel = AndroidNotificationChannel(
-    'life_tracker_reminders',       // channel id — must match below
-    'Daily Reminders',              // shown in Android system settings
+    'life_tracker_reminders',
+    'Daily Reminders',
     description: 'Daily habit and task reminder',
     importance: Importance.defaultImportance,
   );
@@ -38,14 +41,16 @@ class NotificationService {
   // ── Initialisation ────────────────────────────────────────────────────────
 
   /// Must be called once in [main] before [runApp].
-  ///
-  /// - Loads the timezone database (needed for [zonedSchedule]).
-  /// - Configures the Android notification channel.
-  /// - Requests the POST_NOTIFICATIONS permission on Android 13+.
   Future<void> init() async {
-    // Load all timezone data into memory.
+    // 1. Load all timezone definitions.
     tz.initializeTimeZones();
 
+    // 2. Detect the device's local timezone (e.g. "Asia/Riyadh") and apply it
+    //    so that tz.local matches the user's clock, not UTC.
+    final String localTzName = await FlutterTimezone.getLocalTimezone();
+    tz.setLocalLocation(tz.getLocation(localTzName));
+
+    // 3. Configure the plugin.
     const AndroidInitializationSettings androidSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
@@ -53,15 +58,13 @@ class NotificationService {
       const InitializationSettings(android: androidSettings),
     );
 
-    // Create the Android channel (harmless no-op if it already exists).
+    // 4. Create the Android notification channel (no-op if it already exists).
     await _plugin
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>()
         ?.createNotificationChannel(_channel);
 
-    // Request the POST_NOTIFICATIONS runtime permission (Android 13+).
-    // Returns true if granted, false if denied — we don't gate any feature
-    // on this; the setting just becomes inert if the user says no.
+    // 5. Request POST_NOTIFICATIONS permission (Android 13+; ignored below).
     await _plugin
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>()
@@ -70,11 +73,7 @@ class NotificationService {
 
   // ── Schedule ──────────────────────────────────────────────────────────────
 
-  /// Schedules (or replaces) the daily reminder to fire at [time] every day.
-  ///
-  /// [matchDateTimeComponents: DateTimeComponents.time] is the key flag:
-  /// it makes the alarm repeat daily at the same hour/minute automatically —
-  /// no workmanager or background tasks needed.
+  /// Schedules (or replaces) the daily reminder at [time] every day.
   Future<void> scheduleDailyReminder(TimeOfDay time) async {
     await _plugin.zonedSchedule(
       _dailyReminderId,
@@ -90,28 +89,28 @@ class NotificationService {
           priority: Priority.defaultPriority,
         ),
       ),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      // iOS: treat the scheduled time as wall-clock time in the local timezone.
+      // inexactAllowWhileIdle: fires within a few minutes of the target time.
+      // No extra system permission needed — unlike exactAllowWhileIdle.
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.wallClockTime,
+      // Repeat daily at the same hour and minute.
       matchDateTimeComponents: DateTimeComponents.time,
     );
   }
 
-  /// Cancels the daily reminder (called when the user disables notifications).
+  /// Cancels the daily reminder.
   Future<void> cancelDailyReminder() async {
     await _plugin.cancel(_dailyReminderId);
   }
 
-  /// Cancels every scheduled notification — used for cleanup.
+  /// Cancels every scheduled notification.
   Future<void> cancelAll() => _plugin.cancelAll();
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
   /// Returns a [tz.TZDateTime] for the next occurrence of [time].
-  ///
-  /// If [time] has already passed today, returns tomorrow's instance so the
-  /// first alarm doesn't fire in the past (which would trigger immediately).
+  /// If the time has already passed today, schedules for tomorrow.
   tz.TZDateTime _nextInstanceOf(TimeOfDay time) {
     final tz.TZDateTime now = tz.TZDateTime.now(tz.local);
     tz.TZDateTime scheduled = tz.TZDateTime(

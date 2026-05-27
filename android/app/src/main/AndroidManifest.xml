@@ -1,8 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Show notifications (required on Android 13+; silently ignored below). -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <!-- Allow the app to schedule exact-time alarms for reminders. -->
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <!-- Re-schedule notifications after a device reboot. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
