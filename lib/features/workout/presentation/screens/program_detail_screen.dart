@@ -5,6 +5,7 @@ import '../../data/models/program_exercise_model.dart';
 import '../../data/models/program_model.dart';
 import '../../data/models/program_session_model.dart';
 import '../providers/program_providers.dart';
+import '../providers/workout_providers.dart';
 
 /// Shows all session types in a program with their exercises.
 ///
@@ -54,6 +55,19 @@ class _ProgramDetailView extends ConsumerStatefulWidget {
 class _ProgramDetailViewState
     extends ConsumerState<_ProgramDetailView> {
   ProgramModel get program => widget.program;
+
+  Future<void> _startSession(ProgramSessionModel session) async {
+    final existing = ref.read(activeWorkoutProvider).valueOrNull;
+    if (existing != null) {
+      context.push('/workout/active');
+      return;
+    }
+    await ref.read(activeWorkoutProvider.notifier).start(
+          programSessionId: session.id,
+          programExercises: session.exercises,
+        );
+    if (mounted) context.push('/workout/active');
+  }
 
   Future<void> _addSession() async {
     final nameCtrl = TextEditingController();
@@ -293,6 +307,7 @@ class _ProgramDetailViewState
                   onTap: () => context.push(
                     '/workout/programs/${program.id}/session/${session.id}',
                   ),
+                  onStart: () => _startSession(session),
                   onDelete: () => _deleteSession(session),
                 );
               },
@@ -314,12 +329,14 @@ class _SessionCard extends StatelessWidget {
     required this.session,
     required this.splitType,
     required this.onTap,
+    required this.onStart,
     required this.onDelete,
   });
 
   final ProgramSessionModel session;
   final String splitType;
   final VoidCallback onTap;
+  final VoidCallback onStart;
   final VoidCallback onDelete;
 
   @override
@@ -366,7 +383,13 @@ class _SessionCard extends StatelessWidget {
                       child: Text(session.weekDayLabel,
                           style: const TextStyle(fontSize: 11)),
                     ),
-                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: const Icon(Icons.play_arrow_rounded),
+                    iconSize: 22,
+                    color: cs.primary,
+                    tooltip: 'Start workout',
+                    onPressed: onStart,
+                  ),
                   IconButton(
                     icon: const Icon(Icons.delete_outline_rounded),
                     iconSize: 20,

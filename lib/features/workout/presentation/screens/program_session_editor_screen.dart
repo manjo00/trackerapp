@@ -6,6 +6,7 @@ import '../../data/models/program_exercise_model.dart';
 import '../../data/models/program_model.dart';
 import '../../data/models/program_session_model.dart';
 import '../providers/program_providers.dart';
+import '../providers/workout_providers.dart';
 
 /// Edit the exercises inside one session type.
 ///
@@ -13,6 +14,7 @@ import '../providers/program_providers.dart';
 ///   • Reorder exercises via drag handles
 ///   • Edit target sets / reps / rest per exercise
 ///   • Add exercises via the Exercise Picker
+///   • "Start Workout" button in the app bar to log a session immediately
 ///   • Delete exercises
 class ProgramSessionEditorScreen extends ConsumerWidget {
   const ProgramSessionEditorScreen({
@@ -69,6 +71,22 @@ class _SessionEditorView extends ConsumerStatefulWidget {
 class _SessionEditorViewState
     extends ConsumerState<_SessionEditorView> {
   ProgramSessionModel get session => widget.session;
+
+  // ── Start workout ────────────────────────────────────────────────────────
+
+  Future<void> _startWorkout() async {
+    // If a workout is already in progress, just resume it.
+    final existing = ref.read(activeWorkoutProvider).valueOrNull;
+    if (existing != null) {
+      context.push('/workout/active');
+      return;
+    }
+    await ref.read(activeWorkoutProvider.notifier).start(
+          programSessionId: session.id,
+          programExercises: session.exercises,
+        );
+    if (mounted) context.push('/workout/active');
+  }
 
   // ── Add exercise ────────────────────────────────────────────────────────
 
@@ -166,9 +184,15 @@ class _SessionEditorViewState
           if (widget.program.isWeekly &&
               session.weekDayLabel.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.only(right: 16),
+              padding: const EdgeInsets.only(right: 4),
               child: Chip(label: Text(session.weekDayLabel)),
             ),
+          IconButton(
+            icon: const Icon(Icons.play_arrow_rounded),
+            tooltip: 'Start workout',
+            color: Theme.of(context).colorScheme.primary,
+            onPressed: _startWorkout,
+          ),
         ],
       ),
 
