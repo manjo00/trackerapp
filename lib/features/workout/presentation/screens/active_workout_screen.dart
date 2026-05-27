@@ -52,7 +52,10 @@ class _ActiveWorkoutScreenState
   // ── Finish ────────────────────────────────────────────────────────────────
 
   Future<void> _showFinishDialog() async {
-    final nameCtrl = TextEditingController();
+    final active = ref.read(activeWorkoutProvider).valueOrNull;
+    final nameCtrl = TextEditingController(
+      text: active?.programSessionName ?? '',
+    );
     final notesCtrl = TextEditingController();
     final confirm = await showDialog<bool>(
       context: context,

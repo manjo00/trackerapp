@@ -65,6 +65,7 @@ class _ProgramDetailViewState
     await ref.read(activeWorkoutProvider.notifier).start(
           programSessionId: session.id,
           programExercises: session.exercises,
+          programSessionName: session.name,
         );
     if (mounted) context.push('/workout/active');
   }

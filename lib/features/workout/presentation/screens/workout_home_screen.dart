@@ -134,6 +134,7 @@ class WorkoutHomeScreen extends ConsumerWidget {
     await ref.read(activeWorkoutProvider.notifier).start(
           programSessionId: session?.id,
           programExercises: session?.exercises ?? [],
+          programSessionName: session?.name,
         );
     if (context.mounted) context.push('/workout/active');
   }

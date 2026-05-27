@@ -4,8 +4,7 @@ import '../../data/models/workout_set_model.dart';
 
 /// A single set row inside the active-workout exercise section.
 ///
-/// Displays: Set# | Weight field | × | Reps field | ✓ button
-/// Long-press on the row deletes it.
+/// Layout: Set# | [−] Weight [+] | × | [−] Reps [+] | ✓
 ///
 /// [hint] is the corresponding set from the previous session — shown as
 /// placeholder text so the user can quickly replicate last time's weights.
@@ -24,7 +23,7 @@ class SetRow extends StatefulWidget {
   /// Optional matching set from the previous session (for placeholder hints).
   final WorkoutSetModel? hint;
 
-  /// Called whenever reps or weight are edited (debounced on focus-lost).
+  /// Called whenever reps or weight are edited.
   final ValueChanged<WorkoutSetModel> onUpdate;
 
   /// Called when the ✓ button is tapped (saves + starts rest timer).
@@ -46,9 +45,7 @@ class _SetRowState extends State<SetRow> {
   void initState() {
     super.initState();
     _weightCtrl = TextEditingController(
-      text: widget.set.weightKg != null
-          ? _fmt(widget.set.weightKg!)
-          : '',
+      text: widget.set.weightKg != null ? _fmt(widget.set.weightKg!) : '',
     );
     _repsCtrl = TextEditingController(
       text: widget.set.reps != null ? '${widget.set.reps}' : '',
@@ -58,9 +55,11 @@ class _SetRowState extends State<SetRow> {
   @override
   void didUpdateWidget(SetRow oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Sync controller text when the model changes from outside (e.g. undo).
-    final newWeight = widget.set.weightKg != null ? _fmt(widget.set.weightKg!) : '';
-    final newReps = widget.set.reps != null ? '${widget.set.reps}' : '';
+    // Sync controller text when the model changes from outside.
+    final newWeight =
+        widget.set.weightKg != null ? _fmt(widget.set.weightKg!) : '';
+    final newReps =
+        widget.set.reps != null ? '${widget.set.reps}' : '';
     if (_weightCtrl.text != newWeight) _weightCtrl.text = newWeight;
     if (_repsCtrl.text != newReps) _repsCtrl.text = newReps;
   }
@@ -72,14 +71,31 @@ class _SetRowState extends State<SetRow> {
     super.dispose();
   }
 
-  /// Formats weight: drops trailing ".0" to keep things tidy.
+  /// Formats weight: drops trailing ".0" for tidiness.
   static String _fmt(double kg) =>
       kg == kg.truncateToDouble() ? '${kg.toInt()}' : '$kg';
 
+  /// Flush current controller values to the parent model.
   void _flush() {
     final double? kg = double.tryParse(_weightCtrl.text);
     final int? reps = int.tryParse(_repsCtrl.text);
     widget.onUpdate(widget.set.copyWith(weightKg: kg, reps: reps));
+  }
+
+  /// Adjust weight by [delta] kg (e.g. +2.5 / −2.5).
+  void _stepWeight(double delta) {
+    final current = double.tryParse(_weightCtrl.text) ?? 0.0;
+    final next = (current + delta).clamp(0.0, 999.0);
+    _weightCtrl.text = _fmt(next);
+    _flush();
+  }
+
+  /// Adjust reps by [delta] (e.g. +1 / −1).
+  void _stepReps(int delta) {
+    final current = int.tryParse(_repsCtrl.text) ?? 0;
+    final next = (current + delta).clamp(0, 99);
+    _repsCtrl.text = '$next';
+    _flush();
   }
 
   @override
@@ -89,7 +105,7 @@ class _SetRowState extends State<SetRow> {
     final isPr = widget.set.isPr;
     final isWarmup = widget.set.isWarmup;
 
-    // Hint text derived from the previous-session set.
+    // Hint text from the previous session.
     final String weightHint = widget.hint?.weightKg != null
         ? _fmt(widget.hint!.weightKg!)
         : 'kg';
@@ -99,8 +115,8 @@ class _SetRowState extends State<SetRow> {
     return GestureDetector(
       onLongPress: widget.onDelete,
       child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 2),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        margin: const EdgeInsets.symmetric(vertical: 3),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
         decoration: BoxDecoration(
           color: isPr
               ? cs.primaryContainer.withAlpha(80)
@@ -111,9 +127,9 @@ class _SetRowState extends State<SetRow> {
         ),
         child: Row(
           children: [
-            // Set number badge
+            // ── Set number ──────────────────────────────────────────────────
             SizedBox(
-              width: 28,
+              width: 24,
               child: Text(
                 '${widget.set.setNumber}',
                 textAlign: TextAlign.center,
@@ -125,31 +141,24 @@ class _SetRowState extends State<SetRow> {
                 ),
               ),
             ),
-            // Warm-up label (replaces extra space when warmup)
-            if (isWarmup) ...[
-              const SizedBox(width: 4),
-              Text(
-                'W',
-                style: textTheme.labelSmall?.copyWith(
-                  color: cs.onSurface.withAlpha(128),
-                ),
-              ),
-            ],
-            const SizedBox(width: 8),
 
-            // Weight field
+            const SizedBox(width: 4),
+
+            // ── Weight stepper ──────────────────────────────────────────────
             Expanded(
-              flex: 3,
-              child: _NumberField(
+              flex: 5,
+              child: _StepperField(
                 controller: _weightCtrl,
                 hint: weightHint,
                 isDecimal: true,
                 onEditingComplete: _flush,
+                onDecrement: () => _stepWeight(-2.5),
+                onIncrement: () => _stepWeight(2.5),
               ),
             ),
 
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 4),
               child: Text(
                 '×',
                 style: textTheme.titleMedium?.copyWith(
@@ -158,30 +167,29 @@ class _SetRowState extends State<SetRow> {
               ),
             ),
 
-            // Reps field
+            // ── Reps stepper ────────────────────────────────────────────────
             Expanded(
-              flex: 2,
-              child: _NumberField(
+              flex: 4,
+              child: _StepperField(
                 controller: _repsCtrl,
                 hint: repsHint,
                 isDecimal: false,
                 onEditingComplete: _flush,
+                onDecrement: () => _stepReps(-1),
+                onIncrement: () => _stepReps(1),
               ),
             ),
 
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
 
-            // PR badge
+            // ── PR badge ────────────────────────────────────────────────────
             if (isPr)
               Padding(
                 padding: const EdgeInsets.only(right: 4),
-                child: Text(
-                  '🏆',
-                  style: textTheme.bodyMedium,
-                ),
+                child: Text('🏆', style: textTheme.bodyMedium),
               ),
 
-            // Complete button — fills green when tapped
+            // ── Complete button ─────────────────────────────────────────────
             InkWell(
               onTap: () {
                 _flush();
@@ -195,7 +203,9 @@ class _SetRowState extends State<SetRow> {
                 height: 36,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: _completed ? Colors.green : cs.primary.withAlpha(20),
+                  color: _completed
+                      ? Colors.green
+                      : cs.primary.withAlpha(20),
                 ),
                 child: Icon(
                   Icons.check_rounded,
@@ -211,7 +221,71 @@ class _SetRowState extends State<SetRow> {
   }
 }
 
-// ── Private helper widget ─────────────────────────────────────────────────────
+// ── Stepper field ─────────────────────────────────────────────────────────────
+
+/// A number text field flanked by [−] and [+] step buttons.
+class _StepperField extends StatelessWidget {
+  const _StepperField({
+    required this.controller,
+    required this.hint,
+    required this.isDecimal,
+    required this.onEditingComplete,
+    required this.onDecrement,
+    required this.onIncrement,
+  });
+
+  final TextEditingController controller;
+  final String hint;
+  final bool isDecimal;
+  final VoidCallback onEditingComplete;
+  final VoidCallback onDecrement;
+  final VoidCallback onIncrement;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        _StepBtn(icon: Icons.remove_rounded, onTap: onDecrement),
+        Expanded(
+          child: _NumberField(
+            controller: controller,
+            hint: hint,
+            isDecimal: isDecimal,
+            onEditingComplete: onEditingComplete,
+          ),
+        ),
+        _StepBtn(icon: Icons.add_rounded, onTap: onIncrement),
+      ],
+    );
+  }
+}
+
+// ── Step button ───────────────────────────────────────────────────────────────
+
+class _StepBtn extends StatelessWidget {
+  const _StepBtn({required this.icon, required this.onTap});
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 26,
+        height: 26,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: cs.surfaceContainerHighest,
+        ),
+        child: Icon(icon, size: 13, color: cs.onSurface.withAlpha(200)),
+      ),
+    );
+  }
+}
+
+// ── Number text field ─────────────────────────────────────────────────────────
 
 class _NumberField extends StatelessWidget {
   const _NumberField({
@@ -231,7 +305,8 @@ class _NumberField extends StatelessWidget {
     return TextField(
       controller: controller,
       textAlign: TextAlign.center,
-      keyboardType: TextInputType.numberWithOptions(decimal: isDecimal),
+      keyboardType:
+          TextInputType.numberWithOptions(decimal: isDecimal),
       inputFormatters: isDecimal
           ? [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))]
           : [FilteringTextInputFormatter.digitsOnly],
@@ -239,7 +314,7 @@ class _NumberField extends StatelessWidget {
         hintText: hint,
         isDense: true,
         contentPadding:
-            const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+            const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide(

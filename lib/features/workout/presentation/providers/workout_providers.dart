@@ -37,6 +37,7 @@ class ActiveWorkoutState {
     required this.sessionId,
     required this.startedAt,
     this.programSessionId,
+    this.programSessionName,
     this.programExercises = const [],
     this.sets = const [],
   });
@@ -46,6 +47,10 @@ class ActiveWorkoutState {
 
   /// Non-null when this session is driven by a program session type.
   final int? programSessionId;
+
+  /// Human-readable name of the session type, e.g. "Push" or "Legs".
+  /// Used to auto-fill the "Finish Workout" name field.
+  final String? programSessionName;
 
   /// Ordered exercises from the program session (may be empty for freeform).
   final List<ProgramExerciseModel> programExercises;
@@ -60,6 +65,7 @@ class ActiveWorkoutState {
         sessionId: sessionId,
         startedAt: startedAt,
         programSessionId: programSessionId,
+        programSessionName: programSessionName,
         programExercises: programExercises ?? this.programExercises,
         sets: sets ?? this.sets,
       );
@@ -128,6 +134,7 @@ class ActiveWorkout extends _$ActiveWorkout {
   Future<void> start({
     int? programSessionId,
     List<ProgramExerciseModel> programExercises = const [],
+    String? programSessionName,
   }) async {
     state = const AsyncLoading();
     final repo = ref.read(workoutRepositoryProvider);
@@ -138,6 +145,7 @@ class ActiveWorkout extends _$ActiveWorkout {
       sessionId: sessionId,
       startedAt: DateTime.now(),
       programSessionId: programSessionId,
+      programSessionName: programSessionName,
       programExercises: programExercises,
     ));
   }
