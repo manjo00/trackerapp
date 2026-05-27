@@ -56,9 +56,6 @@ class _PlannerScreenState extends State<PlannerScreen> {
     final ColorScheme cs = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Planner'),
-      ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

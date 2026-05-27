@@ -21,9 +21,6 @@ class TaskListScreen extends ConsumerWidget {
         ref.watch(allTasksProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Tasks'),
-      ),
       body: tasksAsync.when(
         // ── Loading ────────────────────────────────────────────────────────
         loading: () => const Center(child: CircularProgressIndicator()),

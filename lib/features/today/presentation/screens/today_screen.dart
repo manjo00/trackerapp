@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import '../../../../features/habits/data/models/habit_with_status.dart';
 import '../../../../features/habits/presentation/providers/habits_providers.dart';
 import '../../../../features/habits/presentation/widgets/habit_tile.dart';
@@ -21,20 +20,6 @@ import '../../../../features/tasks/presentation/widgets/task_tile.dart';
 class TodayScreen extends ConsumerWidget {
   const TodayScreen({super.key});
 
-  // ── Date helpers ─────────────────────────────────────────────────────────
-
-  static String _formattedDate(DateTime d) {
-    const List<String> weekdays = [
-      '', 'Monday', 'Tuesday', 'Wednesday',
-      'Thursday', 'Friday', 'Saturday', 'Sunday',
-    ];
-    const List<String> months = [
-      '', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-    ];
-    return '${weekdays[d.weekday]}, ${months[d.month]} ${d.day}';
-  }
-
   // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
@@ -49,35 +34,7 @@ class TodayScreen extends ConsumerWidget {
     final bool bothLoading =
         habitsAsync is AsyncLoading && tasksAsync is AsyncLoading;
 
-    final DateTime today = DateTime.now();
-
     return Scaffold(
-      appBar: AppBar(
-        // Two-line title: "Today" large + date small below.
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Today'),
-            Text(
-              _formattedDate(today),
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withAlpha(140),
-                  ),
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings_rounded),
-            tooltip: 'Settings',
-            onPressed: () => context.push('/settings'),
-          ),
-        ],
-      ),
-
       body: bothLoading
           ? const Center(child: CircularProgressIndicator())
           : ListView(

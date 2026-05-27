@@ -25,9 +25,6 @@ class HabitListScreen extends ConsumerWidget {
         ref.watch(habitsWithStatusProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Habits'),
-      ),
       body: habitsAsync.when(
         // skipLoadingOnReload: when the provider is refreshed after a toggle,
         // keep showing the current list instead of flashing a spinner.
