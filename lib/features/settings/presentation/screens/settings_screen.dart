@@ -3,12 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../core/settings/app_settings.dart';
 import '../../../../../core/settings/settings_provider.dart';
 
-/// App settings screen — reached via the ⚙ icon on the Today tab.
+/// App settings screen.
 ///
-/// Two sections:
-///   1. Appearance — Light / System / Dark segmented choice.
-///   2. Navigation tabs — toggle which tabs appear in the bottom bar.
-///      At least one tab must always be visible.
+/// Sections:
+///   1. Appearance — Light / System / Dark theme.
+///   2. Notifications — daily reminder toggle + time picker.
+///   3. Navigation tabs — toggle which tabs appear in the bottom bar.
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
@@ -39,7 +39,6 @@ class SettingsScreen extends ConsumerWidget {
                       ),
                 ),
                 const SizedBox(height: 10),
-                // Material 3 SegmentedButton — three mutually exclusive options.
                 SegmentedButton<ThemeMode>(
                   style: SegmentedButton.styleFrom(
                     minimumSize: const Size.fromHeight(44),
@@ -72,6 +71,40 @@ class SettingsScreen extends ConsumerWidget {
 
           const Divider(indent: 16, endIndent: 16),
 
+          // ── Notifications ──────────────────────────────────────────────
+          const _SectionHeader(label: 'Notifications'),
+
+          SwitchListTile(
+            secondary: Icon(
+              Icons.notifications_rounded,
+              color: settings.notificationsEnabled
+                  ? cs.primary
+                  : cs.onSurface.withAlpha(100),
+            ),
+            title: const Text('Daily reminder'),
+            subtitle: const Text('A nudge to check your habits and tasks'),
+            value: settings.notificationsEnabled,
+            onChanged: (bool value) =>
+                notifier.setNotificationsEnabled(value),
+          ),
+
+          // Time picker row — only shown when notifications are enabled.
+          if (settings.notificationsEnabled)
+            _ReminderTimeTile(
+              time: settings.reminderTime,
+              onTap: () async {
+                final TimeOfDay? picked = await showTimePicker(
+                  context: context,
+                  initialTime: settings.reminderTime,
+                );
+                if (picked != null) {
+                  notifier.setReminderTime(picked);
+                }
+              },
+            ),
+
+          const Divider(indent: 16, endIndent: 16),
+
           // ── Navigation tabs ────────────────────────────────────────────
           const _SectionHeader(label: 'Navigation tabs'),
 
@@ -101,6 +134,38 @@ class SettingsScreen extends ConsumerWidget {
           const SizedBox(height: 24),
         ],
       ),
+    );
+  }
+}
+
+// ── Reminder time tile ────────────────────────────────────────────────────────
+
+class _ReminderTimeTile extends StatelessWidget {
+  const _ReminderTimeTile({required this.time, required this.onTap});
+
+  final TimeOfDay time;
+  final VoidCallback onTap;
+
+  String _formatTime(TimeOfDay t) {
+    final int hour = t.hourOfPeriod == 0 ? 12 : t.hourOfPeriod;
+    final String minute = t.minute.toString().padLeft(2, '0');
+    final String period = t.period == DayPeriod.am ? 'AM' : 'PM';
+    return '$hour:$minute $period';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: const Icon(Icons.access_time_rounded),
+      title: const Text('Reminder time'),
+      trailing: Text(
+        _formatTime(time),
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Theme.of(context).colorScheme.primary,
+              fontWeight: FontWeight.w600,
+            ),
+      ),
+      onTap: onTap,
     );
   }
 }
@@ -140,11 +205,7 @@ class _TabToggleTile extends StatelessWidget {
 
   final AppTab tab;
   final bool isVisible;
-
-  /// True when this is the only remaining visible tab — toggling it off
-  /// would leave the nav empty, so we disable the switch.
   final bool isLastVisible;
-
   final ValueChanged<bool> onChanged;
 
   @override
@@ -167,7 +228,6 @@ class _TabToggleTile extends StatelessWidget {
             )
           : null,
       value: isVisible,
-      // Disable the switch when this is the only visible tab.
       onChanged: isLastVisible ? null : onChanged,
     );
   }

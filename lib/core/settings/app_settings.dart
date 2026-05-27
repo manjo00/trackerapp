@@ -40,6 +40,9 @@ class AppSettings {
   const AppSettings({
     required this.themeMode,
     required this.visibleTabs,
+    required this.notificationsEnabled,
+    required this.reminderHour,
+    required this.reminderMinute,
   });
 
   final ThemeMode themeMode;
@@ -48,7 +51,19 @@ class AppSettings {
   /// Always contains at least one element.
   final Set<AppTab> visibleTabs;
 
-  /// Shipped defaults — all tabs on, follow system theme.
+  /// Whether the daily reminder notification is scheduled.
+  final bool notificationsEnabled;
+
+  /// Hour component of the daily reminder time (0–23).
+  final int reminderHour;
+
+  /// Minute component of the daily reminder time (0–59).
+  final int reminderMinute;
+
+  /// Convenience getter — the reminder as a Flutter [TimeOfDay].
+  TimeOfDay get reminderTime => TimeOfDay(hour: reminderHour, minute: reminderMinute);
+
+  /// Shipped defaults — all tabs on, system theme, 9 AM reminder (off).
   static const AppSettings defaults = AppSettings(
     themeMode: ThemeMode.system,
     visibleTabs: {
@@ -57,14 +72,23 @@ class AppSettings {
       AppTab.tasks,
       AppTab.planner,
     },
+    notificationsEnabled: false,
+    reminderHour: 9,
+    reminderMinute: 0,
   );
 
   AppSettings copyWith({
     ThemeMode? themeMode,
     Set<AppTab>? visibleTabs,
+    bool? notificationsEnabled,
+    int? reminderHour,
+    int? reminderMinute,
   }) =>
       AppSettings(
         themeMode: themeMode ?? this.themeMode,
         visibleTabs: visibleTabs ?? this.visibleTabs,
+        notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
+        reminderHour: reminderHour ?? this.reminderHour,
+        reminderMinute: reminderMinute ?? this.reminderMinute,
       );
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../notifications/notification_service.dart';
 import 'app_settings.dart';
 
 // ── SharedPreferences provider ────────────────────────────────────────────────
@@ -34,6 +35,9 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
 
   static const String _kTheme = 'theme_mode';
   static const String _kTabs = 'visible_tabs';
+  static const String _kNotifications = 'notifications_enabled';
+  static const String _kReminderHour = 'reminder_hour';
+  static const String _kReminderMinute = 'reminder_minute';
 
   // ── Load ───────────────────────────────────────────────────────────────
 
@@ -41,6 +45,12 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
     state = AppSettings(
       themeMode: _loadTheme(),
       visibleTabs: _loadTabs(),
+      notificationsEnabled:
+          _prefs.getBool(_kNotifications) ?? AppSettings.defaults.notificationsEnabled,
+      reminderHour:
+          _prefs.getInt(_kReminderHour) ?? AppSettings.defaults.reminderHour,
+      reminderMinute:
+          _prefs.getInt(_kReminderMinute) ?? AppSettings.defaults.reminderMinute,
     );
   }
 
@@ -62,7 +72,6 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
         .whereType<AppTab>()
         .toSet();
 
-    // Guard: always keep at least one tab.
     return tabs.isEmpty ? AppSettings.defaults.visibleTabs : tabs;
   }
 
@@ -88,6 +97,37 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
 
     state = state.copyWith(visibleTabs: updated);
     _prefs.setStringList(_kTabs, updated.map((t) => t.name).toList());
+  }
+
+  /// Enables or disables the daily reminder notification.
+  ///
+  /// When enabled: schedules the notification at [state.reminderTime].
+  /// When disabled: cancels the scheduled notification.
+  Future<void> setNotificationsEnabled(bool enabled) async {
+    state = state.copyWith(notificationsEnabled: enabled);
+    await _prefs.setBool(_kNotifications, enabled);
+
+    if (enabled) {
+      await NotificationService.instance
+          .scheduleDailyReminder(state.reminderTime);
+    } else {
+      await NotificationService.instance.cancelDailyReminder();
+    }
+  }
+
+  /// Updates the reminder time and re-schedules if notifications are on.
+  Future<void> setReminderTime(TimeOfDay time) async {
+    state = state.copyWith(
+      reminderHour: time.hour,
+      reminderMinute: time.minute,
+    );
+    await _prefs.setInt(_kReminderHour, time.hour);
+    await _prefs.setInt(_kReminderMinute, time.minute);
+
+    // Only re-schedule if notifications are currently enabled.
+    if (state.notificationsEnabled) {
+      await NotificationService.instance.scheduleDailyReminder(time);
+    }
   }
 }
 

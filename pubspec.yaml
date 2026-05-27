@@ -42,6 +42,14 @@ dependencies:
   # (theme mode, visible tabs). Data survives app restarts.
   shared_preferences: ^2.3.3
 
+  # --- Notifications ---
+  # Schedules and displays local (device-only) notifications.
+  # No server needed — everything runs on-device.
+  flutter_local_notifications: ^18.0.0
+  # Required by flutter_local_notifications for timezone-aware scheduling
+  # (so "9 AM" means 9 AM in the user's local timezone, not UTC).
+  timezone: ^0.9.4
+
   # --- Utilities ---
   # Date formatting — turns DateTime into readable strings like "2026-05-26".
   intl: ^0.19.0
