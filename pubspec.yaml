@@ -37,6 +37,11 @@ dependencies:
   # freezed generates copyWith(), ==, hashCode — making models immutable.
   freezed_annotation: ^2.4.4
 
+  # --- Preferences ---
+  # shared_preferences: key-value store for small persistent settings
+  # (theme mode, visible tabs). Data survives app restarts.
+  shared_preferences: ^2.3.3
+
   # --- Utilities ---
   # Date formatting — turns DateTime into readable strings like "2026-05-26".
   intl: ^0.19.0

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../features/habits/data/models/habit_with_status.dart';
 import '../../../../features/habits/presentation/providers/habits_providers.dart';
 import '../../../../features/habits/presentation/widgets/habit_tile.dart';
@@ -68,6 +69,13 @@ class TodayScreen extends ConsumerWidget {
             ),
           ],
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings_rounded),
+            tooltip: 'Settings',
+            onPressed: () => context.push('/settings'),
+          ),
+        ],
       ),
 
       body: bothLoading

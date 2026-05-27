@@ -5,6 +5,7 @@ import '../../features/habits/presentation/screens/add_habit_screen.dart';
 import '../../features/tasks/presentation/screens/task_list_screen.dart';
 import '../../features/tasks/presentation/screens/add_task_screen.dart';
 import '../../features/planner/presentation/screens/planner_screen.dart';
+import '../../features/settings/presentation/screens/settings_screen.dart';
 import '../../features/today/presentation/screens/today_screen.dart';
 import 'shell_scaffold.dart';
 
@@ -87,6 +88,11 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/habits/add',
       builder: (context, state) => const AddHabitScreen(),
+    ),
+
+    GoRoute(
+      path: '/settings',
+      builder: (context, state) => const SettingsScreen(),
     ),
 
     GoRoute(
