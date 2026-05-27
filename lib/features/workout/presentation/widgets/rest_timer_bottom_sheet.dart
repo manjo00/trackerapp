@@ -24,16 +24,26 @@ class RestTimerBottomSheet extends ConsumerStatefulWidget {
 
 class _RestTimerBottomSheetState
     extends ConsumerState<RestTimerBottomSheet> {
+  // Guard against double-pop: "Skip Rest" calls cancel() which sets
+  // the timer to 0, which would re-trigger the auto-dismiss listener
+  // and pop the Active Workout screen behind this sheet.
+  bool _closing = false;
+
+  void _close() {
+    if (_closing) return;
+    _closing = true;
+    Navigator.of(context).pop();
+  }
 
   @override
   Widget build(BuildContext context) {
     final int remaining = ref.watch(restTimerProvider);
     final cs = Theme.of(context).colorScheme;
 
-    // Auto-close when timer finishes.
+    // Auto-close when timer reaches zero.
     ref.listen<int>(restTimerProvider, (int? prev, int next) {
       if (next == 0 && (prev ?? 0) > 0) {
-        Navigator.of(context).pop();
+        _close();
       }
     });
 
@@ -117,7 +127,7 @@ class _RestTimerBottomSheetState
                 FilledButton.icon(
                   onPressed: () {
                     ref.read(restTimerProvider.notifier).cancel();
-                    Navigator.of(context).pop();
+                    _close();
                   },
                   icon: const Icon(Icons.close_rounded),
                   label: const Text('Skip Rest'),

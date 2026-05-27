@@ -250,23 +250,6 @@ class _ActiveWorkoutScreenState
                       sets: sets,
                       sessionId: active.sessionId,
                       programExercise: programEx,
-                      onAddSet: () async {
-                        // Pre-fill from last set in this session, or from
-                        // lastSessionHints if no sets yet.
-                        double? weight;
-                        int? reps;
-                        if (sets.isNotEmpty) {
-                          weight = sets.last.weightKg;
-                          reps = sets.last.reps;
-                        }
-                        await ref
-                            .read(activeWorkoutProvider.notifier)
-                            .addSet(
-                              exerciseName: name,
-                              weightKg: weight,
-                              reps: reps,
-                            );
-                      },
                       onUpdateSet: (updated) => ref
                           .read(activeWorkoutProvider.notifier)
                           .updateSet(updated),
@@ -295,7 +278,6 @@ class _ExerciseSection extends ConsumerWidget {
     required this.sets,
     required this.sessionId,
     required this.programExercise,
-    required this.onAddSet,
     required this.onUpdateSet,
     required this.onCompleteSet,
     required this.onDeleteSet,
@@ -305,7 +287,6 @@ class _ExerciseSection extends ConsumerWidget {
   final List<WorkoutSetModel> sets;
   final int sessionId;
   final ProgramExerciseModel? programExercise;
-  final VoidCallback onAddSet;
   final ValueChanged<WorkoutSetModel> onUpdateSet;
   final ValueChanged<WorkoutSetModel> onCompleteSet;
   final ValueChanged<int> onDeleteSet;
@@ -444,7 +425,26 @@ class _ExerciseSection extends ConsumerWidget {
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
-                onPressed: onAddSet,
+                onPressed: () async {
+                  // Pre-fill: use last set in current session; if none, use
+                  // the matching hint from the previous session.
+                  double? weight;
+                  int? reps;
+                  if (sets.isNotEmpty) {
+                    weight = sets.last.weightKg;
+                    reps = sets.last.reps;
+                  } else if (hints.isNotEmpty) {
+                    weight = hints.first.weightKg;
+                    reps = hints.first.reps;
+                  }
+                  await ref
+                      .read(activeWorkoutProvider.notifier)
+                      .addSet(
+                        exerciseName: exerciseName,
+                        weightKg: weight,
+                        reps: reps,
+                      );
+                },
                 icon: const Icon(Icons.add_rounded, size: 18),
                 label: const Text('Add Set'),
                 style: OutlinedButton.styleFrom(

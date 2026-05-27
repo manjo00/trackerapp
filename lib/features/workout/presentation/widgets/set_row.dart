@@ -40,6 +40,7 @@ class SetRow extends StatefulWidget {
 class _SetRowState extends State<SetRow> {
   late final TextEditingController _weightCtrl;
   late final TextEditingController _repsCtrl;
+  bool _completed = false;
 
   @override
   void initState() {
@@ -180,24 +181,26 @@ class _SetRowState extends State<SetRow> {
                 ),
               ),
 
-            // Complete button
+            // Complete button — fills green when tapped
             InkWell(
               onTap: () {
                 _flush();
+                setState(() => _completed = true);
                 widget.onComplete();
               },
               borderRadius: BorderRadius.circular(20),
-              child: Container(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: cs.primary.withAlpha(20),
+                  color: _completed ? Colors.green : cs.primary.withAlpha(20),
                 ),
                 child: Icon(
                   Icons.check_rounded,
                   size: 20,
-                  color: cs.primary,
+                  color: _completed ? Colors.white : cs.primary,
                 ),
               ),
             ),
