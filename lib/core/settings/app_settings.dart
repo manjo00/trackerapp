@@ -9,7 +9,8 @@ enum AppTab {
   habits,
   tasks,
   planner,
-  trackers;
+  trackers,
+  workout;
 
   String get label => switch (this) {
         today => 'Today',
@@ -17,6 +18,7 @@ enum AppTab {
         tasks => 'Tasks',
         planner => 'Planner',
         trackers => 'Trackers',
+        workout => 'Workout',
       };
 
   IconData get icon => switch (this) {
@@ -25,6 +27,7 @@ enum AppTab {
         tasks => Icons.check_box_outline_blank_rounded,
         planner => Icons.calendar_today_rounded,
         trackers => Icons.bar_chart_outlined,
+        workout => Icons.fitness_center_outlined,
       };
 
   IconData get selectedIcon => switch (this) {
@@ -33,6 +36,7 @@ enum AppTab {
         tasks => Icons.check_box_rounded,
         planner => Icons.calendar_month_rounded,
         trackers => Icons.bar_chart_rounded,
+        workout => Icons.fitness_center_rounded,
       };
 }
 
@@ -76,6 +80,7 @@ class AppSettings {
       AppTab.tasks,
       AppTab.planner,
       AppTab.trackers,
+      AppTab.workout,
     },
     notificationsEnabled: false,
     reminderHour: 9,

@@ -13,6 +13,7 @@ import '../../features/trackers/data/tables/custom_trackers_table.dart';
 import '../../features/trackers/data/tables/tracker_items_table.dart';
 import '../../features/trackers/data/tables/tracker_log_values_table.dart';
 import '../../features/trackers/data/tables/tracker_logs_table.dart';
+import '../../features/workout/data/dao/workout_dao.dart';
 import '../../features/workout/data/models/exercise_seed_data.dart';
 import '../../features/workout/data/tables/exercise_library_table.dart';
 import '../../features/workout/data/tables/workout_sessions_table.dart';
@@ -45,7 +46,7 @@ part 'app_database.g.dart';
     WorkoutSessions,
     WorkoutSets,
   ],
-  daos: [HabitsDao, TasksDao, TrackersDao],
+  daos: [HabitsDao, TasksDao, TrackersDao, WorkoutDao],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());

@@ -15,6 +15,9 @@ import '../../features/trackers/presentation/screens/trackers_screen.dart';
 import '../../features/trackers/presentation/screens/add_tracker_screen.dart';
 import '../../features/trackers/presentation/screens/tracker_detail_screen.dart';
 import '../../features/trackers/presentation/screens/log_entry_screen.dart';
+import '../../features/workout/presentation/screens/active_workout_screen.dart';
+import '../../features/workout/presentation/screens/exercise_picker_screen.dart';
+import '../../features/workout/presentation/screens/workout_list_screen.dart';
 import 'shell_scaffold.dart';
 
 /// The single [GoRouter] instance for the whole app.
@@ -22,17 +25,20 @@ import 'shell_scaffold.dart';
 /// Route tree:
 /// ```
 ///  StatefulShellRoute   ← HomeShell (bottom nav persists across tabs)
-///    /today             ← TodayScreen      (index 0, default tab)
-///    /habits            ← HabitListScreen  (index 1)
-///    /tasks             ← TaskListScreen   (index 2)
-///    /planner           ← PlannerScreen    (index 3, placeholder)
-///    /trackers          ← TrackersScreen   (index 4)
+///    /today             ← TodayScreen        (index 0, default tab)
+///    /habits            ← HabitListScreen    (index 1)
+///    /tasks             ← TaskListScreen     (index 2)
+///    /planner           ← PlannerScreen      (index 3)
+///    /trackers          ← TrackersScreen     (index 4)
+///    /workout           ← WorkoutListScreen  (index 5)
 ///
 ///  /habits/add          ← AddHabitScreen        (outside shell)
 ///  /tasks/add           ← AddTaskScreen          (outside shell)
 ///  /trackers/add        ← AddTrackerScreen       (outside shell)
 ///  /trackers/:id        ← TrackerDetailScreen    (outside shell)
 ///  /trackers/:id/log    ← LogEntryScreen         (outside shell)
+///  /workout/active      ← ActiveWorkoutScreen    (outside shell)
+///  /workout/exercises   ← ExercisePickerScreen   (outside shell)
 /// ```
 final GoRouter appRouter = GoRouter(
   initialLocation: '/today',
@@ -100,6 +106,18 @@ final GoRouter appRouter = GoRouter(
               path: '/trackers',
               pageBuilder: (context, state) => const NoTransitionPage(
                 child: TrackersScreen(),
+              ),
+            ),
+          ],
+        ),
+
+        // Branch 5 — Workout
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: '/workout',
+              pageBuilder: (context, state) => const NoTransitionPage(
+                child: WorkoutListScreen(),
               ),
             ),
           ],
@@ -189,6 +207,18 @@ final GoRouter appRouter = GoRouter(
           preChecked: extra['checkedItemIds'] as Set<int>?,
         );
       },
+    ),
+
+    // ── Workout full-screen routes ─────────────────────────────────────────
+
+    GoRoute(
+      path: '/workout/active',
+      builder: (context, state) => const ActiveWorkoutScreen(),
+    ),
+
+    GoRoute(
+      path: '/workout/exercises',
+      builder: (context, state) => const ExercisePickerScreen(),
     ),
   ],
 );
