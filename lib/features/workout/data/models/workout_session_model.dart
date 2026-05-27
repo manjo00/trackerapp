@@ -14,6 +14,10 @@ class WorkoutSessionModel with _$WorkoutSessionModel {
     required String date,
     String? notes,
     required DateTime createdAt,
+
+    /// NULL for freeform sessions; non-null when based on a program session type.
+    int? programSessionId,
+
     @Default([]) List<WorkoutSetModel> sets,
   }) = _WorkoutSessionModel;
 

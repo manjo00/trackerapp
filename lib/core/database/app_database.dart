@@ -13,9 +13,13 @@ import '../../features/trackers/data/tables/custom_trackers_table.dart';
 import '../../features/trackers/data/tables/tracker_items_table.dart';
 import '../../features/trackers/data/tables/tracker_log_values_table.dart';
 import '../../features/trackers/data/tables/tracker_logs_table.dart';
+import '../../features/workout/data/dao/program_dao.dart';
 import '../../features/workout/data/dao/workout_dao.dart';
 import '../../features/workout/data/models/exercise_seed_data.dart';
 import '../../features/workout/data/tables/exercise_library_table.dart';
+import '../../features/workout/data/tables/program_exercises_table.dart';
+import '../../features/workout/data/tables/program_sessions_table.dart';
+import '../../features/workout/data/tables/programs_table.dart';
 import '../../features/workout/data/tables/workout_sessions_table.dart';
 import '../../features/workout/data/tables/workout_sets_table.dart';
 
@@ -45,8 +49,12 @@ part 'app_database.g.dart';
     ExerciseLibrary,
     WorkoutSessions,
     WorkoutSets,
+    // ── Programs (v5) ────────────────────────────────────────────────────────
+    Programs,
+    ProgramSessions,
+    ProgramExercises,
   ],
-  daos: [HabitsDao, TasksDao, TrackersDao, WorkoutDao],
+  daos: [HabitsDao, TasksDao, TrackersDao, WorkoutDao, ProgramDao],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
@@ -62,8 +70,10 @@ class AppDatabase extends _$AppDatabase {
   /// v4 → added reminder columns to habits/tasks/custom_trackers,
   ///       isTemplate to custom_trackers,
   ///       workout tables (exercise_library, workout_sessions, workout_sets)
+  /// v5 → added programs, program_sessions, program_exercises tables;
+  ///       added programSessionId FK to workout_sessions
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -82,7 +92,6 @@ class AppDatabase extends _$AppDatabase {
             await m.createTable(trackerLogValues);
           }
           if (from < 4) {
-            // New columns on existing tables
             await m.addColumn(habits, habits.reminderEnabled);
             await m.addColumn(habits, habits.reminderTime);
             await m.addColumn(tasks, tasks.dueTime);
@@ -91,20 +100,23 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(customTrackers, customTrackers.reminderEnabled);
             await m.addColumn(customTrackers, customTrackers.reminderTime);
             await m.addColumn(customTrackers, customTrackers.isTemplate);
-            // New workout tables
             await m.createTable(exerciseLibrary);
             await m.createTable(workoutSessions);
             await m.createTable(workoutSets);
-            // Seed built-in exercises
             await _seedExerciseLibrary(m);
+          }
+          if (from < 5) {
+            // New program tables
+            await m.createTable(programs);
+            await m.createTable(programSessions);
+            await m.createTable(programExercises);
+            // New FK column on existing table
+            await m.addColumn(
+                workoutSessions, workoutSessions.programSessionId);
           }
         },
       );
 
-  /// Inserts the built-in exercise library entries.
-  ///
-  /// Called both on [onCreate] and inside the v4 upgrade block so that
-  /// both fresh installs and existing users receive the seed data.
   Future<void> _seedExerciseLibrary(Migrator m) async {
     for (final exercise in kSeedExercises) {
       await into(exerciseLibrary).insert(

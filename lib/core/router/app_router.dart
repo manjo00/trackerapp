@@ -16,8 +16,11 @@ import '../../features/trackers/presentation/screens/add_tracker_screen.dart';
 import '../../features/trackers/presentation/screens/tracker_detail_screen.dart';
 import '../../features/trackers/presentation/screens/log_entry_screen.dart';
 import '../../features/workout/presentation/screens/active_workout_screen.dart';
+import '../../features/workout/presentation/screens/create_program_screen.dart';
 import '../../features/workout/presentation/screens/exercise_picker_screen.dart';
-import '../../features/workout/presentation/screens/workout_list_screen.dart';
+import '../../features/workout/presentation/screens/program_detail_screen.dart';
+import '../../features/workout/presentation/screens/program_session_editor_screen.dart';
+import '../../features/workout/presentation/screens/workout_home_screen.dart';
 import 'shell_scaffold.dart';
 
 /// The single [GoRouter] instance for the whole app.
@@ -30,15 +33,18 @@ import 'shell_scaffold.dart';
 ///    /tasks             ← TaskListScreen     (index 2)
 ///    /planner           ← PlannerScreen      (index 3)
 ///    /trackers          ← TrackersScreen     (index 4)
-///    /workout           ← WorkoutListScreen  (index 5)
+///    /workout           ← WorkoutHomeScreen  (index 5)
 ///
-///  /habits/add          ← AddHabitScreen        (outside shell)
-///  /tasks/add           ← AddTaskScreen          (outside shell)
-///  /trackers/add        ← AddTrackerScreen       (outside shell)
-///  /trackers/:id        ← TrackerDetailScreen    (outside shell)
-///  /trackers/:id/log    ← LogEntryScreen         (outside shell)
-///  /workout/active      ← ActiveWorkoutScreen    (outside shell)
-///  /workout/exercises   ← ExercisePickerScreen   (outside shell)
+///  /habits/add                          ← AddHabitScreen              (outside shell)
+///  /tasks/add                           ← AddTaskScreen               (outside shell)
+///  /trackers/add                        ← AddTrackerScreen            (outside shell)
+///  /trackers/:id                        ← TrackerDetailScreen         (outside shell)
+///  /trackers/:id/log                    ← LogEntryScreen              (outside shell)
+///  /workout/active                      ← ActiveWorkoutScreen         (outside shell)
+///  /workout/exercises                   ← ExercisePickerScreen        (outside shell)
+///  /workout/programs/create             ← CreateProgramScreen         (outside shell)
+///  /workout/programs/:id                ← ProgramDetailScreen         (outside shell)
+///  /workout/programs/:id/session/:sid   ← ProgramSessionEditorScreen  (outside shell)
 /// ```
 final GoRouter appRouter = GoRouter(
   initialLocation: '/today',
@@ -117,7 +123,7 @@ final GoRouter appRouter = GoRouter(
             GoRoute(
               path: '/workout',
               pageBuilder: (context, state) => const NoTransitionPage(
-                child: WorkoutListScreen(),
+                child: WorkoutHomeScreen(),
               ),
             ),
           ],
@@ -219,6 +225,31 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/workout/exercises',
       builder: (context, state) => const ExercisePickerScreen(),
+    ),
+
+    GoRoute(
+      path: '/workout/programs/create',
+      builder: (context, state) => const CreateProgramScreen(),
+    ),
+
+    GoRoute(
+      path: '/workout/programs/:id',
+      builder: (context, state) {
+        final programId = int.parse(state.pathParameters['id']!);
+        return ProgramDetailScreen(programId: programId);
+      },
+    ),
+
+    GoRoute(
+      path: '/workout/programs/:id/session/:sid',
+      builder: (context, state) {
+        final programId = int.parse(state.pathParameters['id']!);
+        final sessionId = int.parse(state.pathParameters['sid']!);
+        return ProgramSessionEditorScreen(
+          programId: programId,
+          sessionId: sessionId,
+        );
+      },
     ),
   ],
 );

@@ -4,6 +4,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../../core/database/database_provider.dart';
 import '../../data/dao/workout_dao.dart';
 import '../../data/models/exercise_model.dart';
+import '../../data/models/program_exercise_model.dart';
 import '../../data/models/workout_session_model.dart';
 import '../../data/models/workout_set_model.dart';
 import '../../data/repositories/workout_repository.dart';
@@ -35,21 +36,35 @@ class ActiveWorkoutState {
   const ActiveWorkoutState({
     required this.sessionId,
     required this.startedAt,
+    this.programSessionId,
+    this.programExercises = const [],
     this.sets = const [],
   });
 
   final int sessionId;
   final DateTime startedAt;
+
+  /// Non-null when this session is driven by a program session type.
+  final int? programSessionId;
+
+  /// Ordered exercises from the program session (may be empty for freeform).
+  final List<ProgramExerciseModel> programExercises;
+
   final List<WorkoutSetModel> sets;
 
   ActiveWorkoutState copyWith({
     List<WorkoutSetModel>? sets,
+    List<ProgramExerciseModel>? programExercises,
   }) =>
       ActiveWorkoutState(
         sessionId: sessionId,
         startedAt: startedAt,
+        programSessionId: programSessionId,
+        programExercises: programExercises ?? this.programExercises,
         sets: sets ?? this.sets,
       );
+
+  bool get isProgramDriven => programSessionId != null;
 
   /// Sets grouped by exercise name, preserving insertion order.
   Map<String, List<WorkoutSetModel>> get setsByExercise {
@@ -60,14 +75,37 @@ class ActiveWorkoutState {
     return map;
   }
 
-  /// Unique exercise names in the order they were first logged.
+  /// All exercise names to display:
+  /// - If program-driven: program order, then any extras the user added.
+  /// - If freeform: order first logged.
   List<String> get exerciseNames {
+    if (isProgramDriven) {
+      final programNames =
+          programExercises.map((e) => e.exerciseName).toList();
+      // Add any freeform exercises the user added during the session.
+      final seen = <String>{...programNames};
+      for (final s in sets) {
+        if (seen.add(s.exerciseName)) programNames.add(s.exerciseName);
+      }
+      return programNames;
+    }
+    // Freeform: insertion order.
     final seen = <String>{};
     final names = <String>[];
     for (final s in sets) {
       if (seen.add(s.exerciseName)) names.add(s.exerciseName);
     }
     return names;
+  }
+
+  /// Returns the [ProgramExerciseModel] for [exerciseName], or null.
+  ProgramExerciseModel? programExerciseFor(String exerciseName) {
+    try {
+      return programExercises
+          .firstWhere((e) => e.exerciseName == exerciseName);
+    } catch (_) {
+      return null;
+    }
   }
 }
 
@@ -81,14 +119,26 @@ class ActiveWorkout extends _$ActiveWorkout {
   @override
   Future<ActiveWorkoutState?> build() async => null;
 
-  /// Starts a new workout session and stores it in the DB.
-  Future<void> start() async {
+  /// Starts a new workout session.
+  ///
+  /// [programSessionId] links the session to a program session type.
+  /// [programExercises] is the ordered exercise list from that session type —
+  /// passed in from the UI layer so the provider doesn't need to import
+  /// the program repository directly.
+  Future<void> start({
+    int? programSessionId,
+    List<ProgramExerciseModel> programExercises = const [],
+  }) async {
     state = const AsyncLoading();
     final repo = ref.read(workoutRepositoryProvider);
-    final int sessionId = await repo.createSession();
+    final int sessionId = await repo.createSession(
+      programSessionId: programSessionId,
+    );
     state = AsyncData(ActiveWorkoutState(
       sessionId: sessionId,
       startedAt: DateTime.now(),
+      programSessionId: programSessionId,
+      programExercises: programExercises,
     ));
   }
 

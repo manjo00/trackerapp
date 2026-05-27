@@ -29,11 +29,12 @@ class WorkoutRepository {
   }
 
   /// Creates a new workout session and returns its id.
-  Future<int> createSession({String? name}) =>
+  Future<int> createSession({String? name, int? programSessionId}) =>
       _dao.insertSession(WorkoutSessionsCompanion(
         name: Value(name),
         date: Value(_today()),
         createdAt: Value(DateTime.now()),
+        programSessionId: Value(programSessionId),
       ));
 
   /// Finalises a session by setting its name and/or notes.
@@ -195,6 +196,7 @@ class WorkoutRepository {
         date: row.date,
         notes: row.notes,
         createdAt: row.createdAt,
+        programSessionId: row.programSessionId,
         sets: sets.map(_setFromRow).toList(),
       );
 

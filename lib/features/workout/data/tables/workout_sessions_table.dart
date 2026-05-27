@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'program_sessions_table.dart';
 
 /// One completed (or in-progress) workout session.
 ///
@@ -19,4 +20,11 @@ class WorkoutSessions extends Table {
 
   /// When this session row was first created (= when the workout started).
   DateTimeColumn get createdAt => dateTime()();
+
+  /// Optional link to the program session type this workout follows.
+  /// NULL for freeform workouts not based on a program.
+  /// SET NULL (not CASCADE) so deleting a session type doesn't erase history.
+  IntColumn get programSessionId => integer()
+      .references(ProgramSessions, #id, onDelete: KeyAction.setNull)
+      .nullable()();
 }
