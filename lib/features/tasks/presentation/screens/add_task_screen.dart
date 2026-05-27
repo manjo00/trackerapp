@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/notifications/notification_service.dart';
 import '../../data/models/task_model.dart';
 import '../../data/models/task_priority.dart';
 import '../providers/tasks_providers.dart';
@@ -15,8 +16,6 @@ import '../providers/tasks_providers.dart';
 ///
 /// Also accepts [initialDate] so the planner's long-press pre-fills the
 /// due-date field without putting the screen in edit mode.
-///
-/// Lives outside the [StatefulShellRoute] so the bottom nav is hidden.
 class AddTaskScreen extends ConsumerStatefulWidget {
   const AddTaskScreen({
     this.task,
@@ -40,7 +39,12 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
   late final TextEditingController _noteCtrl;
 
   DateTime? _dueDate;
+  TimeOfDay? _dueTime;
   late TaskPriority _priority;
+  bool _reminderEnabled = false;
+  bool _lead1d = false;
+  bool _lead3h = false;
+  bool _lead5m = false;
   bool _saving = false;
 
   bool get _isEditing => widget.task != null;
@@ -54,7 +58,13 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
       _titleCtrl = TextEditingController(text: t.title);
       _noteCtrl = TextEditingController(text: t.note ?? '');
       _dueDate = t.dueDate != null ? DateTime.parse(t.dueDate!) : null;
+      _dueTime = _parseTimeOfDay(t.dueTime);
       _priority = t.priority;
+      _reminderEnabled = t.reminderEnabled;
+      final List<int> leads = t.leadTimeMinutes;
+      _lead1d = leads.contains(1440);
+      _lead3h = leads.contains(180);
+      _lead5m = leads.contains(5);
     } else {
       // Create mode — blank form, optional pre-filled date from planner.
       _titleCtrl = TextEditingController();
@@ -73,7 +83,22 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
     super.dispose();
   }
 
-  // ── Date helpers ─────────────────────────────────────────────────────────
+  // ── Helpers ───────────────────────────────────────────────────────────────
+
+  /// Parses "HH:mm" → [TimeOfDay]. Returns null on any parse failure.
+  static TimeOfDay? _parseTimeOfDay(String? s) {
+    if (s == null) return null;
+    final List<String> parts = s.split(':');
+    if (parts.length != 2) return null;
+    final int? h = int.tryParse(parts[0]);
+    final int? m = int.tryParse(parts[1]);
+    if (h == null || m == null) return null;
+    return TimeOfDay(hour: h, minute: m);
+  }
+
+  /// Formats [TimeOfDay] as "HH:mm" for storage.
+  String _timeStr(TimeOfDay t) =>
+      '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
 
   String _toDateString(DateTime d) =>
       '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
@@ -99,6 +124,20 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
     };
   }
 
+  /// Builds the lead-times CSV (e.g. "1440,180") from the checkbox state.
+  /// Returns null when no boxes are ticked or reminders are off.
+  String? _buildLeadTimesStr() {
+    if (!_reminderEnabled) return null;
+    final List<int> selected = [
+      if (_lead1d) 1440,
+      if (_lead3h) 180,
+      if (_lead5m) 5,
+    ];
+    return selected.isEmpty ? null : selected.join(',');
+  }
+
+  // ── Date / time pickers ───────────────────────────────────────────────────
+
   Future<void> _pickDate() async {
     final DateTime now = DateTime.now();
     final DateTime? picked = await showDatePicker(
@@ -110,42 +149,72 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
     if (picked != null) setState(() => _dueDate = picked);
   }
 
-  // ── Save ─────────────────────────────────────────────────────────────────
+  Future<void> _pickDueTime() async {
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: _dueTime ?? const TimeOfDay(hour: 9, minute: 0),
+    );
+    if (picked != null) setState(() => _dueTime = picked);
+  }
+
+  // ── Save ──────────────────────────────────────────────────────────────────
 
   Future<void> _save() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
-
     setState(() => _saving = true);
 
     final String? dueDateStr =
         _dueDate != null ? _toDateString(_dueDate!) : null;
+    final String? dueTimeStr =
+        _dueTime != null ? _timeStr(_dueTime!) : null;
+    final String? leadTimesStr = _buildLeadTimesStr();
 
     if (_isEditing) {
-      // Edit mode: update existing task, preserving id and completion state.
-      await ref.read(updateTaskProvider.notifier).save(
-            widget.task!.copyWith(
-              title: _titleCtrl.text.trim(),
-              note: _noteCtrl.text.trim().isEmpty
-                  ? null
-                  : _noteCtrl.text.trim(),
-              dueDate: dueDateStr,
-              priority: _priority,
-            ),
-          );
+      final TaskModel updated = widget.task!.copyWith(
+        title: _titleCtrl.text.trim(),
+        note: _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
+        dueDate: dueDateStr,
+        dueTime: dueTimeStr,
+        priority: _priority,
+        reminderEnabled: _reminderEnabled,
+        reminderLeadTimes: leadTimesStr,
+      );
+      await ref.read(updateTaskProvider.notifier).save(updated);
+
+      // Apply notification change immediately for the edited task.
+      if (_reminderEnabled && dueDateStr != null) {
+        await NotificationService.instance.scheduleTaskReminders(updated);
+      } else {
+        await NotificationService.instance.cancelTaskReminders(updated.id);
+      }
     } else {
-      // Create mode: add a brand-new task.
       await ref.read(addTaskProvider.notifier).add(
             _titleCtrl.text.trim(),
             note: _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
             dueDate: dueDateStr,
+            dueTime: dueTimeStr,
             priority: _priority,
+            reminderEnabled: _reminderEnabled,
+            reminderLeadTimes: leadTimesStr,
           );
+
+      // After creation, reschedule all tasks so the new one gets its
+      // notifications (we don't have the new ID yet, so we fetch fresh).
+      if (_reminderEnabled && dueDateStr != null) {
+        final List<TaskModel> allTasks =
+            await ref.read(tasksRepositoryProvider).getAllTasks();
+        for (final TaskModel task in allTasks) {
+          if (task.reminderEnabled && !task.isCompleted) {
+            await NotificationService.instance.scheduleTaskReminders(task);
+          }
+        }
+      }
     }
 
     if (mounted) context.pop();
   }
 
-  // ── Build ────────────────────────────────────────────────────────────────
+  // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -164,7 +233,7 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
         child: ListView(
           padding: const EdgeInsets.all(24),
           children: [
-            // ── Title ──────────────────────────────────────────────────────
+            // ── Title ─────────────────────────────────────────────────────
             Text(
               'What needs to get done?',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -192,7 +261,7 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
 
             const SizedBox(height: 24),
 
-            // ── Note (optional) ────────────────────────────────────────────
+            // ── Note ──────────────────────────────────────────────────────
             Text(
               'Add a note  (optional)',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -212,7 +281,7 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
 
             const SizedBox(height: 28),
 
-            // ── Due date ───────────────────────────────────────────────────
+            // ── Due date ──────────────────────────────────────────────────
             Text(
               'Due date  (optional)',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -220,56 +289,30 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
                   ),
             ),
             const SizedBox(height: 12),
-            InkWell(
-              borderRadius: BorderRadius.circular(12),
+            _DateTimeTile(
+              icon: Icons.calendar_month_rounded,
+              label: _dueDate != null ? _formatDisplay(_dueDate!) : 'No due date',
+              active: _dueDate != null,
               onTap: _pickDate,
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                decoration: BoxDecoration(
-                  border: Border.all(color: cs.outline.withAlpha(120)),
-                  borderRadius: BorderRadius.circular(12),
-                  color: cs.surfaceContainerLow,
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.calendar_month_rounded,
-                      size: 20,
-                      color: _dueDate != null
-                          ? cs.primary
-                          : cs.onSurface.withAlpha(120),
-                    ),
-                    const SizedBox(width: 10),
-                    Text(
-                      _dueDate != null
-                          ? _formatDisplay(_dueDate!)
-                          : 'No due date',
-                      style: TextStyle(
-                        color: _dueDate != null
-                            ? cs.onSurface
-                            : cs.onSurface.withAlpha(120),
-                        fontSize: 15,
-                      ),
-                    ),
-                    const Spacer(),
-                    if (_dueDate != null)
-                      GestureDetector(
-                        onTap: () => setState(() => _dueDate = null),
-                        child: Icon(
-                          Icons.close_rounded,
-                          size: 18,
-                          color: cs.onSurface.withAlpha(120),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
+              onClear: _dueDate != null ? () => setState(() => _dueDate = null) : null,
+            ),
+
+            const SizedBox(height: 12),
+
+            // ── Due time ──────────────────────────────────────────────────
+            _DateTimeTile(
+              icon: Icons.access_time_rounded,
+              label: _dueTime != null
+                  ? _dueTime!.format(context)
+                  : 'No time set',
+              active: _dueTime != null,
+              onTap: _pickDueTime,
+              onClear: _dueTime != null ? () => setState(() => _dueTime = null) : null,
             ),
 
             const SizedBox(height: 28),
 
-            // ── Priority ───────────────────────────────────────────────────
+            // ── Priority ──────────────────────────────────────────────────
             Text(
               'Priority',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -282,9 +325,84 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
               onChanged: (TaskPriority p) => setState(() => _priority = p),
             ),
 
+            const SizedBox(height: 28),
+            const Divider(),
+            const SizedBox(height: 4),
+
+            // ── Reminders ─────────────────────────────────────────────────
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              secondary: Icon(
+                _reminderEnabled
+                    ? Icons.notifications_active_rounded
+                    : Icons.notifications_outlined,
+                color: _reminderEnabled ? cs.primary : cs.onSurfaceVariant,
+              ),
+              title: const Text('Reminders'),
+              subtitle: const Text('Get notified before the due time'),
+              value: _reminderEnabled,
+              onChanged: (bool v) => setState(() => _reminderEnabled = v),
+            ),
+
+            if (_reminderEnabled) ...[
+              // Amber warning when no due date is set.
+              if (_dueDate == null) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withAlpha(40),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.amber.shade700),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.warning_amber_rounded,
+                          color: Colors.amber.shade700, size: 18),
+                      const SizedBox(width: 10),
+                      const Expanded(
+                        child: Text(
+                          'Set a due date above for reminders to fire',
+                          style: TextStyle(fontSize: 13),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+
+              // Lead-time checkboxes (always shown when reminder is on).
+              const SizedBox(height: 4),
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('1 day before'),
+                value: _lead1d,
+                onChanged: (bool? v) => setState(() => _lead1d = v ?? false),
+                controlAffinity: ListTileControlAffinity.leading,
+                dense: true,
+              ),
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('3 hours before'),
+                value: _lead3h,
+                onChanged: (bool? v) => setState(() => _lead3h = v ?? false),
+                controlAffinity: ListTileControlAffinity.leading,
+                dense: true,
+              ),
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('5 minutes before'),
+                value: _lead5m,
+                onChanged: (bool? v) => setState(() => _lead5m = v ?? false),
+                controlAffinity: ListTileControlAffinity.leading,
+                dense: true,
+              ),
+            ],
+
             const SizedBox(height: 40),
 
-            // ── Save ───────────────────────────────────────────────────────
+            // ── Save button ───────────────────────────────────────────────
             FilledButton(
               onPressed: _saving ? null : _save,
               style: FilledButton.styleFrom(
@@ -310,6 +428,71 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
                       ),
                     ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Shared date/time picker tile ──────────────────────────────────────────────
+
+/// A styled tap-target for date and time pickers — reused for both due date
+/// and due time to keep visual consistency.
+class _DateTimeTile extends StatelessWidget {
+  const _DateTimeTile({
+    required this.icon,
+    required this.label,
+    required this.active,
+    required this.onTap,
+    this.onClear,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+  final VoidCallback? onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme cs = Theme.of(context).colorScheme;
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          border: Border.all(color: cs.outline.withAlpha(120)),
+          borderRadius: BorderRadius.circular(12),
+          color: cs.surfaceContainerLow,
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              size: 20,
+              color: active ? cs.primary : cs.onSurface.withAlpha(120),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              label,
+              style: TextStyle(
+                color: active ? cs.onSurface : cs.onSurface.withAlpha(120),
+                fontSize: 15,
+              ),
+            ),
+            const Spacer(),
+            if (onClear != null)
+              GestureDetector(
+                onTap: onClear,
+                child: Icon(
+                  Icons.close_rounded,
+                  size: 18,
+                  color: cs.onSurface.withAlpha(120),
+                ),
+              ),
           ],
         ),
       ),

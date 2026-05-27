@@ -50,12 +50,19 @@ class AddHabit extends _$AddHabit {
   @override
   Future<void> build() async {}
 
-  Future<void> add(String name, {int targetPerWeek = 7}) async {
+  Future<void> add(
+    String name, {
+    int targetPerWeek = 7,
+    bool reminderEnabled = false,
+    String? reminderTime,
+  }) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(
       () => ref.read(habitsRepositoryProvider).addHabit(
             name,
             targetPerWeek: targetPerWeek,
+            reminderEnabled: reminderEnabled,
+            reminderTime: reminderTime,
           ),
     );
   }

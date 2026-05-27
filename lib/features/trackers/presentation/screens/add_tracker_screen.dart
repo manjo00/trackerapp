@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/notifications/notification_service.dart';
 import '../../data/models/tracker_item_model.dart';
 import '../../data/models/tracker_model.dart';
 import '../../data/models/tracker_template.dart';
@@ -31,6 +32,10 @@ class _AddTrackerScreenState extends ConsumerState<AddTrackerScreen> {
   int _colorValue = 0xFF607D8B; // grey default
   // Mutable list of (name, fieldType) pairs
   final List<(String, FieldType)> _items = [];
+
+  // ── Reminder state ────────────────────────────────────────────────────────
+  bool _reminderEnabled = false;
+  TimeOfDay _reminderTime = const TimeOfDay(hour: 8, minute: 0);
 
   // Preset color swatches
   static const List<Color> _swatches = [
@@ -77,6 +82,21 @@ class _AddTrackerScreenState extends ConsumerState<AddTrackerScreen> {
 
   // ── Save ──────────────────────────────────────────────────────────────────
 
+  // ── Reminder helpers ──────────────────────────────────────────────────────
+
+  String _timeStr(TimeOfDay t) =>
+      '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+
+  Future<void> _pickTime() async {
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: _reminderTime,
+    );
+    if (picked != null) setState(() => _reminderTime = picked);
+  }
+
+  // ── Save ──────────────────────────────────────────────────────────────────
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     await ref.read(addTrackerProvider.notifier).add(
@@ -88,7 +108,22 @@ class _AddTrackerScreenState extends ConsumerState<AddTrackerScreen> {
           icon: _iconCtrl.text.trim().isEmpty ? '📋' : _iconCtrl.text.trim(),
           colorValue: _colorValue,
           items: List.from(_items),
+          reminderEnabled: _reminderEnabled,
+          reminderTime: _reminderEnabled ? _timeStr(_reminderTime) : null,
         );
+
+    // After creation, reschedule all trackers so the new one gets its
+    // notification (we don't have the new ID until we fetch fresh).
+    if (_reminderEnabled) {
+      final allTrackers =
+          await ref.read(trackersRepositoryProvider).getAllTrackers();
+      for (final t in allTrackers) {
+        if (t.reminderEnabled && !t.isTemplate) {
+          await NotificationService.instance.scheduleTrackerReminder(t);
+        }
+      }
+    }
+
     if (mounted) context.pop();
   }
 
@@ -314,6 +349,44 @@ class _AddTrackerScreenState extends ConsumerState<AddTrackerScreen> {
             );
           }),
           const SizedBox(height: 24),
+          const Divider(),
+          const SizedBox(height: 4),
+
+          // ── Reminder ─────────────────────────────────────────────────
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            secondary: Icon(
+              _reminderEnabled
+                  ? Icons.notifications_active_rounded
+                  : Icons.notifications_outlined,
+              color: _reminderEnabled
+                  ? Theme.of(context).colorScheme.primary
+                  : Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+            title: const Text('Daily reminder'),
+            subtitle: const Text('Get notified to log this tracker'),
+            value: _reminderEnabled,
+            onChanged: (bool v) => setState(() => _reminderEnabled = v),
+          ),
+          if (_reminderEnabled) ...[
+            const SizedBox(height: 4),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.access_time_rounded),
+              title: const Text('Reminder time'),
+              trailing: Text(
+                _reminderTime.format(context),
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+              onTap: _pickTime,
+            ),
+          ],
+
+          const SizedBox(height: 20),
 
           // ── Save button ───────────────────────────────────────────────
           FilledButton.icon(

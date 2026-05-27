@@ -75,6 +75,8 @@ class AddTracker extends _$AddTracker {
     required String icon,
     required int colorValue,
     required List<(String, FieldType)> items,
+    bool reminderEnabled = false,
+    String? reminderTime,
   }) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(
@@ -85,6 +87,8 @@ class AddTracker extends _$AddTracker {
             icon: icon,
             colorValue: colorValue,
             items: items,
+            reminderEnabled: reminderEnabled,
+            reminderTime: reminderTime,
           ),
     );
     ref.invalidate(trackersWithProgressProvider);

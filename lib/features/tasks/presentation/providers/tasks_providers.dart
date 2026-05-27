@@ -1,5 +1,6 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../../core/database/database_provider.dart';
+import '../../../../core/notifications/notification_service.dart';
 import '../../data/dao/tasks_dao.dart';
 import '../../data/models/task_model.dart';
 import '../../data/models/task_priority.dart';
@@ -57,7 +58,10 @@ class AddTask extends _$AddTask {
     String title, {
     String? note,
     String? dueDate,
+    String? dueTime,
     TaskPriority priority = TaskPriority.medium,
+    bool reminderEnabled = false,
+    String? reminderLeadTimes,
   }) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(
@@ -65,7 +69,10 @@ class AddTask extends _$AddTask {
             title,
             note: note,
             dueDate: dueDate,
+            dueTime: dueTime,
             priority: priority,
+            reminderEnabled: reminderEnabled,
+            reminderLeadTimes: reminderLeadTimes,
           ),
     );
   }
@@ -85,6 +92,11 @@ class ToggleTask extends _$ToggleTask {
             currentlyCompleted: currentlyCompleted,
           ),
     );
+    // Marking a task complete → cancel its pending notifications.
+    // Marking incomplete → leave as-is; user can re-edit to set new reminders.
+    if (!currentlyCompleted) {
+      await NotificationService.instance.cancelTaskReminders(id);
+    }
   }
 }
 
