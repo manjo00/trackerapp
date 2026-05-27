@@ -20,14 +20,11 @@ subprojects {
 }
 
 // Force all plugin subprojects (e.g. flutter_timezone) to use the same
-// JVM target as the app so Gradle doesn't complain about a mismatch between
-// the Java compile task (11) and the Kotlin compile task (1.8).
+// JVM target as the app. configureEach is lazy — no afterEvaluate needed.
 subprojects {
-    afterEvaluate {
-        tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
-            compilerOptions {
-                jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
-            }
+    tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
         }
     }
 }
