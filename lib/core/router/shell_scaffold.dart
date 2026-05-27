@@ -67,6 +67,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         1 => 'Habits',
         2 => 'Tasks',
         3 => 'Planner',
+        4 => 'Trackers',
         _ => 'Life Tracker',
       };
 

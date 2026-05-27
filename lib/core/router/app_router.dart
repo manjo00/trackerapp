@@ -9,6 +9,12 @@ import '../../features/tasks/presentation/screens/add_task_screen.dart';
 import '../../features/planner/presentation/screens/planner_screen.dart';
 import '../../features/settings/presentation/screens/settings_screen.dart';
 import '../../features/today/presentation/screens/today_screen.dart';
+import '../../features/trackers/data/models/tracker_item_model.dart';
+import '../../features/trackers/data/models/tracker_model.dart';
+import '../../features/trackers/presentation/screens/trackers_screen.dart';
+import '../../features/trackers/presentation/screens/add_tracker_screen.dart';
+import '../../features/trackers/presentation/screens/tracker_detail_screen.dart';
+import '../../features/trackers/presentation/screens/log_entry_screen.dart';
 import 'shell_scaffold.dart';
 
 /// The single [GoRouter] instance for the whole app.
@@ -20,9 +26,13 @@ import 'shell_scaffold.dart';
 ///    /habits            ← HabitListScreen  (index 1)
 ///    /tasks             ← TaskListScreen   (index 2)
 ///    /planner           ← PlannerScreen    (index 3, placeholder)
+///    /trackers          ← TrackersScreen   (index 4)
 ///
-///  /habits/add          ← AddHabitScreen  (outside shell — hides bottom nav)
-///  /tasks/add           ← AddTaskScreen   (outside shell — hides bottom nav)
+///  /habits/add          ← AddHabitScreen        (outside shell)
+///  /tasks/add           ← AddTaskScreen          (outside shell)
+///  /trackers/add        ← AddTrackerScreen       (outside shell)
+///  /trackers/:id        ← TrackerDetailScreen    (outside shell)
+///  /trackers/:id/log    ← LogEntryScreen         (outside shell)
 /// ```
 final GoRouter appRouter = GoRouter(
   initialLocation: '/today',
@@ -82,6 +92,18 @@ final GoRouter appRouter = GoRouter(
             ),
           ],
         ),
+
+        // Branch 4 — Trackers
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: '/trackers',
+              pageBuilder: (context, state) => const NoTransitionPage(
+                child: TrackersScreen(),
+              ),
+            ),
+          ],
+        ),
       ],
     ),
 
@@ -120,6 +142,53 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) => AddHabitScreen(
         habit: state.extra as HabitModel?,
       ),
+    ),
+
+    // ── Tracker routes (full-screen, no bottom nav) ───────────────────────
+
+    GoRoute(
+      path: '/trackers/add',
+      builder: (context, state) => const AddTrackerScreen(),
+    ),
+
+    GoRoute(
+      path: '/trackers/:id',
+      builder: (context, state) {
+        final int trackerId = int.parse(state.pathParameters['id']!);
+        final extra = state.extra as Map<String, dynamic>? ?? {};
+        final typeRaw = extra['trackerType'];
+        final trackerType = typeRaw is TrackerType
+            ? typeRaw
+            : TrackerType.dailyChecklist;
+        return TrackerDetailScreen(
+          trackerId: trackerId,
+          trackerName: extra['name'] as String? ?? '',
+          trackerIcon: extra['icon'] as String? ?? '📋',
+          trackerType: trackerType,
+        );
+      },
+    ),
+
+    GoRoute(
+      path: '/trackers/:id/log',
+      builder: (context, state) {
+        final int trackerId = int.parse(state.pathParameters['id']!);
+        final extra = state.extra as Map<String, dynamic>? ?? {};
+        final items =
+            (extra['items'] as List<TrackerItemModel>?) ?? const [];
+        final typeRaw = extra['trackerType'];
+        final trackerType = typeRaw is TrackerType
+            ? typeRaw
+            : TrackerType.dailyChecklist;
+        return LogEntryScreen(
+          trackerId: trackerId,
+          trackerName: extra['name'] as String? ?? '',
+          trackerIcon: extra['icon'] as String? ?? '📋',
+          items: items,
+          trackerType: trackerType,
+          preChecked: extra['checkedItemIds'] as Set<int>?,
+        );
+      },
     ),
   ],
 );

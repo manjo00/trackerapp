@@ -8,6 +8,11 @@ import '../../features/habits/data/tables/habit_completions_table.dart';
 import '../../features/habits/data/tables/habits_table.dart';
 import '../../features/tasks/data/dao/tasks_dao.dart';
 import '../../features/tasks/data/tables/tasks_table.dart';
+import '../../features/trackers/data/dao/trackers_dao.dart';
+import '../../features/trackers/data/tables/custom_trackers_table.dart';
+import '../../features/trackers/data/tables/tracker_items_table.dart';
+import '../../features/trackers/data/tables/tracker_log_values_table.dart';
+import '../../features/trackers/data/tables/tracker_logs_table.dart';
 
 part 'app_database.g.dart';
 
@@ -20,8 +25,16 @@ part 'app_database.g.dart';
 /// 4. Bump [schemaVersion] and add a migration step in [migration]
 /// 5. Run `dart run build_runner build --delete-conflicting-outputs`
 @DriftDatabase(
-  tables: [Habits, HabitCompletions, Tasks],
-  daos: [HabitsDao, TasksDao],
+  tables: [
+    Habits,
+    HabitCompletions,
+    Tasks,
+    CustomTrackers,
+    TrackerItems,
+    TrackerLogs,
+    TrackerLogValues,
+  ],
+  daos: [HabitsDao, TasksDao, TrackersDao],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
@@ -33,29 +46,29 @@ class AppDatabase extends _$AppDatabase {
   ///
   /// v1 → initial schema (habits, habit_completions)
   /// v2 → added tasks table
+  /// v3 → added custom_trackers, tracker_items, tracker_logs, tracker_log_values
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
-  /// Drift calls this when an existing device upgrades from an older version.
-  ///
-  /// Each `if (from < N)` block is additive — a device jumping from v1 to v3
-  /// would run all intermediate blocks in order.
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (Migrator m) async {
-          // Fresh install — create all tables at once.
           await m.createAll();
         },
         onUpgrade: (Migrator m, int from, int to) async {
           if (from < 2) {
-            // Added in v2: tasks table.
             await m.createTable(tasks);
+          }
+          if (from < 3) {
+            await m.createTable(customTrackers);
+            await m.createTable(trackerItems);
+            await m.createTable(trackerLogs);
+            await m.createTable(trackerLogValues);
           }
         },
       );
 }
 
-/// Builds the [NativeDatabase] pointing at the SQLite file on device.
 LazyDatabase _openConnection() {
   return LazyDatabase(() async {
     final Directory dir = await getApplicationDocumentsDirectory();
