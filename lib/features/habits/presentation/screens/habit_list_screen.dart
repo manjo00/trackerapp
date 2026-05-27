@@ -29,6 +29,10 @@ class HabitListScreen extends ConsumerWidget {
         title: const Text('Habits'),
       ),
       body: habitsAsync.when(
+        // skipLoadingOnReload: when the provider is refreshed after a toggle,
+        // keep showing the current list instead of flashing a spinner.
+        skipLoadingOnReload: true,
+
         // ── Loading ──────────────────────────────────────────────────────
         loading: () => const Center(child: CircularProgressIndicator()),
 

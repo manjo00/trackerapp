@@ -76,5 +76,10 @@ class ToggleCompletion extends _$ToggleCompletion {
     state = await AsyncValue.guard(
       () => ref.read(habitsRepositoryProvider).toggleCompletion(habitId),
     );
+    // The habits stream only watches the `habits` table, but a toggle writes
+    // to `habit_completions` — a different table — so Drift's stream never
+    // re-emits on its own. Invalidating the provider forces Riverpod to
+    // resubscribe and get the fresh data immediately.
+    ref.invalidate(habitsWithStatusProvider);
   }
 }
