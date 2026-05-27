@@ -74,29 +74,36 @@ class NotificationService {
   // ── Schedule ──────────────────────────────────────────────────────────────
 
   /// Schedules (or replaces) the daily reminder at [time] every day.
-  Future<void> scheduleDailyReminder(TimeOfDay time) async {
-    await _plugin.zonedSchedule(
-      _dailyReminderId,
-      'Life Tracker',
-      'Time to check your habits and tasks for today 🎯',
-      _nextInstanceOf(time),
-      NotificationDetails(
-        android: AndroidNotificationDetails(
-          _channel.id,
-          _channel.name,
-          channelDescription: _channel.description,
-          importance: Importance.defaultImportance,
-          priority: Priority.defaultPriority,
+  /// Returns false if scheduling failed (e.g. permission denied) so the
+  /// caller can react without crashing.
+  Future<bool> scheduleDailyReminder(TimeOfDay time) async {
+    try {
+      await _plugin.zonedSchedule(
+        _dailyReminderId,
+        'Life Tracker',
+        'Time to check your habits and tasks for today 🎯',
+        _nextInstanceOf(time),
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            _channel.id,
+            _channel.name,
+            channelDescription: _channel.description,
+            importance: Importance.defaultImportance,
+            priority: Priority.defaultPriority,
+          ),
         ),
-      ),
-      // inexactAllowWhileIdle: fires within a few minutes of the target time.
-      // No extra system permission needed — unlike exactAllowWhileIdle.
-      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.wallClockTime,
-      // Repeat daily at the same hour and minute.
-      matchDateTimeComponents: DateTimeComponents.time,
-    );
+        // inexactAllowWhileIdle: fires within a few minutes of the target
+        // time. No extra system permission needed.
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.wallClockTime,
+        // Repeat daily at the same hour and minute.
+        matchDateTimeComponents: DateTimeComponents.time,
+      );
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   /// Cancels the daily reminder.
