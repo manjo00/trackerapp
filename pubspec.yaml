@@ -49,9 +49,6 @@ dependencies:
   # Required by flutter_local_notifications for timezone-aware scheduling
   # (so "9 AM" means 9 AM in the user's local timezone, not UTC).
   timezone: ^0.9.4
-  # Detects the device's IANA timezone name (e.g. "Asia/Riyadh").
-  # The timezone package needs this to set tz.local correctly.
-  flutter_timezone: ^1.0.8
 
   # --- Utilities ---
   # Date formatting — turns DateTime into readable strings like "2026-05-26".

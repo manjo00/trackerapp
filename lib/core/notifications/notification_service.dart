@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -45,10 +44,17 @@ class NotificationService {
     // 1. Load all timezone definitions.
     tz.initializeTimeZones();
 
-    // 2. Detect the device's local timezone (e.g. "Asia/Riyadh") and apply it
-    //    so that tz.local matches the user's clock, not UTC.
-    final String localTzName = await FlutterTimezone.getLocalTimezone();
-    tz.setLocalLocation(tz.getLocation(localTzName));
+    // 2. Detect the device's local timezone and apply it so that tz.local
+    //    matches the user's clock, not UTC.
+    //    On Android, DateTime.timeZoneName returns an IANA id ("Asia/Riyadh").
+    //    We wrap in try/catch so an unrecognised name falls back to UTC
+    //    rather than crashing.
+    try {
+      final String localTzName = DateTime.now().timeZoneName;
+      tz.setLocalLocation(tz.getLocation(localTzName));
+    } catch (_) {
+      // Falls back to UTC — notification fires at the right UTC time.
+    }
 
     // 3. Configure the plugin.
     const AndroidInitializationSettings androidSettings =
