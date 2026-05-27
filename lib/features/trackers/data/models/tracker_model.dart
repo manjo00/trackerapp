@@ -30,5 +30,11 @@ abstract class TrackerModel with _$TrackerModel {
     required String icon,
     required int colorValue,
     required DateTime createdAt,
+    /// Whether a daily reminder notification is enabled for this tracker.
+    @Default(false) bool reminderEnabled,
+    /// Reminder time as "HH:mm", e.g. "20:00". Null = not configured.
+    String? reminderTime,
+    /// When true this row is a saved template, not an active tracker.
+    @Default(false) bool isTemplate,
   }) = _TrackerModel;
 }

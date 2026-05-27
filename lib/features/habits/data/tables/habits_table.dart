@@ -23,4 +23,12 @@ class Habits extends Table {
 
   /// How many days per week the user wants to hit this habit (1–7).
   IntColumn get targetPerWeek => integer().withDefault(const Constant(7))();
+
+  /// Whether a daily reminder is scheduled for this habit.
+  BoolColumn get reminderEnabled =>
+      boolean().withDefault(const Constant(false))();
+
+  /// Time-of-day for the reminder, stored as "HH:mm" (e.g. "07:00").
+  /// NULL means no time has been set (reminder won't fire even if enabled).
+  TextColumn get reminderTime => text().nullable()();
 }

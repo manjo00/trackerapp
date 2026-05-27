@@ -61,15 +61,21 @@ class TasksRepository {
     String title, {
     String? note,
     String? dueDate,
+    String? dueTime,
     TaskPriority priority = TaskPriority.medium,
+    bool reminderEnabled = false,
+    String? reminderLeadTimes,
   }) async {
     await _dao.insertTask(
       TasksCompanion(
         title: Value(title.trim()),
         note: Value(note?.trim()),
         dueDate: Value(dueDate),
+        dueTime: Value(dueTime),
         priority: Value(priority.toInt()),
         createdAt: Value(DateTime.now()),
+        reminderEnabled: Value(reminderEnabled),
+        reminderLeadTimes: Value(reminderLeadTimes),
       ),
     );
   }
@@ -84,7 +90,8 @@ class TasksRepository {
     );
   }
 
-  /// Updates an existing task's editable fields (title, note, due date, priority).
+  /// Updates an existing task's editable fields (title, note, due date,
+  /// due time, priority, and reminder settings).
   Future<void> updateTask(TaskModel task) async {
     await _dao.updateTask(
       TasksCompanion(
@@ -92,9 +99,18 @@ class TasksRepository {
         title: Value(task.title.trim()),
         note: Value(task.note?.trim()),
         dueDate: Value(task.dueDate),
+        dueTime: Value(task.dueTime),
         priority: Value(task.priority.toInt()),
+        reminderEnabled: Value(task.reminderEnabled),
+        reminderLeadTimes: Value(task.reminderLeadTimes),
       ),
     );
+  }
+
+  /// Returns all tasks as a one-shot list (used by rescheduleAll in app.dart).
+  Future<List<TaskModel>> getAllTasks() async {
+    final rows = await _dao.getAllTasks();
+    return rows.map(_fromRow).toList();
   }
 
   /// Permanently deletes a task.
@@ -146,8 +162,11 @@ class TasksRepository {
         title: row.title,
         note: row.note,
         dueDate: row.dueDate,
+        dueTime: row.dueTime,
         priority: TaskPriority.fromInt(row.priority),
         isCompleted: row.isCompleted,
         createdAt: row.createdAt,
+        reminderEnabled: row.reminderEnabled,
+        reminderLeadTimes: row.reminderLeadTimes,
       );
 }

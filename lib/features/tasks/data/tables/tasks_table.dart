@@ -34,4 +34,17 @@ class Tasks extends Table {
 
   /// When this task was created (UTC).
   DateTimeColumn get createdAt => dateTime()();
+
+  /// Optional specific time of day the task is due, stored as "HH:mm".
+  /// When null, "09:00" is used as the default for notification scheduling.
+  TextColumn get dueTime => text().nullable()();
+
+  /// Whether reminders are enabled for this task.
+  BoolColumn get reminderEnabled =>
+      boolean().withDefault(const Constant(false))();
+
+  /// Comma-separated lead-time intervals in minutes, e.g. "1440,180,5"
+  /// means 1 day before, 3 hours before, and 5 minutes before the due time.
+  /// NULL means no lead times selected.
+  TextColumn get reminderLeadTimes => text().nullable()();
 }

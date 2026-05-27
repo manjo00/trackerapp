@@ -88,6 +88,9 @@ class TrackersRepository {
     required String icon,
     required int colorValue,
     required List<(String, FieldType)> items,
+    bool reminderEnabled = false,
+    String? reminderTime,
+    bool isTemplate = false,
   }) async {
     final int id = await _dao.insertTracker(
       CustomTrackersCompanion(
@@ -97,6 +100,9 @@ class TrackersRepository {
         icon: Value(icon),
         colorValue: Value(colorValue),
         createdAt: Value(DateTime.now()),
+        reminderEnabled: Value(reminderEnabled),
+        reminderTime: Value(reminderTime),
+        isTemplate: Value(isTemplate),
       ),
     );
 
@@ -180,7 +186,26 @@ class TrackersRepository {
   Future<void> deleteLog(int logId) => _dao.deleteLog(logId);
   Future<void> deleteTracker(int id) => _dao.deleteTracker(id);
 
+  /// One-shot list of all trackers — used by rescheduleAll on app start.
+  Future<List<TrackerModel>> getAllTrackers() async {
+    final rows = await _dao.getAllTrackers();
+    return rows.map(_trackerFromRow).toList();
+  }
+
   // ── Private converters ────────────────────────────────────────────────────
+
+  TrackerModel _trackerFromRow(CustomTracker row) => TrackerModel(
+        id: row.id,
+        name: row.name,
+        description: row.description,
+        type: TrackerType.fromString(row.templateType),
+        icon: row.icon,
+        colorValue: row.colorValue,
+        createdAt: row.createdAt,
+        reminderEnabled: row.reminderEnabled,
+        reminderTime: row.reminderTime,
+        isTemplate: row.isTemplate,
+      );
 
   TrackerItemModel _itemFromRow(TrackerItem row) => TrackerItemModel(
         id: row.id,

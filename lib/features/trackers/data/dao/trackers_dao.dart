@@ -23,6 +23,10 @@ class TrackersDao extends DatabaseAccessor<AppDatabase>
   Future<int> insertTracker(CustomTrackersCompanion companion) =>
       into(customTrackers).insert(companion);
 
+  /// One-shot fetch of all trackers — used by rescheduleAll on app start.
+  Future<List<CustomTracker>> getAllTrackers() =>
+      select(customTrackers).get();
+
   Future<void> deleteTracker(int id) =>
       (delete(customTrackers)..where((t) => t.id.equals(id))).go();
 

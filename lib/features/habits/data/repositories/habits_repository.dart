@@ -98,12 +98,19 @@ class HabitsRepository {
   // ── Write operations ──────────────────────────────────────────────────────
 
   /// Adds a new habit.  [targetPerWeek] defaults to 7 (every day).
-  Future<void> addHabit(String name, {int targetPerWeek = 7}) async {
+  Future<void> addHabit(
+    String name, {
+    int targetPerWeek = 7,
+    bool reminderEnabled = false,
+    String? reminderTime,
+  }) async {
     await _dao.insertHabit(
       HabitsCompanion(
         name: Value(name.trim()),
         createdAt: Value(DateTime.now()),
         targetPerWeek: Value(targetPerWeek),
+        reminderEnabled: Value(reminderEnabled),
+        reminderTime: Value(reminderTime),
       ),
     );
   }
@@ -129,15 +136,23 @@ class HabitsRepository {
     }
   }
 
-  /// Updates a habit's name and target-per-week.
+  /// Updates a habit's name, target-per-week, and reminder settings.
   Future<void> updateHabit(HabitModel habit) async {
     await _dao.updateHabit(
       HabitsCompanion(
         id: Value(habit.id),
         name: Value(habit.name.trim()),
         targetPerWeek: Value(habit.targetPerWeek),
+        reminderEnabled: Value(habit.reminderEnabled),
+        reminderTime: Value(habit.reminderTime),
       ),
     );
+  }
+
+  /// Returns all habits as a one-shot list (used by rescheduleAll in app.dart).
+  Future<List<HabitModel>> getAllHabits() async {
+    final rows = await _dao.getAllHabits();
+    return rows.map(_habitFromRow).toList();
   }
 
   /// Permanently deletes a habit and all its completions.
@@ -191,6 +206,8 @@ class HabitsRepository {
         name: row.name,
         createdAt: row.createdAt,
         targetPerWeek: row.targetPerWeek,
+        reminderEnabled: row.reminderEnabled,
+        reminderTime: row.reminderTime,
       );
 
   HabitCompletionModel _completionFromRow(HabitCompletion row) =>

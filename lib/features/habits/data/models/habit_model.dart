@@ -19,5 +19,10 @@ abstract class HabitModel with _$HabitModel {
     required String name,
     required DateTime createdAt,
     required int targetPerWeek,
+    /// Whether a daily reminder notification is scheduled for this habit.
+    @Default(false) bool reminderEnabled,
+    /// Time-of-day for the reminder as "HH:mm", e.g. "07:00".
+    /// Null means no time has been configured yet.
+    String? reminderTime,
   }) = _HabitModel;
 }

@@ -68,6 +68,9 @@ class TasksDao extends DatabaseAccessor<AppDatabase> with _$TasksDaoMixin {
         .watch();
   }
 
+  /// All tasks as a one-shot list (used by rescheduleAll on app start).
+  Future<List<Task>> getAllTasks() => select(tasks).get();
+
   // ── Writes ────────────────────────────────────────────────────────────────
 
   /// Inserts a new task row and returns its auto-assigned id.

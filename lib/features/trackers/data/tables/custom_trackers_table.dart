@@ -26,4 +26,16 @@ class CustomTrackers extends Table {
   IntColumn get colorValue => integer()();
 
   DateTimeColumn get createdAt => dateTime()();
+
+  /// Whether a daily reminder is scheduled for this tracker.
+  BoolColumn get reminderEnabled =>
+      boolean().withDefault(const Constant(false))();
+
+  /// Time-of-day for the reminder, stored as "HH:mm" (e.g. "20:00").
+  TextColumn get reminderTime => text().nullable()();
+
+  /// When true, this row acts as a saved template (not an active tracker).
+  /// Templates appear in the template picker but not in the progress list.
+  BoolColumn get isTemplate =>
+      boolean().withDefault(const Constant(false))();
 }
