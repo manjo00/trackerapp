@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../../core/notifications/notification_service.dart';
 import '../../../../../core/settings/app_settings.dart';
 import '../../../../../core/settings/settings_provider.dart';
 
@@ -102,6 +103,29 @@ class SettingsScreen extends ConsumerWidget {
                 }
               },
             ),
+
+          // Test button — fires a notification immediately so the user can
+          // verify that permission is granted and the channel is working.
+          ListTile(
+            leading: Icon(
+              Icons.send_rounded,
+              color: cs.primary,
+            ),
+            title: const Text('Send test notification'),
+            subtitle: const Text(
+                'Fires right now — use this to confirm notifications work'),
+            onTap: () async {
+              await NotificationService.instance.showTestNotification();
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Test notification sent — check your status bar!'),
+                    duration: Duration(seconds: 3),
+                  ),
+                );
+              }
+            },
+          ),
 
           const Divider(indent: 16, endIndent: 16),
 

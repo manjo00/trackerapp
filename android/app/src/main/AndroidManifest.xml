@@ -3,6 +3,11 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Re-schedule notifications after a device reboot. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Exact alarms: auto-granted on API 31-32; user must enable in
+         Special App Access > Alarms & Reminders on API 33+.
+         canScheduleExactAlarms() is checked at runtime; we fall back to
+         inexact when this permission is not granted. -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 
     <application
         android:label="life_tracker"

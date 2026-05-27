@@ -17,6 +17,7 @@ import '../../features/trackers/data/models/tracker_model.dart';
 /// | 10 000 + id×3 + 1  | Task — 3 hours before                            |
 /// | 10 000 + id×3 + 2  | Task — 5 minutes before                          |
 /// | 30 000 + trackerId | Tracker daily reminders                          |
+/// | 999                | Test notification (transient, never persisted)   |
 ///
 /// ## Timezone fix
 /// `flutter_timezone` (the native plugin) is incompatible with Flutter 3's
@@ -24,20 +25,23 @@ import '../../features/trackers/data/models/tracker_model.dart';
 /// the target local time by reading `DateTime.now().timeZoneOffset`.
 /// This is 100% portable and needs no native code.
 ///
-/// ## Why inexact alarms
-/// Android 12+ requires an explicit system-settings grant for exact alarms
-/// (`SCHEDULE_EXACT_ALARM`). Without the grant, exact alarms fail silently.
-/// Inexact alarms need no extra permission and fire within a few minutes —
-/// perfectly adequate for reminders.
+/// ## Exact vs inexact alarms
+/// Exact alarms (`exactAllowWhileIdle`) are far more reliable but require
+/// `SCHEDULE_EXACT_ALARM` permission. On API 31–32 this is auto-granted; on
+/// API 33+ the user must enable it in Special App Access.
+/// [init] checks [canScheduleExactAlarms()] and stores the result in
+/// [_canUseExact]. All schedule calls use [_scheduleMode] so they
+/// automatically use the best mode available.
 class NotificationService {
   NotificationService._();
   static final NotificationService instance = NotificationService._();
 
   // ── Notification IDs ───────────────────────────────────────────────────────
   static const int _dailyReminderId = 0;
-  static int _habitId(int habitId) => habitId;                      // 1–9999
-  static int _taskId(int taskId, int slot) => 10000 + taskId * 3 + slot; // 0/1/2
+  static int _habitId(int habitId) => habitId;                       // 1–9999
+  static int _taskId(int taskId, int slot) => 10000 + taskId * 3 + slot;
   static int _trackerId(int trackerId) => 30000 + trackerId;
+  static const int _testId = 999;
 
   // ── Channels ───────────────────────────────────────────────────────────────
   static const AndroidNotificationChannel _globalChannel =
@@ -59,6 +63,15 @@ class NotificationService {
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
 
+  /// True when [SCHEDULE_EXACT_ALARM] is granted on the device.
+  /// Set once in [init]; read everywhere via [_scheduleMode].
+  bool _canUseExact = false;
+
+  /// Best scheduling mode available on this device.
+  AndroidScheduleMode get _scheduleMode => _canUseExact
+      ? AndroidScheduleMode.exactAllowWhileIdle
+      : AndroidScheduleMode.inexactAllowWhileIdle;
+
   // ── Initialisation ────────────────────────────────────────────────────────
 
   /// Must be called once in [main] before [runApp].
@@ -79,7 +92,38 @@ class NotificationService {
 
     await android?.createNotificationChannel(_globalChannel);
     await android?.createNotificationChannel(_itemChannel);
-    await android?.requestNotificationsPermission();
+
+    // Request POST_NOTIFICATIONS permission (Android 13+).
+    final bool? granted = await android?.requestNotificationsPermission();
+    debugPrint('[Notifications] POST_NOTIFICATIONS granted: $granted');
+
+    // Check exact-alarm availability and store for all schedule calls.
+    // On API 31-32 this is auto-granted; on API 33+ the user must enable
+    // "Alarms & Reminders" for this app in Special App Access.
+    _canUseExact = await android?.canScheduleExactNotifications() ?? false;
+    debugPrint('[Notifications] canScheduleExactNotifications: $_canUseExact');
+  }
+
+  // ── Test notification ─────────────────────────────────────────────────────
+
+  /// Fires an immediate notification to verify permission + channels work.
+  /// Call from Settings → "Send test notification".
+  Future<void> showTestNotification() async {
+    debugPrint('[Notifications] Sending test notification immediately');
+    await _plugin.show(
+      _testId,
+      'Life Tracker',
+      'Notifications are working! 🎉',
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          _itemChannel.id,
+          _itemChannel.name,
+          channelDescription: _itemChannel.description,
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+      ),
+    );
   }
 
   // ── Global daily reminder ──────────────────────────────────────────────────
@@ -87,11 +131,13 @@ class NotificationService {
   /// Schedules (or replaces) the global daily reminder at [time] every day.
   Future<bool> scheduleDailyReminder(TimeOfDay time) async {
     try {
+      final target = _nextDailyUtc(time);
+      debugPrint('[Notifications] Scheduling global reminder at $target (mode: $_scheduleMode)');
       await _plugin.zonedSchedule(
         _dailyReminderId,
         'Life Tracker',
         'Time to check your habits and tasks for today 🎯',
-        _nextDailyUtc(time),
+        target,
         NotificationDetails(
           android: AndroidNotificationDetails(
             _globalChannel.id,
@@ -101,13 +147,14 @@ class NotificationService {
             priority: Priority.defaultPriority,
           ),
         ),
-        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        androidScheduleMode: _scheduleMode,
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.wallClockTime,
         matchDateTimeComponents: DateTimeComponents.time,
       );
       return true;
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('[Notifications] scheduleDailyReminder failed: $e\n$st');
       return false;
     }
   }
@@ -169,11 +216,12 @@ class NotificationService {
     final List<int> leadTimes = task.leadTimeMinutes;
     if (leadTimes.isEmpty) return false;
 
-    // Parse due date + time.  Fall back to 09:00 when no dueTime is set.
+    // Parse due date + time. Fall back to 09:00 when no dueTime is set.
     DateTime due;
     try {
       due = DateTime.parse(task.dueDate!);
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[Notifications] Invalid dueDate "${task.dueDate}": $e');
       return false;
     }
 
@@ -190,12 +238,15 @@ class NotificationService {
       final DateTime fireTime =
           due.subtract(Duration(minutes: leadTimes[slot]));
 
-      // Skip if already in the past.
-      if (fireTime.isBefore(DateTime.now())) continue;
+      if (fireTime.isBefore(DateTime.now())) {
+        debugPrint('[Notifications] Task ${task.id} slot $slot is in the past, skipping');
+        continue;
+      }
 
       final String leadLabel = _leadLabel(leadTimes[slot]);
 
       try {
+        debugPrint('[Notifications] Scheduling task ${task.id} slot $slot at $fireTime');
         await _plugin.zonedSchedule(
           _taskId(task.id, slot),
           task.title,
@@ -210,14 +261,14 @@ class NotificationService {
               priority: Priority.high,
             ),
           ),
-          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          androidScheduleMode: _scheduleMode,
           uiLocalNotificationDateInterpretation:
               UILocalNotificationDateInterpretation.wallClockTime,
           // One-shot — no matchDateTimeComponents.
         );
         anyScheduled = true;
-      } catch (_) {
-        // Skip this slot but continue with others.
+      } catch (e, st) {
+        debugPrint('[Notifications] scheduleTaskReminders slot $slot failed: $e\n$st');
       }
     }
     return anyScheduled;
@@ -230,16 +281,16 @@ class NotificationService {
     }
   }
 
-  // ── Reschedule on app start (handles OS reboot clearing notifications) ─────
+  // ── Reschedule on app start ───────────────────────────────────────────────
 
   /// Re-schedules every currently-enabled reminder across habits, tasks, and
-  /// trackers.  Called once in [main] after [init] and after the database is
-  /// ready.  Cheap to run because it only writes notifications, not DB rows.
+  /// trackers. Called once in [app.dart] after init.
   Future<void> rescheduleAll({
     required List<HabitModel> habits,
     required List<TaskModel> tasks,
     required List<TrackerModel> trackers,
   }) async {
+    debugPrint('[Notifications] rescheduleAll — habits:${habits.length} tasks:${tasks.length} trackers:${trackers.length}');
     for (final h in habits) {
       if (h.reminderEnabled) await scheduleHabitReminder(h);
     }
@@ -263,11 +314,13 @@ class NotificationService {
     required TimeOfDay time,
   }) async {
     try {
+      final target = _nextDailyUtc(time);
+      debugPrint('[Notifications] _scheduleDaily id=$id at $target (mode: $_scheduleMode)');
       await _plugin.zonedSchedule(
         id,
         title,
         body,
-        _nextDailyUtc(time),
+        target,
         NotificationDetails(
           android: AndroidNotificationDetails(
             _itemChannel.id,
@@ -277,31 +330,30 @@ class NotificationService {
             priority: Priority.high,
           ),
         ),
-        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        androidScheduleMode: _scheduleMode,
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.wallClockTime,
         matchDateTimeComponents: DateTimeComponents.time,
       );
       return true;
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('[Notifications] _scheduleDaily id=$id failed: $e\n$st');
       return false;
     }
   }
 
   /// Returns the next UTC [tz.TZDateTime] at which local-time [time] occurs.
   ///
-  /// We avoid `tz.local` (which defaults to UTC and requires a native plugin
-  /// to detect correctly). Instead we compute: UTC_fire = local_time - offset.
+  /// We avoid `tz.local` (defaults to UTC; requires a native plugin to detect
+  /// correctly). Instead: UTC_fire = local_time − device_offset.
   /// If the result is already in the past, add 24 hours.
   tz.TZDateTime _nextDailyUtc(TimeOfDay time) {
     final Duration offset = DateTime.now().timeZoneOffset;
     final tz.TZDateTime nowUtc = tz.TZDateTime.now(tz.UTC);
 
-    // Local fire time expressed in UTC.
     int utcHour = time.hour - offset.inHours;
     int utcMinute = time.minute - offset.inMinutes.remainder(60);
 
-    // Normalise minute overflow/underflow.
     if (utcMinute < 0) {
       utcMinute += 60;
       utcHour -= 1;
@@ -309,7 +361,6 @@ class NotificationService {
       utcMinute -= 60;
       utcHour += 1;
     }
-    // Normalise hour (0–23).
     utcHour = utcHour % 24;
 
     tz.TZDateTime target = tz.TZDateTime(
@@ -321,10 +372,11 @@ class NotificationService {
     if (target.isBefore(nowUtc)) {
       target = target.add(const Duration(days: 1));
     }
+    debugPrint('[Notifications] _nextDailyUtc: local=${time.hour}:${time.minute} offset=$offset → UTC target=$target');
     return target;
   }
 
-  /// Converts a plain [DateTime] (local) to a UTC [tz.TZDateTime].
+  /// Converts a plain local [DateTime] to a UTC [tz.TZDateTime].
   tz.TZDateTime _toTzUtc(DateTime localDt) {
     final utcDt = localDt.toUtc();
     return tz.TZDateTime(
