@@ -38,6 +38,18 @@ class TasksDao extends DatabaseAccessor<AppDatabase> with _$TasksDaoMixin {
         .watch();
   }
 
+  /// All tasks due on [date] (any completion state), ordered by
+  /// completion ascending (incomplete first) then priority descending.
+  Stream<List<Task>> watchTasksForDate(String date) {
+    return (select(tasks)
+          ..where((t) => t.dueDate.equals(date))
+          ..orderBy([
+            (t) => OrderingTerm.asc(t.isCompleted),
+            (t) => OrderingTerm.desc(t.priority),
+          ]))
+        .watch();
+  }
+
   // ── Writes ────────────────────────────────────────────────────────────────
 
   /// Inserts a new task row and returns its auto-assigned id.

@@ -71,10 +71,14 @@ class ToggleCompletion extends _$ToggleCompletion {
   @override
   Future<void> build() async {}
 
-  Future<void> toggle(int habitId) async {
+  /// Toggles completion for [habitId] on [date] (defaults to today).
+  /// Passing [date] lets the planner toggle any date.
+  Future<void> toggle(int habitId, {String? date}) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(
-      () => ref.read(habitsRepositoryProvider).toggleCompletion(habitId),
+      () => ref
+          .read(habitsRepositoryProvider)
+          .toggleCompletion(habitId, date: date),
     );
     // The habits stream only watches the `habits` table, but a toggle writes
     // to `habit_completions` — a different table — so Drift's stream never

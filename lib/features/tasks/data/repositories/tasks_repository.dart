@@ -37,6 +37,14 @@ class TasksRepository {
         );
   }
 
+  /// All tasks due on a specific [date], sorted by completion + priority.
+  /// Used by the planner day-detail view.
+  Stream<List<TaskModel>> watchTasksForDate(String date) {
+    return _dao.watchTasksForDate(date).map(
+          (rows) => rows.map(_fromRow).toList(),
+        );
+  }
+
   // ── Write operations ──────────────────────────────────────────────────────
 
   /// Creates a new task.

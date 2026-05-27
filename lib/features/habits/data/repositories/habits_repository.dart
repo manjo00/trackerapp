@@ -68,6 +68,33 @@ class HabitsRepository {
     });
   }
 
+  /// Watches habits with their done/undone status for a specific [date].
+  ///
+  /// Unlike [watchHabitsWithStatus] (which uses today), this works for any
+  /// past, present, or future date — useful for the planner tab.
+  ///
+  /// Driven by [watchAllCompletions] so it re-emits whenever any completion
+  /// row changes, regardless of which habit or date was toggled.
+  Stream<List<HabitWithStatus>> watchHabitsForDate(String date) {
+    return _dao.watchAllCompletions().asyncMap((_) async {
+      final List<Habit> rawHabits = await _dao.getAllHabits();
+      final List<HabitWithStatus> result = [];
+
+      for (final Habit raw in rawHabits) {
+        final bool isDone = await _dao.isCompletedOn(raw.id, date);
+        result.add(
+          HabitWithStatus(
+            habit: _habitFromRow(raw),
+            isDoneToday: isDone, // means "isDoneOnDate" in planner context
+            streak: 0,           // streak not shown in planner view
+          ),
+        );
+      }
+
+      return result;
+    });
+  }
+
   // ── Write operations ──────────────────────────────────────────────────────
 
   /// Adds a new habit.  [targetPerWeek] defaults to 7 (every day).
@@ -81,20 +108,22 @@ class HabitsRepository {
     );
   }
 
-  /// Toggles today's completion for [habitId]:
-  ///   - If not completed today → inserts a completion row.
-  ///   - If already completed today → deletes the completion row.
-  Future<void> toggleCompletion(int habitId) async {
-    final String today = _dateStr(DateTime.now());
-    final bool alreadyDone = await _dao.isCompletedOn(habitId, today);
+  /// Toggles a habit's completion for [date] (defaults to today).
+  ///   - If not completed → inserts a completion row.
+  ///   - If already completed → deletes the completion row.
+  ///
+  /// Passing an explicit [date] lets the planner toggle past or future dates.
+  Future<void> toggleCompletion(int habitId, {String? date}) async {
+    final String targetDate = date ?? _dateStr(DateTime.now());
+    final bool alreadyDone = await _dao.isCompletedOn(habitId, targetDate);
 
     if (alreadyDone) {
-      await _dao.deleteCompletion(habitId, today);
+      await _dao.deleteCompletion(habitId, targetDate);
     } else {
       await _dao.insertCompletion(
         HabitCompletionsCompanion(
           habitId: Value(habitId),
-          date: Value(today),
+          date: Value(targetDate),
         ),
       );
     }

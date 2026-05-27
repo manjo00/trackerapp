@@ -72,6 +72,21 @@ class HabitsDao extends DatabaseAccessor<AppDatabase> with _$HabitsDaoMixin {
             ))
           .go();
 
+  /// Returns all habits as a one-shot [Future].
+  /// Used by the planner to compute date-specific status without a stream.
+  Future<List<Habit>> getAllHabits() {
+    return (select(habits)
+          ..orderBy([(h) => OrderingTerm.asc(h.createdAt)]))
+        .get();
+  }
+
+  /// Stream of every completion row across all habits.
+  /// The planner watches this so its date views update whenever any
+  /// completion changes (insert or delete).
+  Stream<List<HabitCompletion>> watchAllCompletions() {
+    return select(habitCompletions).watch();
+  }
+
   /// Returns true if [habitId] has a completion row for [date].
   Future<bool> isCompletedOn(int habitId, String date) async {
     final row = await (select(habitCompletions)

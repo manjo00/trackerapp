@@ -7,11 +7,18 @@ import '../providers/tasks_providers.dart';
 /// Full-screen form for creating a new task.
 ///
 /// Pushed from [TaskListScreen]'s FAB via `context.push('/tasks/add')`.
+/// Also reachable from the planner via long-press on a day column, which
+/// passes [initialDate] so the due-date field is pre-filled.
+///
 /// Lives outside the [StatefulShellRoute] so the bottom nav is hidden.
 ///
 /// Fields: title (required) · note (optional) · due date · priority.
 class AddTaskScreen extends ConsumerStatefulWidget {
-  const AddTaskScreen({super.key});
+  const AddTaskScreen({this.initialDate, super.key});
+
+  /// Optional pre-filled due date in "yyyy-MM-dd" format.
+  /// Provided when opening from the planner's long-press gesture.
+  final String? initialDate;
 
   @override
   ConsumerState<AddTaskScreen> createState() => _AddTaskScreenState();
@@ -25,6 +32,15 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
   DateTime? _dueDate;
   TaskPriority _priority = TaskPriority.medium; // sensible default
   bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Pre-fill the due date if one was passed from the planner long-press.
+    if (widget.initialDate != null) {
+      _dueDate = DateTime.parse(widget.initialDate!);
+    }
+  }
 
   @override
   void dispose() {

@@ -91,7 +91,11 @@ final GoRouter appRouter = GoRouter(
 
     GoRoute(
       path: '/tasks/add',
-      builder: (context, state) => const AddTaskScreen(),
+      // state.extra carries the pre-filled date string ("yyyy-MM-dd") when
+      // opened via long-press from the planner. Null when opened from the FAB.
+      builder: (context, state) => AddTaskScreen(
+        initialDate: state.extra as String?,
+      ),
     ),
   ],
 );
