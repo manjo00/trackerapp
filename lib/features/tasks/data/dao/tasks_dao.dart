@@ -38,6 +38,24 @@ class TasksDao extends DatabaseAccessor<AppDatabase> with _$TasksDaoMixin {
         .watch();
   }
 
+  /// Incomplete tasks whose due date is strictly before [today].
+  /// [today] must be in "yyyy-MM-dd" format.
+  /// Ordered by due date ascending (most overdue first) then priority desc.
+  Stream<List<Task>> watchOverdueTasks(String today) {
+    return (select(tasks)
+          ..where(
+            (t) =>
+                t.dueDate.isNotNull() &
+                t.isCompleted.equals(false) &
+                t.dueDate.isSmallerThanValue(today),
+          )
+          ..orderBy([
+            (t) => OrderingTerm.asc(t.dueDate),
+            (t) => OrderingTerm.desc(t.priority),
+          ]))
+        .watch();
+  }
+
   /// All tasks due on [date] (any completion state), ordered by
   /// completion ascending (incomplete first) then priority descending.
   Stream<List<Task>> watchTasksForDate(String date) {

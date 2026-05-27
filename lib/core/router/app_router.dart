@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../features/habits/data/models/habit_model.dart';
 import '../../features/habits/presentation/screens/habit_list_screen.dart';
 import '../../features/habits/presentation/screens/add_habit_screen.dart';
+import '../../features/tasks/data/models/task_model.dart';
 import '../../features/tasks/presentation/screens/task_list_screen.dart';
 import '../../features/tasks/presentation/screens/add_task_screen.dart';
 import '../../features/planner/presentation/screens/planner_screen.dart';
@@ -101,6 +103,22 @@ final GoRouter appRouter = GoRouter(
       // opened via long-press from the planner. Null when opened from the FAB.
       builder: (context, state) => AddTaskScreen(
         initialDate: state.extra as String?,
+      ),
+    ),
+
+    GoRoute(
+      path: '/tasks/edit',
+      // state.extra is a TaskModel passed from TaskTile's long-press.
+      builder: (context, state) => AddTaskScreen(
+        task: state.extra as TaskModel?,
+      ),
+    ),
+
+    GoRoute(
+      path: '/habits/edit',
+      // state.extra is a HabitModel passed from HabitTile's long-press.
+      builder: (context, state) => AddHabitScreen(
+        habit: state.extra as HabitModel?,
       ),
     ),
   ],

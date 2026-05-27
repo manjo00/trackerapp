@@ -29,6 +29,13 @@ Stream<List<TaskModel>> tasksDueToday(TasksDueTodayRef ref) {
   return ref.watch(tasksRepositoryProvider).watchTasksDueToday();
 }
 
+/// Stream of incomplete tasks past their due date — shown in Today's
+/// "Overdue" section so nothing slips through.
+@riverpod
+Stream<List<TaskModel>> overdueTasks(OverdueTasksRef ref) {
+  return ref.watch(tasksRepositoryProvider).watchOverdueTasks();
+}
+
 // ── Write providers ───────────────────────────────────────────────────────
 
 /// Handles adding a new task.
@@ -77,6 +84,34 @@ class ToggleTask extends _$ToggleTask {
             id,
             currentlyCompleted: currentlyCompleted,
           ),
+    );
+  }
+}
+
+/// Handles updating an existing task's editable fields.
+@riverpod
+class UpdateTask extends _$UpdateTask {
+  @override
+  Future<void> build() async {}
+
+  Future<void> save(TaskModel task) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(
+      () => ref.read(tasksRepositoryProvider).updateTask(task),
+    );
+  }
+}
+
+/// Handles permanently deleting a task.
+@riverpod
+class DeleteTask extends _$DeleteTask {
+  @override
+  Future<void> build() async {}
+
+  Future<void> delete(int taskId) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(
+      () => ref.read(tasksRepositoryProvider).deleteTask(taskId),
     );
   }
 }

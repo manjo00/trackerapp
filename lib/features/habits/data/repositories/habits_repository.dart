@@ -129,6 +129,17 @@ class HabitsRepository {
     }
   }
 
+  /// Updates a habit's name and target-per-week.
+  Future<void> updateHabit(HabitModel habit) async {
+    await _dao.updateHabit(
+      HabitsCompanion(
+        id: Value(habit.id),
+        name: Value(habit.name.trim()),
+        targetPerWeek: Value(habit.targetPerWeek),
+      ),
+    );
+  }
+
   /// Permanently deletes a habit and all its completions.
   Future<void> deleteHabit(int habitId) => _dao.deleteHabit(habitId);
 

@@ -37,6 +37,15 @@ class TasksRepository {
         );
   }
 
+  /// Incomplete tasks whose due date is in the past.
+  /// Used by the Today screen's "Overdue" section.
+  Stream<List<TaskModel>> watchOverdueTasks() {
+    final String today = _dateStr(DateTime.now());
+    return _dao.watchOverdueTasks(today).map(
+          (rows) => rows.map(_fromRow).toList(),
+        );
+  }
+
   /// All tasks due on a specific [date], sorted by completion + priority.
   /// Used by the planner day-detail view.
   Stream<List<TaskModel>> watchTasksForDate(String date) {
@@ -71,6 +80,19 @@ class TasksRepository {
       TasksCompanion(
         id: Value(id),
         isCompleted: Value(!currentlyCompleted),
+      ),
+    );
+  }
+
+  /// Updates an existing task's editable fields (title, note, due date, priority).
+  Future<void> updateTask(TaskModel task) async {
+    await _dao.updateTask(
+      TasksCompanion(
+        id: Value(task.id),
+        title: Value(task.title.trim()),
+        note: Value(task.note?.trim()),
+        dueDate: Value(task.dueDate),
+        priority: Value(task.priority.toInt()),
       ),
     );
   }

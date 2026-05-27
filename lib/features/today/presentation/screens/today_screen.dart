@@ -7,40 +7,42 @@ import '../../../../features/tasks/data/models/task_model.dart';
 import '../../../../features/tasks/presentation/providers/tasks_providers.dart';
 import '../../../../features/tasks/presentation/widgets/task_tile.dart';
 
-/// The "Today" tab — shows today's habits and tasks due today in one place.
+/// The "Today" tab — shows today's habits, overdue tasks, and tasks due today.
 ///
-/// Watches two separate providers:
+/// Watches three independent providers in parallel:
 ///   • [habitsWithStatusProvider]  — all habits with today's completion state
+///   • [overdueTasksProvider]      — incomplete tasks past their due date
 ///   • [tasksDueTodayProvider]     — incomplete tasks whose due date is today
 ///
-/// The two providers are independent. Rather than blocking the whole screen
-/// until both resolve, we load them in parallel and render each section
-/// as soon as its data arrives — with a fallback spinner while both are
-/// still loading.
+/// Each section renders as soon as its data arrives; a single spinner is
+/// shown only while ALL three are still on their first load.
 class TodayScreen extends ConsumerWidget {
   const TodayScreen({super.key});
-
-  // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final AsyncValue<List<HabitWithStatus>> habitsAsync =
         ref.watch(habitsWithStatusProvider);
-    final AsyncValue<List<TaskModel>> tasksAsync =
+    final AsyncValue<List<TaskModel>> overdueAsync =
+        ref.watch(overdueTasksProvider);
+    final AsyncValue<List<TaskModel>> todayAsync =
         ref.watch(tasksDueTodayProvider);
 
-    // If both providers are still on their first load, show a single spinner
-    // rather than two separate loading indicators — cleaner first impression.
-    final bool bothLoading =
-        habitsAsync is AsyncLoading && tasksAsync is AsyncLoading;
+    // Show a single spinner only while everything is still on its first load.
+    final bool allLoading = habitsAsync is AsyncLoading &&
+        overdueAsync is AsyncLoading &&
+        todayAsync is AsyncLoading;
 
     return Scaffold(
-      body: bothLoading
+      body: allLoading
           ? const Center(child: CircularProgressIndicator())
           : ListView(
               padding: const EdgeInsets.only(top: 8, bottom: 32),
               children: [
-                // ── Habits section ───────────────────────────────────────
+                // ── Overdue section (only shown when there are overdue items)
+                ..._buildOverdueSection(context, overdueAsync),
+
+                // ── Habits section ────────────────────────────────────────
                 const _SectionHeader(
                   label: 'Habits',
                   icon: Icons.loop_rounded,
@@ -49,12 +51,12 @@ class TodayScreen extends ConsumerWidget {
 
                 const SizedBox(height: 8),
 
-                // ── Tasks due today section ──────────────────────────────
+                // ── Tasks due today section ───────────────────────────────
                 const _SectionHeader(
                   label: 'Due today',
                   icon: Icons.task_alt_rounded,
                 ),
-                ..._buildTasksSection(tasksAsync),
+                ..._buildTasksSection(todayAsync),
 
                 const SizedBox(height: 16),
               ],
@@ -62,7 +64,25 @@ class TodayScreen extends ConsumerWidget {
     );
   }
 
-  // ── Section builders ──────────────────────────────────────────────────────
+  // ── Section builders ────────────────────────────────────────────────────────
+
+  List<Widget> _buildOverdueSection(
+      BuildContext context, AsyncValue<List<TaskModel>> overdueAsync) {
+    // Don't render the section at all while loading or on error —
+    // the overdue banner should only appear when there's something to show.
+    return overdueAsync.when(
+      loading: () => [],
+      error: (_, __) => [],
+      data: (List<TaskModel> tasks) {
+        if (tasks.isEmpty) return [];
+        return [
+          _OverdueSectionHeader(count: tasks.length),
+          ...tasks.map((t) => TaskTile(task: t)),
+          const SizedBox(height: 8),
+        ];
+      },
+    );
+  }
 
   List<Widget> _buildHabitsSection(
       AsyncValue<List<HabitWithStatus>> habitsAsync) {
@@ -80,9 +100,7 @@ class TodayScreen extends ConsumerWidget {
         if (habits.isEmpty) {
           return [const _EmptyNote(text: 'No habits set up yet')];
         }
-        return habits
-            .map((HabitWithStatus h) => HabitTile(item: h))
-            .toList();
+        return habits.map((h) => HabitTile(item: h)).toList();
       },
     );
   }
@@ -102,8 +120,46 @@ class TodayScreen extends ConsumerWidget {
         if (tasks.isEmpty) {
           return [const _EmptyNote(text: 'Nothing due today  🎉')];
         }
-        return tasks.map((TaskModel t) => TaskTile(task: t)).toList();
+        return tasks.map((t) => TaskTile(task: t)).toList();
       },
+    );
+  }
+}
+
+// ── Overdue banner ────────────────────────────────────────────────────────────
+
+class _OverdueSectionHeader extends StatelessWidget {
+  const _OverdueSectionHeader({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme cs = Theme.of(context).colorScheme;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 4, 12, 4),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: cs.errorContainer.withAlpha(160),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.warning_amber_rounded,
+              size: 18, color: cs.onErrorContainer),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              '$count overdue ${count == 1 ? 'task' : 'tasks'} — tackle these first',
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: cs.onErrorContainer,
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

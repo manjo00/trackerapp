@@ -1,23 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../data/models/task_model.dart';
 import '../../data/models/task_priority.dart';
 import '../providers/tasks_providers.dart';
 
-/// Full-screen form for creating a new task.
+/// Full-screen form for creating OR editing a task.
 ///
-/// Pushed from [TaskListScreen]'s FAB via `context.push('/tasks/add')`.
-/// Also reachable from the planner via long-press on a day column, which
-/// passes [initialDate] so the due-date field is pre-filled.
+/// **Create mode** — reached via `context.push('/tasks/add')`.
+///   All fields are blank. Saves via [addTaskProvider].
+///
+/// **Edit mode** — reached via `context.push('/tasks/edit', extra: task)`.
+///   Fields are pre-filled from [task]. Saves via [updateTaskProvider].
+///
+/// Also accepts [initialDate] so the planner's long-press pre-fills the
+/// due-date field without putting the screen in edit mode.
 ///
 /// Lives outside the [StatefulShellRoute] so the bottom nav is hidden.
-///
-/// Fields: title (required) · note (optional) · due date · priority.
 class AddTaskScreen extends ConsumerStatefulWidget {
-  const AddTaskScreen({this.initialDate, super.key});
+  const AddTaskScreen({
+    this.task,
+    this.initialDate,
+    super.key,
+  });
 
-  /// Optional pre-filled due date in "yyyy-MM-dd" format.
-  /// Provided when opening from the planner's long-press gesture.
+  /// If non-null, the screen is in edit mode and pre-fills from this model.
+  final TaskModel? task;
+
+  /// Optional pre-filled due date ("yyyy-MM-dd") for new tasks from planner.
   final String? initialDate;
 
   @override
@@ -26,19 +36,33 @@ class AddTaskScreen extends ConsumerStatefulWidget {
 
 class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  final TextEditingController _titleCtrl = TextEditingController();
-  final TextEditingController _noteCtrl = TextEditingController();
+  late final TextEditingController _titleCtrl;
+  late final TextEditingController _noteCtrl;
 
   DateTime? _dueDate;
-  TaskPriority _priority = TaskPriority.medium; // sensible default
+  late TaskPriority _priority;
   bool _saving = false;
+
+  bool get _isEditing => widget.task != null;
 
   @override
   void initState() {
     super.initState();
-    // Pre-fill the due date if one was passed from the planner long-press.
-    if (widget.initialDate != null) {
-      _dueDate = DateTime.parse(widget.initialDate!);
+    final TaskModel? t = widget.task;
+    if (t != null) {
+      // Edit mode — pre-fill every field from the existing task.
+      _titleCtrl = TextEditingController(text: t.title);
+      _noteCtrl = TextEditingController(text: t.note ?? '');
+      _dueDate = t.dueDate != null ? DateTime.parse(t.dueDate!) : null;
+      _priority = t.priority;
+    } else {
+      // Create mode — blank form, optional pre-filled date from planner.
+      _titleCtrl = TextEditingController();
+      _noteCtrl = TextEditingController();
+      _priority = TaskPriority.medium;
+      if (widget.initialDate != null) {
+        _dueDate = DateTime.parse(widget.initialDate!);
+      }
     }
   }
 
@@ -49,13 +73,11 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
     super.dispose();
   }
 
-  // ── Date helpers ────────────────────────────────────────────────────────
+  // ── Date helpers ─────────────────────────────────────────────────────────
 
-  /// Converts a [DateTime] to the storage format "yyyy-MM-dd".
   String _toDateString(DateTime d) =>
       '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
-  /// Human-readable label shown on the date button.
   String _formatDisplay(DateTime d) {
     const List<String> months = [
       '', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
@@ -77,8 +99,6 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
     };
   }
 
-  // ── Open the system date picker ─────────────────────────────────────────
-
   Future<void> _pickDate() async {
     final DateTime now = DateTime.now();
     final DateTime? picked = await showDatePicker(
@@ -87,29 +107,45 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
       firstDate: now.subtract(const Duration(days: 365)),
       lastDate: now.add(const Duration(days: 365 * 5)),
     );
-    if (picked != null) {
-      setState(() => _dueDate = picked);
-    }
+    if (picked != null) setState(() => _dueDate = picked);
   }
 
-  // ── Save ────────────────────────────────────────────────────────────────
+  // ── Save ─────────────────────────────────────────────────────────────────
 
   Future<void> _save() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
     setState(() => _saving = true);
 
-    await ref.read(addTaskProvider.notifier).add(
-          _titleCtrl.text.trim(),
-          note: _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
-          dueDate: _dueDate != null ? _toDateString(_dueDate!) : null,
-          priority: _priority,
-        );
+    final String? dueDateStr =
+        _dueDate != null ? _toDateString(_dueDate!) : null;
+
+    if (_isEditing) {
+      // Edit mode: update existing task, preserving id and completion state.
+      await ref.read(updateTaskProvider.notifier).save(
+            widget.task!.copyWith(
+              title: _titleCtrl.text.trim(),
+              note: _noteCtrl.text.trim().isEmpty
+                  ? null
+                  : _noteCtrl.text.trim(),
+              dueDate: dueDateStr,
+              priority: _priority,
+            ),
+          );
+    } else {
+      // Create mode: add a brand-new task.
+      await ref.read(addTaskProvider.notifier).add(
+            _titleCtrl.text.trim(),
+            note: _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
+            dueDate: dueDateStr,
+            priority: _priority,
+          );
+    }
 
     if (mounted) context.pop();
   }
 
-  // ── Build ───────────────────────────────────────────────────────────────
+  // ── Build ────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -117,7 +153,7 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('New task'),
+        title: Text(_isEditing ? 'Edit task' : 'New task'),
         leading: IconButton(
           icon: const Icon(Icons.close_rounded),
           onPressed: () => context.pop(),
@@ -128,7 +164,7 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
         child: ListView(
           padding: const EdgeInsets.all(24),
           children: [
-            // ── Title ────────────────────────────────────────────────────
+            // ── Title ──────────────────────────────────────────────────────
             Text(
               'What needs to get done?',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -138,7 +174,7 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
             const SizedBox(height: 12),
             TextFormField(
               controller: _titleCtrl,
-              autofocus: true,
+              autofocus: !_isEditing,
               textCapitalization: TextCapitalization.sentences,
               decoration: const InputDecoration(
                 hintText: 'e.g. Book dentist appointment',
@@ -156,7 +192,7 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
 
             const SizedBox(height: 24),
 
-            // ── Note (optional) ───────────────────────────────────────────
+            // ── Note (optional) ────────────────────────────────────────────
             Text(
               'Add a note  (optional)',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -176,7 +212,7 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
 
             const SizedBox(height: 28),
 
-            // ── Due date ──────────────────────────────────────────────────
+            // ── Due date ───────────────────────────────────────────────────
             Text(
               'Due date  (optional)',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -184,7 +220,6 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
                   ),
             ),
             const SizedBox(height: 12),
-            // A tappable row that opens the date picker.
             InkWell(
               borderRadius: BorderRadius.circular(12),
               onTap: _pickDate,
@@ -218,7 +253,6 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
                       ),
                     ),
                     const Spacer(),
-                    // "Clear" ×  button — only shown when a date is selected.
                     if (_dueDate != null)
                       GestureDetector(
                         onTap: () => setState(() => _dueDate = null),
@@ -235,7 +269,7 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
 
             const SizedBox(height: 28),
 
-            // ── Priority ──────────────────────────────────────────────────
+            // ── Priority ───────────────────────────────────────────────────
             Text(
               'Priority',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -250,7 +284,7 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
 
             const SizedBox(height: 40),
 
-            // ── Save ──────────────────────────────────────────────────────
+            // ── Save ───────────────────────────────────────────────────────
             FilledButton(
               onPressed: _saving ? null : _save,
               style: FilledButton.styleFrom(
@@ -268,9 +302,9 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
                         color: cs.onPrimary,
                       ),
                     )
-                  : const Text(
-                      'Save task',
-                      style: TextStyle(
+                  : Text(
+                      _isEditing ? 'Save changes' : 'Save task',
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                       ),
@@ -286,7 +320,6 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
 // ── Priority selector ─────────────────────────────────────────────────────────
 
 /// Three pill buttons — one per [TaskPriority] value.
-/// The selected pill fills with the priority's colour.
 class _PrioritySelector extends StatelessWidget {
   const _PrioritySelector({
     required this.value,
@@ -305,7 +338,6 @@ class _PrioritySelector extends StatelessWidget {
 
         return Expanded(
           child: Padding(
-            // Small gap between pills.
             padding: EdgeInsets.only(
               right: p != TaskPriority.high ? 8 : 0,
             ),

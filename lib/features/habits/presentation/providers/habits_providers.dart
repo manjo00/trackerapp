@@ -1,6 +1,7 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../../core/database/database_provider.dart';
 import '../../data/dao/habits_dao.dart';
+import '../../data/models/habit_model.dart';
 import '../../data/models/habit_with_status.dart';
 import '../../data/repositories/habits_repository.dart';
 
@@ -57,6 +58,36 @@ class AddHabit extends _$AddHabit {
             targetPerWeek: targetPerWeek,
           ),
     );
+  }
+}
+
+/// Handles deleting a habit and all its completions.
+@riverpod
+class DeleteHabit extends _$DeleteHabit {
+  @override
+  Future<void> build() async {}
+
+  Future<void> delete(int habitId) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(
+      () => ref.read(habitsRepositoryProvider).deleteHabit(habitId),
+    );
+    ref.invalidate(habitsWithStatusProvider);
+  }
+}
+
+/// Handles editing an existing habit's name and target.
+@riverpod
+class UpdateHabit extends _$UpdateHabit {
+  @override
+  Future<void> build() async {}
+
+  Future<void> save(HabitModel habit) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(
+      () => ref.read(habitsRepositoryProvider).updateHabit(habit),
+    );
+    ref.invalidate(habitsWithStatusProvider);
   }
 }
 

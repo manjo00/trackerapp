@@ -80,6 +80,11 @@ class HabitsDao extends DatabaseAccessor<AppDatabase> with _$HabitsDaoMixin {
         .get();
   }
 
+  /// Updates the name and/or targetPerWeek of an existing habit.
+  Future<void> updateHabit(HabitsCompanion companion) =>
+      (update(habits)..where((h) => h.id.equals(companion.id.value)))
+          .write(companion);
+
   /// Stream of every completion row across all habits.
   /// The planner watches this so its date views update whenever any
   /// completion changes (insert or delete).

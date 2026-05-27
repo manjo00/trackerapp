@@ -1,20 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../data/models/habit_model.dart';
 import '../providers/habits_providers.dart';
 
-/// Full-screen form for creating a new habit.
+/// Full-screen form for creating OR editing a habit.
 ///
-/// Pushed from [HabitListScreen]'s FAB via `context.push('/habits/add')`.
-/// The bottom navigation bar is hidden while this screen is open because
-/// it lives outside the [StatefulShellRoute].
+/// **Create mode** — reached via `context.push('/habits/add')`.
+///   Fields are blank. Saves via [addHabitProvider].
 ///
-/// Uses [ConsumerStatefulWidget] — the stateful variant of [ConsumerWidget].
-/// We need stateful here because the form has a [GlobalKey<FormState>] and
-/// a [TextEditingController], which are instance-level objects that must
-/// persist across rebuilds.
+/// **Edit mode** — reached via `context.push('/habits/edit', extra: habit)`.
+///   Fields pre-filled from [habit]. Saves via [updateHabitProvider].
 class AddHabitScreen extends ConsumerStatefulWidget {
-  const AddHabitScreen({super.key});
+  const AddHabitScreen({this.habit, super.key});
+
+  /// If non-null, the screen is in edit mode and pre-fills from this model.
+  final HabitModel? habit;
 
   @override
   ConsumerState<AddHabitScreen> createState() => _AddHabitScreenState();
@@ -22,30 +23,54 @@ class AddHabitScreen extends ConsumerStatefulWidget {
 
 class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  final TextEditingController _nameCtrl = TextEditingController();
-  int _targetPerWeek = 7; // default: every day
+  late final TextEditingController _nameCtrl;
+  late int _targetPerWeek;
   bool _saving = false;
+
+  bool get _isEditing => widget.habit != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final HabitModel? h = widget.habit;
+    if (h != null) {
+      // Edit mode — pre-fill from the existing habit.
+      _nameCtrl = TextEditingController(text: h.name);
+      _targetPerWeek = h.targetPerWeek;
+    } else {
+      // Create mode — blank form.
+      _nameCtrl = TextEditingController();
+      _targetPerWeek = 7; // default: every day
+    }
+  }
 
   @override
   void dispose() {
-    // Always dispose controllers to free memory.
     _nameCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _save() async {
-    // Validate runs each field's validator; returns false if any fail.
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
     setState(() => _saving = true);
 
-    await ref.read(addHabitProvider.notifier).add(
-          _nameCtrl.text,
-          targetPerWeek: _targetPerWeek,
-        );
+    if (_isEditing) {
+      // Edit mode: update the existing habit.
+      await ref.read(updateHabitProvider.notifier).save(
+            widget.habit!.copyWith(
+              name: _nameCtrl.text.trim(),
+              targetPerWeek: _targetPerWeek,
+            ),
+          );
+    } else {
+      // Create mode: add a brand-new habit.
+      await ref.read(addHabitProvider.notifier).add(
+            _nameCtrl.text,
+            targetPerWeek: _targetPerWeek,
+          );
+    }
 
-    // mounted check is necessary after any await — the widget might have
-    // been removed from the tree while we were waiting.
     if (mounted) context.pop();
   }
 
@@ -55,8 +80,7 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('New habit'),
-        // Explicit back button so it's always visible.
+        title: Text(_isEditing ? 'Edit habit' : 'New habit'),
         leading: IconButton(
           icon: const Icon(Icons.close_rounded),
           onPressed: () => context.pop(),
@@ -77,7 +101,7 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
             const SizedBox(height: 12),
             TextFormField(
               controller: _nameCtrl,
-              autofocus: true,
+              autofocus: !_isEditing,
               textCapitalization: TextCapitalization.sentences,
               decoration: const InputDecoration(
                 hintText: 'e.g. Read for 20 minutes',
@@ -89,13 +113,13 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
                 if (value.trim().length > 120) {
                   return 'Name must be 120 characters or fewer';
                 }
-                return null; // null means valid
+                return null;
               },
             ),
 
             const SizedBox(height: 32),
 
-            // ── Target days per week ────────────────────────────────────
+            // ── Target days per week ─────────────────────────────────────
             Text(
               'How many days per week?',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -104,7 +128,6 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Seven toggle-buttons, one per day count.
             _DayTargetSelector(
               value: _targetPerWeek,
               onChanged: (int v) => setState(() => _targetPerWeek = v),
@@ -112,7 +135,7 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
 
             const SizedBox(height: 40),
 
-            // ── Save button ─────────────────────────────────────────────
+            // ── Save button ──────────────────────────────────────────────
             FilledButton(
               onPressed: _saving ? null : _save,
               style: FilledButton.styleFrom(
@@ -130,9 +153,9 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
                         color: cs.onPrimary,
                       ),
                     )
-                  : const Text(
-                      'Save habit',
-                      style: TextStyle(
+                  : Text(
+                      _isEditing ? 'Save changes' : 'Save habit',
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                       ),
@@ -145,11 +168,9 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
   }
 }
 
-// ── Day target selector ───────────────────────────────────────────────────
+// ── Day target selector ──────────────────────────────────────────────────────
 
 /// Row of 7 circular toggle buttons (1–7 days per week).
-///
-/// Extracted into its own widget to keep [_AddHabitScreenState.build] readable.
 class _DayTargetSelector extends StatelessWidget {
   const _DayTargetSelector({
     required this.value,
