@@ -5,9 +5,6 @@ import 'package:go_router/go_router.dart';
 ///
 /// [navigationShell] is provided by go_router's [StatefulShellRoute].
 /// It knows which branch (tab) is currently active and handles switching.
-///
-/// Why [StatelessWidget]: the shell itself has no state — go_router's
-/// [StatefulShellRoute] is the source of truth for the active index.
 class HomeShell extends StatelessWidget {
   const HomeShell({
     required this.navigationShell,
@@ -19,36 +16,42 @@ class HomeShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // The inner page is rendered here — go_router swaps it on tab change.
       body: navigationShell,
 
       bottomNavigationBar: NavigationBar(
-        // go_router tells us which branch is showing.
         selectedIndex: navigationShell.currentIndex,
 
-        // Called when the user taps a nav item.
-        // goBranch() switches the active branch while preserving each
-        // branch's own navigation stack.
         onDestinationSelected: (int index) {
           navigationShell.goBranch(
             index,
-            // If the user taps the *already-active* tab, scroll back to
-            // the root of that branch (like tapping the tab again in Instagram).
+            // Tapping the already-active tab scrolls back to root.
             initialLocation: index == navigationShell.currentIndex,
           );
         },
 
         destinations: const [
+          // 0 — Today
+          NavigationDestination(
+            icon: Icon(Icons.wb_sunny_outlined),
+            selectedIcon: Icon(Icons.wb_sunny_rounded),
+            label: 'Today',
+          ),
+
+          // 1 — Habits
           NavigationDestination(
             icon: Icon(Icons.radio_button_unchecked_rounded),
             selectedIcon: Icon(Icons.task_alt_rounded),
             label: 'Habits',
           ),
+
+          // 2 — Tasks
           NavigationDestination(
             icon: Icon(Icons.check_box_outline_blank_rounded),
             selectedIcon: Icon(Icons.check_box_rounded),
             label: 'Tasks',
           ),
+
+          // 3 — Planner
           NavigationDestination(
             icon: Icon(Icons.calendar_today_rounded),
             selectedIcon: Icon(Icons.calendar_month_rounded),

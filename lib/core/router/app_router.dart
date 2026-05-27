@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../features/habits/presentation/screens/habit_list_screen.dart';
 import '../../features/habits/presentation/screens/add_habit_screen.dart';
-import '../../features/tasks/presentation/screens/tasks_screen.dart';
+import '../../features/tasks/presentation/screens/task_list_screen.dart';
+import '../../features/tasks/presentation/screens/add_task_screen.dart';
 import '../../features/planner/presentation/screens/planner_screen.dart';
+import '../../features/today/presentation/screens/today_screen.dart';
 import 'shell_scaffold.dart';
 
 /// The single [GoRouter] instance for the whole app.
@@ -11,27 +13,38 @@ import 'shell_scaffold.dart';
 /// Route tree:
 /// ```
 ///  StatefulShellRoute   ← HomeShell (bottom nav persists across tabs)
-///    /habits            ← HabitListScreen  (Step 9)
-///    /tasks             ← TasksScreen      (placeholder)
-///    /planner           ← PlannerScreen    (placeholder)
+///    /today             ← TodayScreen      (index 0, default tab)
+///    /habits            ← HabitListScreen  (index 1)
+///    /tasks             ← TaskListScreen   (index 2)
+///    /planner           ← PlannerScreen    (index 3, placeholder)
 ///
-///  /habits/add          ← AddHabitScreen   (Step 10, outside shell)
+///  /habits/add          ← AddHabitScreen  (outside shell — hides bottom nav)
+///  /tasks/add           ← AddTaskScreen   (outside shell — hides bottom nav)
 /// ```
-///
-/// Routes outside [StatefulShellRoute] push full-screen without the bottom nav.
 final GoRouter appRouter = GoRouter(
-  initialLocation: '/habits',
+  initialLocation: '/today',
   routes: [
     // ── Tabbed shell ──────────────────────────────────────────────────────
     StatefulShellRoute.indexedStack(
-      // builder receives the navigationShell object that knows the active tab.
       builder: (BuildContext context, GoRouterState state,
           StatefulNavigationShell navigationShell) {
         return HomeShell(navigationShell: navigationShell);
       },
 
       branches: [
-        // Branch 0 — Habits
+        // Branch 0 — Today
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: '/today',
+              pageBuilder: (context, state) => const NoTransitionPage(
+                child: TodayScreen(),
+              ),
+            ),
+          ],
+        ),
+
+        // Branch 1 — Habits
         StatefulShellBranch(
           routes: [
             GoRoute(
@@ -43,19 +56,19 @@ final GoRouter appRouter = GoRouter(
           ],
         ),
 
-        // Branch 1 — Tasks (placeholder)
+        // Branch 2 — Tasks
         StatefulShellBranch(
           routes: [
             GoRoute(
               path: '/tasks',
               pageBuilder: (context, state) => const NoTransitionPage(
-                child: TasksScreen(),
+                child: TaskListScreen(),
               ),
             ),
           ],
         ),
 
-        // Branch 2 — Planner (placeholder)
+        // Branch 3 — Planner (placeholder)
         StatefulShellBranch(
           routes: [
             GoRoute(
@@ -71,10 +84,14 @@ final GoRouter appRouter = GoRouter(
 
     // ── Full-screen routes (no bottom nav) ────────────────────────────────
 
-    // Add Habit — pushed from HabitListScreen's FAB.
     GoRoute(
       path: '/habits/add',
       builder: (context, state) => const AddHabitScreen(),
+    ),
+
+    GoRoute(
+      path: '/tasks/add',
+      builder: (context, state) => const AddTaskScreen(),
     ),
   ],
 );
