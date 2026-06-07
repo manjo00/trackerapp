@@ -196,8 +196,11 @@ class ActiveWorkout extends _$ActiveWorkout {
       isWarmup: isWarmup,
     );
 
-    state = AsyncData(current.copyWith(
-      sets: [...current.sets, newSet],
+    // Re-read after the await so we don't clobber concurrent changes
+    // (e.g. a set being checked off while this insert was in flight).
+    final latest = state.valueOrNull ?? current;
+    state = AsyncData(latest.copyWith(
+      sets: [...latest.sets, newSet],
     ));
     return newSet;
   }
@@ -215,8 +218,11 @@ class ActiveWorkout extends _$ActiveWorkout {
             updated.exerciseName, updated.weightKg, current.sessionId);
     final WorkoutSetModel withPr = updated.copyWith(isPr: isPr);
     await repo.updateSet(withPr);
-    state = AsyncData(current.copyWith(
-      sets: current.sets.map((s) => s.id == withPr.id ? withPr : s).toList(),
+    // Re-read after the await so the PR write doesn't clobber a completion
+    // that was toggled while the async PR check was running.
+    final latest = state.valueOrNull ?? current;
+    state = AsyncData(latest.copyWith(
+      sets: latest.sets.map((s) => s.id == withPr.id ? withPr : s).toList(),
     ));
   }
 
@@ -225,9 +231,10 @@ class ActiveWorkout extends _$ActiveWorkout {
     final current = state.valueOrNull;
     if (current == null) return;
     await ref.read(workoutRepositoryProvider).deleteSet(setId);
-    state = AsyncData(current.copyWith(
-      sets: current.sets.where((s) => s.id != setId).toList(),
-      completedSetIds: {...current.completedSetIds}..remove(setId),
+    final latest = state.valueOrNull ?? current;
+    state = AsyncData(latest.copyWith(
+      sets: latest.sets.where((s) => s.id != setId).toList(),
+      completedSetIds: {...latest.completedSetIds}..remove(setId),
     ));
   }
 
