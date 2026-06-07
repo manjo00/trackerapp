@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../../core/database/database_provider.dart';
+import '../../../../core/notifications/notification_service.dart';
 import '../../data/dao/workout_dao.dart';
 import '../../data/models/exercise_model.dart';
 import '../../data/models/program_exercise_model.dart';
@@ -228,12 +230,21 @@ class ActiveWorkout extends _$ActiveWorkout {
 /// Counts down from a set number of seconds.
 /// State = remaining seconds (0 = not running / finished).
 ///
-/// Kept alive so the countdown survives tab switches.
-/// Use [ref.watch(restTimerProvider)] to read the remaining seconds, and
-/// [ref.read(restTimerProvider.notifier)] to call [start] / [cancel].
+/// Kept alive so the countdown survives tab switches. It is *universal* — one
+/// timer for the whole active workout, surfaced by the top [RestTimerBar].
+/// When it reaches zero it fires a haptic + local notification.
+///
+/// Use [ref.watch(restTimerProvider)] for remaining seconds, and
+/// [ref.read(restTimerProvider.notifier)] for [start]/[cancel]/[addSeconds]/[restart].
 @Riverpod(keepAlive: true)
 class RestTimer extends _$RestTimer {
   Timer? _timer;
+
+  /// The most recent duration started, so [restart] can re-run it.
+  int _lastDuration = 0;
+
+  /// Total seconds of the current/last rest period — for progress display.
+  int get totalSeconds => _lastDuration;
 
   @override
   int build() {
@@ -242,23 +253,63 @@ class RestTimer extends _$RestTimer {
     return 0;
   }
 
-  /// Starts a countdown from [seconds].
+  /// Starts a countdown from [seconds]. Remembered for [restart].
   void start([int seconds = 90]) {
     _timer?.cancel();
+    if (seconds <= 0) {
+      state = 0;
+      return;
+    }
+    _lastDuration = seconds;
     state = seconds;
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (state > 0) {
-        state = state - 1;
-      } else {
-        _timer?.cancel();
-      }
-    });
+    _run();
   }
+
+  /// Adjusts the remaining time by [delta] seconds (e.g. +15 / −15).
+  /// Dropping to zero or below cancels the timer; raising from idle restarts it.
+  void addSeconds(int delta) {
+    final int next = state + delta;
+    if (next <= 0) {
+      cancel();
+      return;
+    }
+    state = next;
+    if (next > _lastDuration) _lastDuration = next;
+    if (_timer == null || !_timer!.isActive) _run();
+  }
+
+  /// Re-runs the last duration (for "skipped by mistake" / "need more rest").
+  void restart() {
+    if (_lastDuration > 0) start(_lastDuration);
+  }
+
+  /// Entry point for the AppBar timer button when the bar is hidden:
+  /// restart the last rest, or a 2:00 default if none has run yet.
+  void reinitiate() => start(_lastDuration > 0 ? _lastDuration : 120);
 
   /// Cancels the countdown and resets to 0.
   void cancel() {
     _timer?.cancel();
     state = 0;
+  }
+
+  void _run() {
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      final int next = state - 1;
+      if (next <= 0) {
+        state = 0;
+        _timer?.cancel();
+        _onFinished();
+      } else {
+        state = next;
+      }
+    });
+  }
+
+  void _onFinished() {
+    HapticFeedback.heavyImpact();
+    // Fire-and-forget; a failed notification must not crash the timer.
+    NotificationService.instance.showRestComplete();
   }
 }
 

@@ -6,7 +6,7 @@ import '../../data/models/exercise_model.dart';
 import '../../data/models/program_exercise_model.dart';
 import '../../data/models/workout_set_model.dart';
 import '../providers/workout_providers.dart';
-import '../widgets/rest_timer_bottom_sheet.dart';
+import '../widgets/rest_timer_bar.dart';
 import '../widgets/set_row.dart';
 
 /// The in-progress workout screen.
@@ -150,16 +150,10 @@ class _ActiveWorkoutScreenState
 
   void _onSetComplete(
       WorkoutSetModel set, ProgramExerciseModel? programEx) {
+    // Completing a set starts the universal rest timer; the top
+    // [RestTimerBar] reacts automatically — no modal needed.
     final restSec = programEx?.restSeconds ?? 120;
     ref.read(restTimerProvider.notifier).start(restSec);
-    showModalBottomSheet<void>(
-      context: context,
-      builder: (_) => const RestTimerBottomSheet(),
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-    );
   }
 
   Future<void> _deleteSet(int setId) async {
@@ -222,6 +216,12 @@ class _ActiveWorkoutScreenState
             ),
             title: Text(formatElapsed(_elapsed)),
             actions: [
+              IconButton(
+                icon: const Icon(Icons.timer_outlined),
+                tooltip: 'Start / restart rest',
+                onPressed: () =>
+                    ref.read(restTimerProvider.notifier).reinitiate(),
+              ),
               TextButton(
                 onPressed: _showFinishDialog,
                 child: const Text('Finish',
@@ -239,29 +239,37 @@ class _ActiveWorkoutScreenState
               ),
             ],
           ),
-          body: exercises.isEmpty
-              ? _NoExercisesPlaceholder(onAdd: _addExercise)
-              : ListView.builder(
-                  padding: const EdgeInsets.only(bottom: 120),
-                  itemCount: exercises.length,
-                  itemBuilder: (ctx, i) {
-                    final name = exercises[i];
-                    final sets = setsByExercise[name] ?? [];
-                    final programEx = active.programExerciseFor(name);
-                    return _ExerciseSection(
-                      exerciseName: name,
-                      sets: sets,
-                      sessionId: active.sessionId,
-                      programExercise: programEx,
-                      onUpdateSet: (updated) => ref
-                          .read(activeWorkoutProvider.notifier)
-                          .updateSet(updated),
-                      onCompleteSet: (set) =>
-                          _onSetComplete(set, programEx),
-                      onDeleteSet: _deleteSet,
-                    );
-                  },
-                ),
+          body: Column(
+            children: [
+              const RestTimerBar(),
+              Expanded(
+                child: exercises.isEmpty
+                    ? _NoExercisesPlaceholder(onAdd: _addExercise)
+                    : ListView.builder(
+                        padding: const EdgeInsets.only(bottom: 120),
+                        itemCount: exercises.length,
+                        itemBuilder: (ctx, i) {
+                          final name = exercises[i];
+                          final sets = setsByExercise[name] ?? [];
+                          final programEx =
+                              active.programExerciseFor(name);
+                          return _ExerciseSection(
+                            exerciseName: name,
+                            sets: sets,
+                            sessionId: active.sessionId,
+                            programExercise: programEx,
+                            onUpdateSet: (updated) => ref
+                                .read(activeWorkoutProvider.notifier)
+                                .updateSet(updated),
+                            onCompleteSet: (set) =>
+                                _onSetComplete(set, programEx),
+                            onDeleteSet: _deleteSet,
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
           floatingActionButton: FloatingActionButton.extended(
             onPressed: _addExercise,
             icon: const Icon(Icons.add_rounded),

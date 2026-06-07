@@ -42,6 +42,7 @@ class NotificationService {
   static int _taskId(int taskId, int slot) => 10000 + taskId * 3 + slot;
   static int _trackerId(int trackerId) => 30000 + trackerId;
   static const int _testId = 999;
+  static const int _restCompleteId = 998; // transient, rest-timer finished
 
   // ── Channels ───────────────────────────────────────────────────────────────
   static const AndroidNotificationChannel _globalChannel =
@@ -121,6 +122,29 @@ class NotificationService {
           channelDescription: _itemChannel.description,
           importance: Importance.high,
           priority: Priority.high,
+        ),
+      ),
+    );
+  }
+
+  // ── Rest-timer complete ─────────────────────────────────────────────────────
+
+  /// Fires an immediate notification when the workout rest timer reaches zero.
+  /// Transient (id 998) — safe to overwrite on each rest period.
+  Future<void> showRestComplete() async {
+    await _plugin.show(
+      _restCompleteId,
+      'Rest over 💪',
+      'Time for your next set',
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          _itemChannel.id,
+          _itemChannel.name,
+          channelDescription: _itemChannel.description,
+          importance: Importance.high,
+          priority: Priority.high,
+          // Auto-dismiss shortly after — it's just a nudge.
+          timeoutAfter: 10000,
         ),
       ),
     );
