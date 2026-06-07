@@ -388,33 +388,7 @@ class _ExerciseSection extends ConsumerWidget {
               ],
             ),
 
-            // Column headers
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Row(
-                children: [
-                  const SizedBox(width: 36),
-                  Expanded(
-                    flex: 3,
-                    child: Text('Weight',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                            fontSize: 11,
-                            color: cs.onSurface.withAlpha(140))),
-                  ),
-                  const SizedBox(width: 28),
-                  Expanded(
-                    flex: 2,
-                    child: Text('Reps',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                            fontSize: 11,
-                            color: cs.onSurface.withAlpha(140))),
-                  ),
-                  const SizedBox(width: 44),
-                ],
-              ),
-            ),
+            const SizedBox(height: 4),
             const Divider(height: 1),
 
             // Set rows

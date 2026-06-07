@@ -85,6 +85,68 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase>
     return rows.isEmpty ? null : rows.first.weightKg;
   }
 
+  /// Past sets for [exerciseName] across all sessions except
+  /// [currentSessionId], joined to their session date, newest first.
+  /// Used by the per-set history picker ("Recent" tab).
+  Future<List<({String date, double? weightKg, int? reps, int setNumber, bool isPr})>>
+      getExerciseHistory(String exerciseName, int currentSessionId,
+          {int limit = 50}) async {
+    final query = select(workoutSets).join([
+      innerJoin(workoutSessions,
+          workoutSessions.id.equalsExp(workoutSets.sessionId)),
+    ])
+      ..where(workoutSets.exerciseName.equals(exerciseName) &
+          workoutSets.sessionId.equals(currentSessionId).not())
+      ..orderBy([
+        OrderingTerm.desc(workoutSessions.date),
+        OrderingTerm.desc(workoutSets.sessionId),
+        OrderingTerm.asc(workoutSets.setNumber),
+      ])
+      ..limit(limit);
+
+    final rows = await query.get();
+    return rows.map((r) {
+      final s = r.readTable(workoutSets);
+      final sess = r.readTable(workoutSessions);
+      return (
+        date: sess.date,
+        weightKg: s.weightKg,
+        reps: s.reps,
+        setNumber: s.setNumber,
+        isPr: s.isPr,
+      );
+    }).toList();
+  }
+
+  /// Heaviest sets ever logged for [exerciseName] (excluding the current
+  /// session), heaviest first. Used by the history picker ("Max" tab).
+  Future<List<({String date, double? weightKg, int? reps, int setNumber, bool isPr})>>
+      getTopSets(String exerciseName, int currentSessionId,
+          {int limit = 10}) async {
+    final query = select(workoutSets).join([
+      innerJoin(workoutSessions,
+          workoutSessions.id.equalsExp(workoutSets.sessionId)),
+    ])
+      ..where(workoutSets.exerciseName.equals(exerciseName) &
+          workoutSets.sessionId.equals(currentSessionId).not() &
+          workoutSets.weightKg.isNotNull())
+      ..orderBy([OrderingTerm.desc(workoutSets.weightKg)])
+      ..limit(limit);
+
+    final rows = await query.get();
+    return rows.map((r) {
+      final s = r.readTable(workoutSets);
+      final sess = r.readTable(workoutSessions);
+      return (
+        date: sess.date,
+        weightKg: s.weightKg,
+        reps: s.reps,
+        setNumber: s.setNumber,
+        isPr: s.isPr,
+      );
+    }).toList();
+  }
+
   /// Returns all sets for [exerciseName] from the most recent previous
   /// session — used to show "last session" hints in the active workout.
   Future<List<WorkoutSet>> getLastSessionSets(

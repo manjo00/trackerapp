@@ -9,6 +9,14 @@ import '../models/workout_set_model.dart';
 final DateFormat _dateFmt = DateFormat('yyyy-MM-dd');
 String _today() => _dateFmt.format(DateTime.now());
 
+/// One historical set for the per-set history picker (plain record — no codegen).
+typedef ExerciseHistoryEntry = ({
+  DateTime date,
+  double? weightKg,
+  int? reps,
+  bool isPr,
+});
+
 class WorkoutRepository {
   WorkoutRepository(this._dao);
 
@@ -127,6 +135,30 @@ class WorkoutRepository {
         await _dao.getLastSessionSets(exerciseName, currentSessionId);
     return rows.map(_setFromRow).toList();
   }
+
+  /// Dated history of past sets for [exerciseName] (newest first).
+  Future<List<ExerciseHistoryEntry>> getExerciseHistory(
+      String exerciseName, int currentSessionId) async {
+    final rows = await _dao.getExerciseHistory(exerciseName, currentSessionId);
+    return rows.map(_historyEntry).toList();
+  }
+
+  /// Heaviest sets ever for [exerciseName] (heaviest first).
+  Future<List<ExerciseHistoryEntry>> getTopSets(
+      String exerciseName, int currentSessionId) async {
+    final rows = await _dao.getTopSets(exerciseName, currentSessionId);
+    return rows.map(_historyEntry).toList();
+  }
+
+  ExerciseHistoryEntry _historyEntry(
+          ({String date, double? weightKg, int? reps, int setNumber, bool isPr})
+              r) =>
+      (
+        date: DateTime.tryParse(r.date) ?? DateTime.now(),
+        weightKg: r.weightKg,
+        reps: r.reps,
+        isPr: r.isPr,
+      );
 
   // ── Exercises ─────────────────────────────────────────────────────────────
 

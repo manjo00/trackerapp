@@ -1,13 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../data/models/workout_set_model.dart';
+import '../../data/repositories/workout_repository.dart';
+import 'exercise_history_sheet.dart';
 
-/// A single set row inside the active-workout exercise section.
+/// A single set inside the active-workout exercise card, as a two-line tile:
 ///
-/// Layout: Set# | [−] Weight [+] | × | [−] Reps [+] | ✓
+/// ```
+/// [#]  prev 35 × 12            ⋮  ✓
+///      [−] 35 kg [+]  ×  [−] 12 [+]
+/// ```
 ///
-/// [hint] is the corresponding set from the previous session — shown as
-/// placeholder text so the user can quickly replicate last time's weights.
+/// - **prev** (tap → copies last session's weight/reps into the fields).
+/// - **⋮** opens the history picker (Recent / Max) to load any past set.
+/// - **✓** marks the set done (whole tile fills green) and starts the rest timer.
+/// - Long-press anywhere on the tile deletes it.
 class SetRow extends StatefulWidget {
   const SetRow({
     super.key,
@@ -20,16 +27,16 @@ class SetRow extends StatefulWidget {
 
   final WorkoutSetModel set;
 
-  /// Optional matching set from the previous session (for placeholder hints).
+  /// Matching set from the previous session (for the "prev" label + copy).
   final WorkoutSetModel? hint;
 
-  /// Called whenever reps or weight are edited.
+  /// Called whenever reps or weight change.
   final ValueChanged<WorkoutSetModel> onUpdate;
 
-  /// Called when the ✓ button is tapped (saves + starts rest timer).
+  /// Called when ✓ is tapped (saves + starts rest timer).
   final VoidCallback onComplete;
 
-  /// Called when the row is long-pressed.
+  /// Called when the tile is long-pressed.
   final VoidCallback onDelete;
 
   @override
@@ -55,11 +62,9 @@ class _SetRowState extends State<SetRow> {
   @override
   void didUpdateWidget(SetRow oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Sync controller text when the model changes from outside.
     final newWeight =
         widget.set.weightKg != null ? _fmt(widget.set.weightKg!) : '';
-    final newReps =
-        widget.set.reps != null ? '${widget.set.reps}' : '';
+    final newReps = widget.set.reps != null ? '${widget.set.reps}' : '';
     if (_weightCtrl.text != newWeight) _weightCtrl.text = newWeight;
     if (_repsCtrl.text != newReps) _repsCtrl.text = newReps;
   }
@@ -71,31 +76,60 @@ class _SetRowState extends State<SetRow> {
     super.dispose();
   }
 
-  /// Formats weight: drops trailing ".0" for tidiness.
   static String _fmt(double kg) =>
       kg == kg.truncateToDouble() ? '${kg.toInt()}' : '$kg';
 
-  /// Flush current controller values to the parent model.
   void _flush() {
     final double? kg = double.tryParse(_weightCtrl.text);
     final int? reps = int.tryParse(_repsCtrl.text);
     widget.onUpdate(widget.set.copyWith(weightKg: kg, reps: reps));
   }
 
-  /// Adjust weight by [delta] kg (e.g. +2.5 / −2.5).
-  void _stepWeight(double delta) {
-    final current = double.tryParse(_weightCtrl.text) ?? 0.0;
-    final next = (current + delta).clamp(0.0, 999.0);
-    _weightCtrl.text = _fmt(next);
+  void _apply(double? weightKg, int? reps) {
+    if (weightKg != null) _weightCtrl.text = _fmt(weightKg);
+    if (reps != null) _repsCtrl.text = '$reps';
     _flush();
+    setState(() {});
   }
 
-  /// Adjust reps by [delta] (e.g. +1 / −1).
+  void _stepWeight(double delta) {
+    final current = double.tryParse(_weightCtrl.text) ?? 0.0;
+    _apply((current + delta).clamp(0.0, 999.0), int.tryParse(_repsCtrl.text));
+  }
+
   void _stepReps(int delta) {
     final current = int.tryParse(_repsCtrl.text) ?? 0;
-    final next = (current + delta).clamp(0, 99);
-    _repsCtrl.text = '$next';
-    _flush();
+    _apply(double.tryParse(_weightCtrl.text), (current + delta).clamp(0, 99));
+  }
+
+  void _copyPrev() {
+    final h = widget.hint;
+    if (h == null) return;
+    _apply(h.weightKg, h.reps);
+  }
+
+  Future<void> _openHistory() async {
+    final entry = await showModalBottomSheet<ExerciseHistoryEntry>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) =>
+          ExerciseHistorySheet(exerciseName: widget.set.exerciseName),
+    );
+    if (entry == null) return;
+    _apply(entry.weightKg, entry.reps);
+  }
+
+  String _prevText() {
+    final h = widget.hint;
+    if (h == null) return 'first time';
+    final w = h.weightKg;
+    final wStr = w == null ? '–' : _fmt(w);
+    final r = h.reps?.toString() ?? '–';
+    return 'prev  $wStr × $r';
   }
 
   @override
@@ -104,115 +138,144 @@ class _SetRowState extends State<SetRow> {
     final textTheme = Theme.of(context).textTheme;
     final isPr = widget.set.isPr;
     final isWarmup = widget.set.isWarmup;
+    final hasPrev = widget.hint != null;
 
-    // Hint text from the previous session.
-    final String weightHint = widget.hint?.weightKg != null
-        ? _fmt(widget.hint!.weightKg!)
-        : 'kg';
-    final String repsHint =
-        widget.hint?.reps != null ? '${widget.hint!.reps}' : 'reps';
+    Color? bg;
+    if (_completed) {
+      bg = Colors.green.withAlpha(40);
+    } else if (isPr) {
+      bg = cs.primaryContainer.withAlpha(80);
+    } else if (isWarmup) {
+      bg = cs.surfaceContainerHighest.withAlpha(60);
+    }
 
     return GestureDetector(
       onLongPress: widget.onDelete,
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
         margin: const EdgeInsets.symmetric(vertical: 3),
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+        padding: const EdgeInsets.fromLTRB(4, 6, 4, 8),
         decoration: BoxDecoration(
-          color: isPr
-              ? cs.primaryContainer.withAlpha(80)
-              : isWarmup
-                  ? cs.surfaceContainerHighest.withAlpha(60)
-                  : null,
-          borderRadius: BorderRadius.circular(8),
+          color: bg,
+          borderRadius: BorderRadius.circular(10),
         ),
-        child: Row(
+        child: Column(
           children: [
-            // ── Set number ──────────────────────────────────────────────────
-            SizedBox(
-              width: 24,
-              child: Text(
-                '${widget.set.setNumber}',
-                textAlign: TextAlign.center,
-                style: textTheme.bodyMedium?.copyWith(
-                  color: isWarmup
-                      ? cs.onSurface.withAlpha(128)
-                      : cs.primary,
-                  fontWeight: FontWeight.bold,
+            // ── Row 1: number · previous · history · complete ────────────────
+            Row(
+              children: [
+                SizedBox(
+                  width: 24,
+                  child: Text(
+                    '${widget.set.setNumber}',
+                    textAlign: TextAlign.center,
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: isWarmup
+                          ? cs.onSurface.withAlpha(128)
+                          : cs.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
-              ),
+                const SizedBox(width: 4),
+                // Previous (tap to copy)
+                Expanded(
+                  child: InkWell(
+                    onTap: hasPrev ? _copyPrev : null,
+                    borderRadius: BorderRadius.circular(6),
+                    child: Padding(
+                      padding:
+                          const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+                      child: Text(
+                        _prevText(),
+                        style: textTheme.bodySmall?.copyWith(
+                          color: hasPrev
+                              ? cs.onSurface.withAlpha(150)
+                              : cs.onSurface.withAlpha(90),
+                          fontStyle:
+                              hasPrev ? FontStyle.normal : FontStyle.italic,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                // PR badge
+                if (isPr)
+                  const Padding(
+                    padding: EdgeInsets.only(right: 2),
+                    child: Text('🏆', style: TextStyle(fontSize: 13)),
+                  ),
+                // History picker
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  icon: Icon(Icons.more_vert_rounded,
+                      size: 20, color: cs.onSurface.withAlpha(140)),
+                  tooltip: 'Load from history',
+                  onPressed: _openHistory,
+                ),
+                // Complete
+                InkWell(
+                  onTap: () {
+                    _flush();
+                    setState(() => _completed = true);
+                    widget.onComplete();
+                  },
+                  borderRadius: BorderRadius.circular(20),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: _completed
+                          ? Colors.green
+                          : cs.primary.withAlpha(20),
+                    ),
+                    child: Icon(
+                      Icons.check_rounded,
+                      size: 19,
+                      color: _completed ? Colors.white : cs.primary,
+                    ),
+                  ),
+                ),
+              ],
             ),
 
-            const SizedBox(width: 4),
+            const SizedBox(height: 4),
 
-            // ── Weight stepper ──────────────────────────────────────────────
-            Expanded(
-              flex: 5,
-              child: _StepperField(
-                controller: _weightCtrl,
-                hint: weightHint,
-                isDecimal: true,
-                onEditingComplete: _flush,
-                onDecrement: () => _stepWeight(-2.5),
-                onIncrement: () => _stepWeight(2.5),
-              ),
-            ),
-
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Text(
-                '×',
-                style: textTheme.titleMedium?.copyWith(
-                  color: cs.onSurface.withAlpha(180),
+            // ── Row 2: weight & reps steppers ────────────────────────────────
+            Row(
+              children: [
+                const SizedBox(width: 24),
+                Expanded(
+                  flex: 5,
+                  child: _StepperField(
+                    controller: _weightCtrl,
+                    hint: 'kg',
+                    isDecimal: true,
+                    onEditingComplete: _flush,
+                    onDecrement: () => _stepWeight(-2.5),
+                    onIncrement: () => _stepWeight(2.5),
+                  ),
                 ),
-              ),
-            ),
-
-            // ── Reps stepper ────────────────────────────────────────────────
-            Expanded(
-              flex: 4,
-              child: _StepperField(
-                controller: _repsCtrl,
-                hint: repsHint,
-                isDecimal: false,
-                onEditingComplete: _flush,
-                onDecrement: () => _stepReps(-1),
-                onIncrement: () => _stepReps(1),
-              ),
-            ),
-
-            const SizedBox(width: 6),
-
-            // ── PR badge ────────────────────────────────────────────────────
-            if (isPr)
-              Padding(
-                padding: const EdgeInsets.only(right: 4),
-                child: Text('🏆', style: textTheme.bodyMedium),
-              ),
-
-            // ── Complete button ─────────────────────────────────────────────
-            InkWell(
-              onTap: () {
-                _flush();
-                setState(() => _completed = true);
-                widget.onComplete();
-              },
-              borderRadius: BorderRadius.circular(20),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: _completed
-                      ? Colors.green
-                      : cs.primary.withAlpha(20),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Text('×',
+                      style: textTheme.titleMedium
+                          ?.copyWith(color: cs.onSurface.withAlpha(160))),
                 ),
-                child: Icon(
-                  Icons.check_rounded,
-                  size: 20,
-                  color: _completed ? Colors.white : cs.primary,
+                Expanded(
+                  flex: 4,
+                  child: _StepperField(
+                    controller: _repsCtrl,
+                    hint: 'reps',
+                    isDecimal: false,
+                    onEditingComplete: _flush,
+                    onDecrement: () => _stepReps(-1),
+                    onIncrement: () => _stepReps(1),
+                  ),
                 ),
-              ),
+              ],
             ),
           ],
         ),
@@ -223,7 +286,6 @@ class _SetRowState extends State<SetRow> {
 
 // ── Stepper field ─────────────────────────────────────────────────────────────
 
-/// A number text field flanked by [−] and [+] step buttons.
 class _StepperField extends StatelessWidget {
   const _StepperField({
     required this.controller,
@@ -260,8 +322,6 @@ class _StepperField extends StatelessWidget {
   }
 }
 
-// ── Step button ───────────────────────────────────────────────────────────────
-
 class _StepBtn extends StatelessWidget {
   const _StepBtn({required this.icon, required this.onTap});
   final IconData icon;
@@ -285,8 +345,6 @@ class _StepBtn extends StatelessWidget {
   }
 }
 
-// ── Number text field ─────────────────────────────────────────────────────────
-
 class _NumberField extends StatelessWidget {
   const _NumberField({
     required this.controller,
@@ -305,8 +363,7 @@ class _NumberField extends StatelessWidget {
     return TextField(
       controller: controller,
       textAlign: TextAlign.center,
-      keyboardType:
-          TextInputType.numberWithOptions(decimal: isDecimal),
+      keyboardType: TextInputType.numberWithOptions(decimal: isDecimal),
       inputFormatters: isDecimal
           ? [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))]
           : [FilteringTextInputFormatter.digitsOnly],
