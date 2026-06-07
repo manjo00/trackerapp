@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/models/exercise_model.dart';
 import '../../data/models/program_exercise_model.dart';
 import '../../data/models/workout_set_model.dart';
@@ -36,6 +37,15 @@ class _ActiveWorkoutScreenState
   /// Exercise names whose cards are currently expanded.
   final Set<String> _expanded = {};
 
+  /// View mode: group cards by muscle vs. manual (program) order.
+  bool _byMuscle = false;
+
+  /// exercise name → primary muscle (loaded once from the library).
+  Map<String, String> _muscleByName = const {};
+
+  /// shared_preferences key for this session type's view mode.
+  String _viewPrefKey = 'workout_view_freeform';
+
   @override
   void initState() {
     super.initState();
@@ -44,6 +54,48 @@ class _ActiveWorkoutScreenState
         setState(() => _elapsed = DateTime.now().difference(_startedAt!));
       }
     });
+    _loadViewPrefs();
+  }
+
+  /// Loads the name→muscle map and the persisted view mode for this session.
+  Future<void> _loadViewPrefs() async {
+    final repo = ref.read(workoutRepositoryProvider);
+    final all = await repo.getAllExercises();
+    final prefs = await SharedPreferences.getInstance();
+    final sid = ref.read(activeWorkoutProvider).valueOrNull?.programSessionId;
+    final key = 'workout_view_${sid ?? 'freeform'}';
+    if (!mounted) return;
+    setState(() {
+      _muscleByName = {for (final e in all) e.name: e.primaryMuscle};
+      _viewPrefKey = key;
+      _byMuscle = prefs.getBool(key) ?? false;
+    });
+  }
+
+  Future<void> _setByMuscle(bool value) async {
+    setState(() => _byMuscle = value);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_viewPrefKey, value);
+  }
+
+  /// Builds the display list: exercises in program order, or grouped under
+  /// muscle headers when [_byMuscle] is on.
+  List<_DisplayItem> _buildItems(List<String> exercises) {
+    if (!_byMuscle) {
+      return exercises.map(_DisplayItem.exercise).toList();
+    }
+    final groups = <String, List<String>>{};
+    for (final name in exercises) {
+      final muscle = _muscleByName[name] ?? 'Other';
+      (groups[muscle] ??= []).add(name);
+    }
+    final muscles = groups.keys.toList()..sort();
+    final items = <_DisplayItem>[];
+    for (final m in muscles) {
+      items.add(_DisplayItem.header(m));
+      items.addAll(groups[m]!.map(_DisplayItem.exercise));
+    }
+    return items;
   }
 
   @override
@@ -256,11 +308,17 @@ class _ActiveWorkoutScreenState
               ),
               PopupMenuButton<String>(
                 itemBuilder: (_) => [
+                  CheckedPopupMenuItem(
+                    value: 'muscle',
+                    checked: _byMuscle,
+                    child: const Text('Group by muscle'),
+                  ),
                   const PopupMenuItem(
                       value: 'discard',
                       child: Text('Discard Workout')),
                 ],
                 onSelected: (v) {
+                  if (v == 'muscle') _setByMuscle(!_byMuscle);
                   if (v == 'discard') _showDiscardDialog();
                 },
               ),
@@ -272,28 +330,39 @@ class _ActiveWorkoutScreenState
               Expanded(
                 child: exercises.isEmpty
                     ? _NoExercisesPlaceholder(onAdd: _addExercise)
-                    : ListView.builder(
-                        padding: const EdgeInsets.only(bottom: 120),
-                        itemCount: exercises.length,
-                        itemBuilder: (ctx, i) {
-                          final name = exercises[i];
-                          final sets = setsByExercise[name] ?? [];
-                          final programEx =
-                              active.programExerciseFor(name);
-                          return ExerciseAccordionCard(
-                            exerciseName: name,
-                            sets: sets,
-                            programExercise: programEx,
-                            completedSetIds: active.completedSetIds,
-                            expanded: _expanded.contains(name),
-                            onToggleExpand: () =>
-                                _toggleExpand(name, programEx),
-                            onUpdateSet: (updated) => ref
-                                .read(activeWorkoutProvider.notifier)
-                                .updateSet(updated),
-                            onCompleteSet: (set) =>
-                                _onSetComplete(set, programEx),
-                            onDeleteSet: _deleteSet,
+                    : Builder(
+                        builder: (ctx) {
+                          final items = _buildItems(exercises);
+                          return ListView.builder(
+                            padding: const EdgeInsets.only(bottom: 120),
+                            itemCount: items.length,
+                            itemBuilder: (ctx, i) {
+                              final item = items[i];
+                              if (item.muscleHeader != null) {
+                                return _MuscleHeader(
+                                    label: item.muscleHeader!);
+                              }
+                              final name = item.exerciseName!;
+                              final sets = setsByExercise[name] ?? [];
+                              final programEx =
+                                  active.programExerciseFor(name);
+                              return ExerciseAccordionCard(
+                                exerciseName: name,
+                                sets: sets,
+                                programExercise: programEx,
+                                completedSetIds: active.completedSetIds,
+                                expanded: _expanded.contains(name),
+                                muscle: _muscleByName[name],
+                                onToggleExpand: () =>
+                                    _toggleExpand(name, programEx),
+                                onUpdateSet: (updated) => ref
+                                    .read(activeWorkoutProvider.notifier)
+                                    .updateSet(updated),
+                                onCompleteSet: (set) =>
+                                    _onSetComplete(set, programEx),
+                                onDeleteSet: _deleteSet,
+                              );
+                            },
                           );
                         },
                       ),
@@ -307,6 +376,38 @@ class _ActiveWorkoutScreenState
           ),
         );
       },
+    );
+  }
+}
+
+/// One row in the active-day list: either a muscle-group header or an exercise.
+class _DisplayItem {
+  const _DisplayItem._({this.muscleHeader, this.exerciseName});
+  const _DisplayItem.header(String muscle) : this._(muscleHeader: muscle);
+  const _DisplayItem.exercise(String name) : this._(exerciseName: name);
+
+  final String? muscleHeader;
+  final String? exerciseName;
+}
+
+class _MuscleHeader extends StatelessWidget {
+  const _MuscleHeader({required this.label});
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
+      child: Text(
+        label.toUpperCase(),
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 0.5,
+          color: cs.primary,
+        ),
+      ),
     );
   }
 }
