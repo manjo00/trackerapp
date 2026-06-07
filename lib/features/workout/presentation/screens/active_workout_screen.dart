@@ -9,6 +9,7 @@ import '../../data/models/workout_set_model.dart';
 import '../providers/workout_providers.dart';
 import '../widgets/exercise_accordion_card.dart';
 import '../widgets/rest_timer_bar.dart';
+import 'workout_summary_screen.dart';
 
 /// The in-progress workout screen.
 ///
@@ -152,14 +153,76 @@ class _ActiveWorkoutScreenState
       ),
     );
     if (confirm == true && mounted) {
+      // Compute the summary from the current state BEFORE finishing clears it.
+      final active = ref.read(activeWorkoutProvider).valueOrNull;
+      final WorkoutSummary? summary =
+          active == null ? null : _buildSummary(active);
+
       await ref.read(activeWorkoutProvider.notifier).finish(
             name: nameCtrl.text.trim().isEmpty ? null : nameCtrl.text.trim(),
             notes: notesCtrl.text.trim().isEmpty
                 ? null
                 : notesCtrl.text.trim(),
           );
+      ref.read(restTimerProvider.notifier).cancel();
+
+      if (mounted && summary != null) {
+        await showModalBottomSheet<void>(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          builder: (_) => WorkoutSummarySheet(summary: summary),
+        );
+      }
       if (mounted) context.pop();
     }
+  }
+
+  /// Computes end-of-workout stats from logged sets (those with weight & reps).
+  WorkoutSummary _buildSummary(ActiveWorkoutState a) {
+    final logged = a.sets
+        .where((s) => s.weightKg != null && s.reps != null && !s.isWarmup)
+        .toList();
+
+    double volume = 0;
+    for (final s in logged) {
+      volume += (s.weightKg ?? 0) * (s.reps ?? 0);
+    }
+
+    final names = <String>{};
+    for (final s in a.sets) {
+      if (s.weightKg != null || s.reps != null) names.add(s.exerciseName);
+    }
+
+    // Heaviest set per exercise.
+    final top = <String, ({double? weight, int? reps})>{};
+    for (final s in logged) {
+      final cur = top[s.exerciseName];
+      if (cur == null || (s.weightKg ?? 0) > (cur.weight ?? 0)) {
+        top[s.exerciseName] = (weight: s.weightKg, reps: s.reps);
+      }
+    }
+
+    // Distinct exercises with a new PR.
+    final prExercises = <String>{};
+    for (final s in logged) {
+      if (s.isPr) prExercises.add(s.exerciseName);
+    }
+
+    return (
+      duration: DateTime.now().difference(a.startedAt),
+      exerciseCount: names.length,
+      setCount: logged.length,
+      totalVolume: volume,
+      prCount: prExercises.length,
+      topSets: top.entries
+          .map((e) =>
+              (name: e.key, topWeight: e.value.weight, topReps: e.value.reps))
+          .toList(),
+    );
   }
 
   Future<void> _showDiscardDialog() async {
@@ -184,8 +247,9 @@ class _ActiveWorkoutScreenState
       ),
     );
     if (confirm == true && mounted) {
-      ref.read(activeWorkoutProvider.notifier).discard();
-      context.pop();
+      await ref.read(activeWorkoutProvider.notifier).discard();
+      ref.read(restTimerProvider.notifier).cancel();
+      if (mounted) context.pop();
     }
   }
 

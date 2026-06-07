@@ -203,6 +203,12 @@ class WorkoutRepository {
 
   // ── PR detection (pure logic) ─────────────────────────────────────────────
 
+  /// Public PR check — used when a set's weight is edited after creation
+  /// (sets are created empty, so PR can't be decided at insert time).
+  Future<bool> isPrWeight(
+          String exerciseName, double? weightKg, int currentSessionId) =>
+      _isPr(exerciseName, weightKg, currentSessionId);
+
   /// Returns true if [weightKg] is >= the best weight ever recorded for
   /// [exerciseName] outside [currentSessionId].
   ///

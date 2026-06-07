@@ -203,12 +203,20 @@ class ActiveWorkout extends _$ActiveWorkout {
   }
 
   /// Updates an existing set (reps, weight, rest, etc.) and writes to DB.
+  ///
+  /// Recomputes the PR flag from the new weight — sets are created empty, so
+  /// PR can't be decided at insert time.
   Future<void> updateSet(WorkoutSetModel updated) async {
     final current = state.valueOrNull;
     if (current == null) return;
-    await ref.read(workoutRepositoryProvider).updateSet(updated);
+    final repo = ref.read(workoutRepositoryProvider);
+    final bool isPr = !updated.isWarmup &&
+        await repo.isPrWeight(
+            updated.exerciseName, updated.weightKg, current.sessionId);
+    final WorkoutSetModel withPr = updated.copyWith(isPr: isPr);
+    await repo.updateSet(withPr);
     state = AsyncData(current.copyWith(
-      sets: current.sets.map((s) => s.id == updated.id ? updated : s).toList(),
+      sets: current.sets.map((s) => s.id == withPr.id ? withPr : s).toList(),
     ));
   }
 
@@ -255,21 +263,36 @@ class ActiveWorkout extends _$ActiveWorkout {
   }
 
   /// Finalises the session (sets name/notes) and clears active state.
+  /// Prunes untouched (empty) auto-created sets so history stays clean.
   Future<void> finish({String? name, String? notes}) async {
     final current = state.valueOrNull;
     if (current == null) return;
-    await ref
-        .read(workoutRepositoryProvider)
-        .finishSession(current.sessionId, name: name, notes: notes);
+    final repo = ref.read(workoutRepositoryProvider);
+    await _pruneEmptySets(current, repo);
+    await repo.finishSession(current.sessionId, name: name, notes: notes);
     state = const AsyncData(null);
     ref.invalidate(allWorkoutSessionsProvider);
   }
 
-  /// Discards the active state without deleting DB data.
-  /// (The session stays in history as an unnamed entry.)
-  void discard() {
+  /// Discards the active state. Prunes empty sets but keeps the session in
+  /// history as an unnamed entry.
+  Future<void> discard() async {
+    final current = state.valueOrNull;
+    if (current != null) {
+      await _pruneEmptySets(current, ref.read(workoutRepositoryProvider));
+    }
     state = const AsyncData(null);
     ref.invalidate(allWorkoutSessionsProvider);
+  }
+
+  /// Deletes auto-created sets the user never filled in (no weight and no reps).
+  Future<void> _pruneEmptySets(
+      ActiveWorkoutState s, WorkoutRepository repo) async {
+    for (final set in s.sets) {
+      if (set.weightKg == null && set.reps == null) {
+        await repo.deleteSet(set.id);
+      }
+    }
   }
 }
 
