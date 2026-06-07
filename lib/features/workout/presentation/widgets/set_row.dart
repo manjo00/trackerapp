@@ -20,6 +20,7 @@ class SetRow extends StatefulWidget {
     super.key,
     required this.set,
     this.hint,
+    required this.isCompleted,
     required this.onUpdate,
     required this.onComplete,
     required this.onDelete,
@@ -30,10 +31,14 @@ class SetRow extends StatefulWidget {
   /// Matching set from the previous session (for the "prev" label + copy).
   final WorkoutSetModel? hint;
 
+  /// Whether this set is checked off (driven by the provider so it survives
+  /// the card being collapsed/expanded).
+  final bool isCompleted;
+
   /// Called whenever reps or weight change.
   final ValueChanged<WorkoutSetModel> onUpdate;
 
-  /// Called when ✓ is tapped (saves + starts rest timer).
+  /// Called when ✓ is tapped (toggles completion + starts rest timer).
   final VoidCallback onComplete;
 
   /// Called when the tile is long-pressed.
@@ -46,7 +51,6 @@ class SetRow extends StatefulWidget {
 class _SetRowState extends State<SetRow> {
   late final TextEditingController _weightCtrl;
   late final TextEditingController _repsCtrl;
-  bool _completed = false;
 
   @override
   void initState() {
@@ -139,9 +143,10 @@ class _SetRowState extends State<SetRow> {
     final isPr = widget.set.isPr;
     final isWarmup = widget.set.isWarmup;
     final hasPrev = widget.hint != null;
+    final completed = widget.isCompleted;
 
     Color? bg;
-    if (_completed) {
+    if (completed) {
       bg = Colors.green.withAlpha(40);
     } else if (isPr) {
       bg = cs.primaryContainer.withAlpha(80);
@@ -213,11 +218,10 @@ class _SetRowState extends State<SetRow> {
                   tooltip: 'Load from history',
                   onPressed: _openHistory,
                 ),
-                // Complete
+                // Complete (toggles; driven by provider state)
                 InkWell(
                   onTap: () {
                     _flush();
-                    setState(() => _completed = true);
                     widget.onComplete();
                   },
                   borderRadius: BorderRadius.circular(20),
@@ -227,14 +231,14 @@ class _SetRowState extends State<SetRow> {
                     height: 34,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: _completed
+                      color: completed
                           ? Colors.green
                           : cs.primary.withAlpha(20),
                     ),
                     child: Icon(
                       Icons.check_rounded,
                       size: 19,
-                      color: _completed ? Colors.white : cs.primary,
+                      color: completed ? Colors.white : cs.primary,
                     ),
                   ),
                 ),

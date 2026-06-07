@@ -6,8 +6,8 @@ import '../../data/models/exercise_model.dart';
 import '../../data/models/program_exercise_model.dart';
 import '../../data/models/workout_set_model.dart';
 import '../providers/workout_providers.dart';
+import '../widgets/exercise_accordion_card.dart';
 import '../widgets/rest_timer_bar.dart';
-import '../widgets/set_row.dart';
 
 /// The in-progress workout screen.
 ///
@@ -32,6 +32,9 @@ class _ActiveWorkoutScreenState
   Timer? _ticker;
   Duration _elapsed = Duration.zero;
   DateTime? _startedAt;
+
+  /// Exercise names whose cards are currently expanded.
+  final Set<String> _expanded = {};
 
   @override
   void initState() {
@@ -140,20 +143,44 @@ class _ActiveWorkoutScreenState
     final result =
         await context.push<ExerciseModel>('/workout/exercises');
     if (result == null || !mounted) return;
-    await ref.read(activeWorkoutProvider.notifier).addSet(
-          exerciseName: result.name,
-          exerciseId: result.id,
-        );
+    // Auto-expand the new exercise and seed one empty set ("pop-up appears").
+    setState(() => _expanded.add(result.name));
+    await ref
+        .read(activeWorkoutProvider.notifier)
+        .ensureTargetSets(result.name, 1);
+  }
+
+  // ── Expand / collapse ─────────────────────────────────────────────────────
+
+  Future<void> _toggleExpand(
+      String name, ProgramExerciseModel? programEx) async {
+    final willExpand = !_expanded.contains(name);
+    setState(() {
+      if (willExpand) {
+        _expanded.add(name);
+      } else {
+        _expanded.remove(name);
+      }
+    });
+    if (willExpand) {
+      // Opening an exercise materialises its target sets (pre-filled prev hints).
+      await ref
+          .read(activeWorkoutProvider.notifier)
+          .ensureTargetSets(name, programEx?.targetSets ?? 1);
+    }
   }
 
   // ── Set complete → rest timer ─────────────────────────────────────────────
 
   void _onSetComplete(
       WorkoutSetModel set, ProgramExerciseModel? programEx) {
-    // Completing a set starts the universal rest timer; the top
-    // [RestTimerBar] reacts automatically — no modal needed.
-    final restSec = programEx?.restSeconds ?? 120;
-    ref.read(restTimerProvider.notifier).start(restSec);
+    final nowDone =
+        ref.read(activeWorkoutProvider.notifier).toggleSetComplete(set.id);
+    if (nowDone) {
+      // Starting the universal rest timer; the top RestTimerBar reacts.
+      final restSec = programEx?.restSeconds ?? 120;
+      ref.read(restTimerProvider.notifier).start(restSec);
+    }
   }
 
   Future<void> _deleteSet(int setId) async {
@@ -253,11 +280,14 @@ class _ActiveWorkoutScreenState
                           final sets = setsByExercise[name] ?? [];
                           final programEx =
                               active.programExerciseFor(name);
-                          return _ExerciseSection(
+                          return ExerciseAccordionCard(
                             exerciseName: name,
                             sets: sets,
-                            sessionId: active.sessionId,
                             programExercise: programEx,
+                            completedSetIds: active.completedSetIds,
+                            expanded: _expanded.contains(name),
+                            onToggleExpand: () =>
+                                _toggleExpand(name, programEx),
                             onUpdateSet: (updated) => ref
                                 .read(activeWorkoutProvider.notifier)
                                 .updateSet(updated),
@@ -277,171 +307,6 @@ class _ActiveWorkoutScreenState
           ),
         );
       },
-    );
-  }
-}
-
-// ── Exercise section ──────────────────────────────────────────────────────────
-
-class _ExerciseSection extends ConsumerWidget {
-  const _ExerciseSection({
-    required this.exerciseName,
-    required this.sets,
-    required this.sessionId,
-    required this.programExercise,
-    required this.onUpdateSet,
-    required this.onCompleteSet,
-    required this.onDeleteSet,
-  });
-
-  final String exerciseName;
-  final List<WorkoutSetModel> sets;
-  final int sessionId;
-  final ProgramExerciseModel? programExercise;
-  final ValueChanged<WorkoutSetModel> onUpdateSet;
-  final ValueChanged<WorkoutSetModel> onCompleteSet;
-  final ValueChanged<int> onDeleteSet;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final hintsAsync =
-        ref.watch(lastSessionHintsProvider(exerciseName));
-    final hints = hintsAsync.valueOrNull ?? const [];
-    final cs = Theme.of(context).colorScheme;
-    final programEx = programExercise;
-
-    // Progressive overload indicator
-    String? progressIcon;
-    if (sets.isNotEmpty && hints.isNotEmpty) {
-      final currentMax = sets
-          .where((s) => s.weightKg != null)
-          .fold<double>(0, (m, s) => s.weightKg! > m ? s.weightKg! : m);
-      final lastMax = hints
-          .where((s) => s.weightKg != null)
-          .fold<double>(0, (m, s) => s.weightKg! > m ? s.weightKg! : m);
-      if (currentMax > lastMax) {
-        progressIcon = '↑';
-      } else if (currentMax < lastMax) {
-        progressIcon = '↓';
-      } else {
-        progressIcon = '→';
-      }
-    }
-
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Text(
-                            exerciseName,
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
-                                ?.copyWith(fontWeight: FontWeight.bold),
-                          ),
-                          if (progressIcon != null) ...[
-                            const SizedBox(width: 6),
-                            Text(
-                              progressIcon,
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: progressIcon == '↑'
-                                    ? Colors.green
-                                    : progressIcon == '↓'
-                                        ? cs.error
-                                        : cs.onSurface.withAlpha(140),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                      if (programEx != null)
-                        Text(
-                          'Target: ${programEx.volumeLabel}  •  Rest ${programEx.restLabel}',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: cs.onSurface.withAlpha(140),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                if (hints.isNotEmpty)
-                  Tooltip(
-                    message: 'Hints from last session',
-                    child: Icon(Icons.history_rounded,
-                        size: 16,
-                        color: cs.onSurface.withAlpha(120)),
-                  ),
-              ],
-            ),
-
-            const SizedBox(height: 4),
-            const Divider(height: 1),
-
-            // Set rows
-            ...sets.asMap().entries.map((e) {
-              final index = e.key;
-              final set = e.value;
-              final hint = index < hints.length ? hints[index] : null;
-              return SetRow(
-                key: ValueKey(set.id),
-                set: set,
-                hint: hint,
-                onUpdate: onUpdateSet,
-                onComplete: () => onCompleteSet(set),
-                onDelete: () => onDeleteSet(set.id),
-              );
-            }),
-
-            const SizedBox(height: 8),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () async {
-                  // Pre-fill: use last set in current session; if none, use
-                  // the matching hint from the previous session.
-                  double? weight;
-                  int? reps;
-                  if (sets.isNotEmpty) {
-                    weight = sets.last.weightKg;
-                    reps = sets.last.reps;
-                  } else if (hints.isNotEmpty) {
-                    weight = hints.first.weightKg;
-                    reps = hints.first.reps;
-                  }
-                  await ref
-                      .read(activeWorkoutProvider.notifier)
-                      .addSet(
-                        exerciseName: exerciseName,
-                        weightKg: weight,
-                        reps: reps,
-                      );
-                },
-                icon: const Icon(Icons.add_rounded, size: 18),
-                label: const Text('Add Set'),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  side: BorderSide(
-                      color: cs.outline.withAlpha(80)),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

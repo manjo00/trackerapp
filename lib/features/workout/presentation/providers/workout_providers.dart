@@ -42,6 +42,7 @@ class ActiveWorkoutState {
     this.programSessionName,
     this.programExercises = const [],
     this.sets = const [],
+    this.completedSetIds = const {},
   });
 
   final int sessionId;
@@ -59,9 +60,14 @@ class ActiveWorkoutState {
 
   final List<WorkoutSetModel> sets;
 
+  /// Set ids the user has checked off this session. Runtime-only (the green
+  /// ✓ state) — lives here so it survives collapsing/expanding exercise cards.
+  final Set<int> completedSetIds;
+
   ActiveWorkoutState copyWith({
     List<WorkoutSetModel>? sets,
     List<ProgramExerciseModel>? programExercises,
+    Set<int>? completedSetIds,
   }) =>
       ActiveWorkoutState(
         sessionId: sessionId,
@@ -70,9 +76,19 @@ class ActiveWorkoutState {
         programSessionName: programSessionName,
         programExercises: programExercises ?? this.programExercises,
         sets: sets ?? this.sets,
+        completedSetIds: completedSetIds ?? this.completedSetIds,
       );
 
   bool get isProgramDriven => programSessionId != null;
+
+  /// Whether [setId] has been checked off.
+  bool isCompleted(int setId) => completedSetIds.contains(setId);
+
+  /// Completed-set count for [exerciseName].
+  int completedCountFor(String exerciseName) => sets
+      .where((s) =>
+          s.exerciseName == exerciseName && completedSetIds.contains(s.id))
+      .length;
 
   /// Sets grouped by exercise name, preserving insertion order.
   Map<String, List<WorkoutSetModel>> get setsByExercise {
@@ -196,14 +212,46 @@ class ActiveWorkout extends _$ActiveWorkout {
     ));
   }
 
-  /// Deletes a set from the DB and removes it from state.
+  /// Deletes a set from the DB and removes it from state + completion set.
   Future<void> deleteSet(int setId) async {
     final current = state.valueOrNull;
     if (current == null) return;
     await ref.read(workoutRepositoryProvider).deleteSet(setId);
     state = AsyncData(current.copyWith(
       sets: current.sets.where((s) => s.id != setId).toList(),
+      completedSetIds: {...current.completedSetIds}..remove(setId),
     ));
+  }
+
+  /// Toggles the checked-off state of [setId]. Returns the new state
+  /// (true = now completed) so the UI can decide whether to start rest.
+  bool toggleSetComplete(int setId) {
+    final current = state.valueOrNull;
+    if (current == null) return false;
+    final next = {...current.completedSetIds};
+    final bool nowDone = !next.contains(setId);
+    if (nowDone) {
+      next.add(setId);
+    } else {
+      next.remove(setId);
+    }
+    state = AsyncData(current.copyWith(completedSetIds: next));
+    return nowDone;
+  }
+
+  /// Ensures [exerciseName] has at least [targetSets] rows (empty, so the
+  /// previous-session hint shows and untouched rows can be pruned on finish).
+  /// No-op if the exercise already has any sets.
+  Future<void> ensureTargetSets(String exerciseName, int targetSets) async {
+    final current = state.valueOrNull;
+    if (current == null) return;
+    final existing =
+        current.sets.where((s) => s.exerciseName == exerciseName).length;
+    if (existing > 0) return;
+    final int count = targetSets < 1 ? 1 : targetSets;
+    for (int i = 0; i < count; i++) {
+      await addSet(exerciseName: exerciseName);
+    }
   }
 
   /// Finalises the session (sets name/notes) and clears active state.
