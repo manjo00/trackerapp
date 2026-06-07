@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 /// so [AppTab.today.index] == 0, [AppTab.habits.index] == 1, etc.
 enum AppTab {
   today,
+  inbox,    // undated tasks / capture
   habits,
   tasks,
   planner,
@@ -14,6 +15,7 @@ enum AppTab {
 
   String get label => switch (this) {
         today => 'Today',
+        inbox => 'Inbox',
         habits => 'Habits',
         tasks => 'Tasks',
         planner => 'Planner',
@@ -23,6 +25,7 @@ enum AppTab {
 
   IconData get icon => switch (this) {
         today => Icons.wb_sunny_outlined,
+        inbox => Icons.inbox_outlined,
         habits => Icons.radio_button_unchecked_rounded,
         tasks => Icons.check_box_outline_blank_rounded,
         planner => Icons.calendar_today_rounded,
@@ -32,6 +35,7 @@ enum AppTab {
 
   IconData get selectedIcon => switch (this) {
         today => Icons.wb_sunny_rounded,
+        inbox => Icons.inbox_rounded,
         habits => Icons.task_alt_rounded,
         tasks => Icons.check_box_rounded,
         planner => Icons.calendar_month_rounded,
@@ -71,16 +75,14 @@ class AppSettings {
   /// Convenience getter — the reminder as a Flutter [TimeOfDay].
   TimeOfDay get reminderTime => TimeOfDay(hour: reminderHour, minute: reminderMinute);
 
-  /// Shipped defaults — all tabs on, system theme, 9 AM reminder (off).
+  /// Shipped defaults — Today + Inbox + Planner in the bottom nav;
+  /// Habits / Tasks / Trackers / Workout accessible from the drawer.
   static const AppSettings defaults = AppSettings(
     themeMode: ThemeMode.system,
     visibleTabs: {
       AppTab.today,
-      AppTab.habits,
-      AppTab.tasks,
+      AppTab.inbox,
       AppTab.planner,
-      AppTab.trackers,
-      AppTab.workout,
     },
     notificationsEnabled: false,
     reminderHour: 9,

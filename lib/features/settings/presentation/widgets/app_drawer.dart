@@ -113,13 +113,64 @@ class AppDrawer extends ConsumerWidget {
             const SizedBox(height: 8),
             Divider(color: cs.outlineVariant),
 
-            // ── Navigation items ────────────────────────────────────────
+            // ── Features (tabs not in the bottom nav) ───────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 4),
+              child: Text(
+                'FEATURES',
+                style: tt.labelSmall?.copyWith(
+                  color: cs.primary,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1,
+                ),
+              ),
+            ),
+            _DrawerTile(
+              icon: Icons.task_alt_rounded,
+              label: 'Habits',
+              subtitle: 'Daily streaks & recurring goals',
+              onTap: () {
+                Navigator.of(context).pop();
+                context.go('/habits');
+              },
+            ),
+            _DrawerTile(
+              icon: Icons.check_box_rounded,
+              label: 'Tasks',
+              subtitle: 'All your tasks',
+              onTap: () {
+                Navigator.of(context).pop();
+                context.go('/tasks');
+              },
+            ),
+            _DrawerTile(
+              icon: Icons.bar_chart_rounded,
+              label: 'Trackers',
+              subtitle: 'Checklists & session logs',
+              onTap: () {
+                Navigator.of(context).pop();
+                context.go('/trackers');
+              },
+            ),
+            _DrawerTile(
+              icon: Icons.fitness_center_rounded,
+              label: 'Workout',
+              subtitle: 'Programs, sets & rest timer',
+              onTap: () {
+                Navigator.of(context).pop();
+                context.go('/workout');
+              },
+            ),
+
+            Divider(color: cs.outlineVariant),
+
+            // ── Settings & info ─────────────────────────────────────────
             _DrawerTile(
               icon: Icons.settings_rounded,
               label: 'Settings',
               subtitle: 'Tabs, theme & more',
               onTap: () {
-                Navigator.of(context).pop(); // close drawer first
+                Navigator.of(context).pop();
                 context.push('/settings');
               },
             ),

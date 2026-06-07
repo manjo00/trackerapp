@@ -46,6 +46,13 @@ class TasksRepository {
         );
   }
 
+  /// Incomplete tasks with no due date — shown in the Inbox tab.
+  Stream<List<TaskModel>> watchInboxTasks() {
+    return _dao.watchInboxTasks().map(
+          (rows) => rows.map(_fromRow).toList(),
+        );
+  }
+
   /// All tasks due on a specific [date], sorted by completion + priority.
   /// Used by the planner day-detail view.
   Stream<List<TaskModel>> watchTasksForDate(String date) {

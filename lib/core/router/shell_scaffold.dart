@@ -64,11 +64,12 @@ class _HomeShellState extends ConsumerState<HomeShell> {
 
   String _labelForBranch(int branchIndex) => switch (branchIndex) {
         0 => 'Today',
-        1 => 'Habits',
-        2 => 'Tasks',
-        3 => 'Planner',
-        4 => 'Trackers',
-        5 => 'Workout',
+        1 => 'Inbox',
+        2 => 'Habits',
+        3 => 'Tasks',
+        4 => 'Planner',
+        5 => 'Trackers',
+        6 => 'Workout',
         _ => 'Life Tracker',
       };
 

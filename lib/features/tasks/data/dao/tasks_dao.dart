@@ -68,6 +68,17 @@ class TasksDao extends DatabaseAccessor<AppDatabase> with _$TasksDaoMixin {
         .watch();
   }
 
+  /// Incomplete tasks with NO due date — the Inbox ("someday / unsorted").
+  Stream<List<Task>> watchInboxTasks() {
+    return (select(tasks)
+          ..where((t) => t.dueDate.isNull() & t.isCompleted.equals(false))
+          ..orderBy([
+            (t) => OrderingTerm.desc(t.priority),
+            (t) => OrderingTerm.asc(t.createdAt),
+          ]))
+        .watch();
+  }
+
   /// All tasks as a one-shot list (used by rescheduleAll on app start).
   Future<List<Task>> getAllTasks() => select(tasks).get();
 

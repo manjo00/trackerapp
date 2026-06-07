@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../features/habits/data/models/habit_with_status.dart';
 import '../../../../features/habits/presentation/providers/habits_providers.dart';
 import '../../../../features/habits/presentation/widgets/habit_tile.dart';
 import '../../../../features/tasks/data/models/task_model.dart';
 import '../../../../features/tasks/presentation/providers/tasks_providers.dart';
 import '../../../../features/tasks/presentation/widgets/task_tile.dart';
+import '../../../../features/workout/data/models/program_session_model.dart';
+import '../../../../features/workout/presentation/providers/program_providers.dart';
+import '../../../../features/workout/presentation/providers/workout_providers.dart';
 
 /// The "Today" tab — shows today's habits, overdue tasks, and tasks due today.
 ///
@@ -27,6 +31,9 @@ class TodayScreen extends ConsumerWidget {
         ref.watch(overdueTasksProvider);
     final AsyncValue<List<TaskModel>> todayAsync =
         ref.watch(tasksDueTodayProvider);
+    final suggestedSession =
+        ref.watch(todaysSuggestedSessionProvider).valueOrNull;
+    final activeWorkout = ref.watch(activeWorkoutProvider).valueOrNull;
 
     // Show a single spinner only while everything is still on its first load.
     final bool allLoading = habitsAsync is AsyncLoading &&
@@ -39,6 +46,11 @@ class TodayScreen extends ConsumerWidget {
           : ListView(
               padding: const EdgeInsets.only(top: 8, bottom: 32),
               children: [
+                // ── Workout session for today ──────────────────────────────
+                if (suggestedSession != null || activeWorkout != null)
+                  _buildWorkoutSection(
+                      context, ref, suggestedSession, activeWorkout),
+
                 // ── Overdue section (only shown when there are overdue items)
                 ..._buildOverdueSection(context, overdueAsync),
 
@@ -62,6 +74,56 @@ class TodayScreen extends ConsumerWidget {
               ],
             ),
     );
+  }
+
+  Widget _buildWorkoutSection(
+    BuildContext context,
+    WidgetRef ref,
+    ProgramSessionModel? suggested,
+    dynamic activeWorkout,
+  ) {
+    final cs = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _SectionHeader(label: 'Workout', icon: Icons.fitness_center_rounded),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          child: activeWorkout != null
+              ? _WorkoutTile(
+                  label: 'Workout in progress',
+                  subtitle: 'Tap to resume',
+                  color: cs.tertiaryContainer,
+                  iconColor: cs.onTertiaryContainer,
+                  onTap: () => context.push('/workout/active'),
+                  onCheck: null, // can't quick-complete an in-progress workout
+                )
+              : _WorkoutTile(
+                  label: suggested != null ? suggested.name : 'Open Workout',
+                  subtitle: suggested != null
+                      ? '${suggested.exercises.length} exercises planned'
+                      : 'No session scheduled today',
+                  color: Color(suggested?.colorValue ?? 0xFF6750A4).withAlpha(30),
+                  iconColor: Color(suggested?.colorValue ?? 0xFF6750A4),
+                  onTap: () => context.go('/workout'),
+                  onCheck: suggested != null
+                      ? () => _startWorkout(context, ref, suggested)
+                      : null,
+                ),
+        ),
+        const SizedBox(height: 4),
+      ],
+    );
+  }
+
+  Future<void> _startWorkout(
+      BuildContext context, WidgetRef ref, ProgramSessionModel session) async {
+    await ref.read(activeWorkoutProvider.notifier).start(
+          programSessionId: session.id,
+          programExercises: session.exercises,
+          programSessionName: session.name,
+        );
+    if (context.mounted) context.push('/workout/active');
   }
 
   // ── Section builders ────────────────────────────────────────────────────────
@@ -238,6 +300,75 @@ class _ErrorTile extends StatelessWidget {
       child: Text(
         message,
         style: TextStyle(color: Theme.of(context).colorScheme.error),
+      ),
+    );
+  }
+}
+
+/// A tappable workout row in the Today list.
+/// [onCheck] is null when there's nothing to start (rest day / in-progress).
+class _WorkoutTile extends StatelessWidget {
+  const _WorkoutTile({
+    required this.label,
+    required this.subtitle,
+    required this.color,
+    required this.iconColor,
+    required this.onTap,
+    required this.onCheck,
+  });
+
+  final String label;
+  final String subtitle;
+  final Color color;
+  final Color iconColor;
+  final VoidCallback onTap;
+  final VoidCallback? onCheck;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Material(
+      color: color,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            children: [
+              Icon(Icons.fitness_center_rounded, color: iconColor, size: 22),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                          fontSize: 12, color: cs.onSurface.withAlpha(150)),
+                    ),
+                  ],
+                ),
+              ),
+              if (onCheck != null)
+                IconButton(
+                  icon: Icon(Icons.play_arrow_rounded, color: iconColor),
+                  tooltip: 'Start workout',
+                  onPressed: onCheck,
+                )
+              else
+                Icon(Icons.chevron_right_rounded,
+                    color: cs.onSurface.withAlpha(120)),
+            ],
+          ),
+        ),
       ),
     );
   }

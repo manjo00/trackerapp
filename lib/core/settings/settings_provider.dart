@@ -39,9 +39,22 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
   static const String _kReminderHour = 'reminder_hour';
   static const String _kReminderMinute = 'reminder_minute';
 
+  // Settings schema version — increment when defaults need to be reset.
+  static const int _currentSettingsVersion = 2;
+  static const String _kSettingsVersion = 'settings_version';
+
   // ── Load ───────────────────────────────────────────────────────────────
 
   void _load() {
+    // Migrate settings when upgrading to a new schema version.
+    final int savedVersion = _prefs.getInt(_kSettingsVersion) ?? 1;
+    if (savedVersion < _currentSettingsVersion) {
+      // v2: Reset tabs to the new 3-tab default (Today + Inbox + Planner).
+      // Old stored tabs used the 6-tab layout; clear to pick up new defaults.
+      _prefs.remove(_kTabs);
+      _prefs.setInt(_kSettingsVersion, _currentSettingsVersion);
+    }
+
     state = AppSettings(
       themeMode: _loadTheme(),
       visibleTabs: _loadTabs(),

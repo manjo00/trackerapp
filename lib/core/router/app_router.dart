@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/habits/data/models/habit_model.dart';
 import '../../features/habits/presentation/screens/habit_list_screen.dart';
 import '../../features/habits/presentation/screens/add_habit_screen.dart';
+import '../../features/inbox/presentation/screens/inbox_screen.dart';
 import '../../features/tasks/data/models/task_model.dart';
 import '../../features/tasks/presentation/screens/task_list_screen.dart';
 import '../../features/tasks/presentation/screens/add_task_screen.dart';
@@ -69,7 +70,19 @@ final GoRouter appRouter = GoRouter(
           ],
         ),
 
-        // Branch 1 — Habits
+        // Branch 1 — Inbox
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: '/inbox',
+              pageBuilder: (context, state) => const NoTransitionPage(
+                child: InboxScreen(),
+              ),
+            ),
+          ],
+        ),
+
+        // Branch 2 — Habits
         StatefulShellBranch(
           routes: [
             GoRoute(

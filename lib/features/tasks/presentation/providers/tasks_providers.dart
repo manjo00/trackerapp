@@ -37,6 +37,12 @@ Stream<List<TaskModel>> overdueTasks(OverdueTasksRef ref) {
   return ref.watch(tasksRepositoryProvider).watchOverdueTasks();
 }
 
+/// Incomplete tasks with no due date — displayed in the Inbox tab.
+@riverpod
+Stream<List<TaskModel>> inboxTasks(InboxTasksRef ref) {
+  return ref.watch(tasksRepositoryProvider).watchInboxTasks();
+}
+
 // ── Write providers ───────────────────────────────────────────────────────
 
 /// Handles adding a new task.
