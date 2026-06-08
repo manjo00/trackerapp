@@ -346,9 +346,15 @@ class _ErrorTile extends StatelessWidget {
 /// toggles the item list. Each item has a circular checkbox that saves
 /// the new check state to the DB immediately on tap.
 ///
-/// Local [_checkedIds] state gives instant visual feedback without waiting
-/// for the Riverpod stream to re-emit. [didUpdateWidget] syncs back from
-/// the stream when external changes arrive (e.g. from the Trackers tab).
+/// Items are loaded via [trackerItemsProvider] — a live Drift stream on the
+/// trackerItems table — rather than being baked into [TrackerTodayStatus].
+/// This avoids the race condition where the customTrackers stream re-emits
+/// before all items have been inserted, causing the card to show 0/1 instead
+/// of 0/3.
+///
+/// Local [_checkedIds] state gives instant visual feedback. [didUpdateWidget]
+/// syncs back from the stream when external changes arrive (e.g. from the
+/// Trackers tab).
 class _TrackerInlineCard extends ConsumerStatefulWidget {
   const _TrackerInlineCard({required this.status});
 
@@ -376,7 +382,7 @@ class _TrackerInlineCardState extends ConsumerState<_TrackerInlineCard> {
     _checkedIds = Set.from(widget.status.checkedItemIds);
   }
 
-  void _toggle(int itemId) {
+  void _toggle(int itemId, List<TrackerItemModel> allItems) {
     final Set<int> updated = Set.from(_checkedIds);
     if (updated.contains(itemId)) {
       updated.remove(itemId);
@@ -388,7 +394,7 @@ class _TrackerInlineCardState extends ConsumerState<_TrackerInlineCard> {
     ref.read(logChecklistProvider.notifier).save(
           trackerId: widget.status.trackerId,
           checkedItemIds: updated,
-          allItems: widget.status.items,
+          allItems: allItems,
         );
   }
 
@@ -396,8 +402,16 @@ class _TrackerInlineCardState extends ConsumerState<_TrackerInlineCard> {
   Widget build(BuildContext context) {
     final ColorScheme cs = Theme.of(context).colorScheme;
     final Color accent = Color(widget.status.colorValue);
-    final bool allDone = _checkedIds.length == widget.status.totalItems &&
-        widget.status.totalItems > 0;
+
+    // Watch items via the live trackerItems stream — avoids the race condition
+    // where the customTrackers stream fires before items are fully inserted.
+    final List<TrackerItemModel> items =
+        ref.watch(trackerItemsProvider(widget.status.trackerId)).valueOrNull ??
+            const [];
+
+    final int totalItems = items.length;
+    final bool allDone =
+        _checkedIds.length == totalItems && totalItems > 0;
 
     return Card(
       child: Column(
@@ -439,7 +453,7 @@ class _TrackerInlineCardState extends ConsumerState<_TrackerInlineCard> {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      '${_checkedIds.length}/${widget.status.totalItems}',
+                      '${_checkedIds.length}/$totalItems',
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -470,14 +484,14 @@ class _TrackerInlineCardState extends ConsumerState<_TrackerInlineCard> {
                 ? Column(
                     children: [
                       Divider(height: 1, color: cs.outlineVariant),
-                      ...widget.status.items.map((TrackerItemModel item) {
+                      ...items.map((TrackerItemModel item) {
                         final bool done = _checkedIds.contains(item.id);
                         return ListTile(
                           dense: true,
                           contentPadding:
                               const EdgeInsets.symmetric(horizontal: 16),
                           leading: GestureDetector(
-                            onTap: () => _toggle(item.id),
+                            onTap: () => _toggle(item.id, items),
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 200),
                               width: 22,
@@ -507,7 +521,7 @@ class _TrackerInlineCardState extends ConsumerState<_TrackerInlineCard> {
                                   done ? TextDecoration.lineThrough : null,
                             ),
                           ),
-                          onTap: () => _toggle(item.id),
+                          onTap: () => _toggle(item.id, items),
                         );
                       }),
                       const SizedBox(height: 8),

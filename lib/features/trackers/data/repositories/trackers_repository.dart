@@ -63,6 +63,11 @@ class TrackersRepository {
   ///
   /// Only returns [TrackerType.dailyChecklist] trackers — session logs are
   /// not suitable for inline check-off on the Today screen.
+  ///
+  /// Items are NOT loaded here to avoid a race condition: the tracker row is
+  /// inserted before its items, so the stream would otherwise emit with an
+  /// empty item list. [_TrackerInlineCard] watches [trackerItemsProvider]
+  /// directly instead, which reacts to the trackerItems table in real-time.
   Stream<List<TrackerTodayStatus>> watchChecklistTrackersForToday() {
     return _dao.watchAllTrackers().asyncMap((rows) async {
       final String today = _today();
@@ -72,11 +77,6 @@ class TrackersRepository {
         // Skip non-checklist trackers and template placeholders.
         if (row.templateType != TrackerType.dailyChecklist.value) continue;
         if (row.isTemplate) continue;
-
-        final List<TrackerItem> itemRows =
-            await _dao.getItemsForTracker(row.id);
-        final List<TrackerItemModel> items =
-            itemRows.map(_itemFromRow).toList();
 
         // Collect which item IDs are checked today.
         final List<TrackerLog> todayLogs =
@@ -95,7 +95,6 @@ class TrackersRepository {
           name: row.name,
           icon: row.icon,
           colorValue: row.colorValue,
-          items: items,
           checkedItemIds: checkedIds,
         ));
       }

@@ -1,16 +1,17 @@
-import 'tracker_item_model.dart';
-
 /// A daily-checklist tracker enriched with today's item-level check state.
 ///
 /// Used exclusively by [TodayScreen] for inline check-off.
 /// Plain Dart — no code generation needed.
+///
+/// Items are intentionally NOT stored here. [_TrackerInlineCard] watches
+/// [trackerItemsProvider] directly so it reacts to item changes without
+/// a race condition between the tracker-row insert and item inserts.
 class TrackerTodayStatus {
   const TrackerTodayStatus({
     required this.trackerId,
     required this.name,
     required this.icon,
     required this.colorValue,
-    required this.items,
     required this.checkedItemIds,
   });
 
@@ -19,12 +20,6 @@ class TrackerTodayStatus {
   final String icon;
   final int colorValue;
 
-  /// All checkbox items belonging to this tracker, in sort order.
-  final List<TrackerItemModel> items;
-
   /// Item IDs that are checked for today's date.
   final Set<int> checkedItemIds;
-
-  int get doneToday => checkedItemIds.length;
-  int get totalItems => items.length;
 }
