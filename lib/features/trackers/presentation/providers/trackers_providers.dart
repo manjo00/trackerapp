@@ -4,6 +4,7 @@ import '../../data/dao/trackers_dao.dart';
 import '../../data/models/tracker_item_model.dart';
 import '../../data/models/tracker_log_model.dart';
 import '../../data/models/tracker_model.dart';
+import '../../data/models/tracker_today_status.dart';
 import '../../data/repositories/trackers_repository.dart';
 
 part 'trackers_providers.g.dart';
@@ -29,6 +30,18 @@ TrackersRepository trackersRepository(TrackersRepositoryRef ref) {
 Stream<List<TrackerWithProgress>> trackersWithProgress(
     TrackersWithProgressRef ref) {
   return ref.watch(trackersRepositoryProvider).watchTrackersWithProgress();
+}
+
+/// Stream of daily-checklist trackers with today's item-level check state.
+///
+/// Used by [TodayScreen] to render inline expandable check-off cards.
+/// Session-log trackers are excluded — they don't map to a simple ✓ pattern.
+@riverpod
+Stream<List<TrackerTodayStatus>> checklistTrackersForToday(
+    ChecklistTrackersForTodayRef ref) {
+  return ref
+      .watch(trackersRepositoryProvider)
+      .watchChecklistTrackersForToday();
 }
 
 /// Stream of items (fields) belonging to [trackerId], ordered by sortOrder.

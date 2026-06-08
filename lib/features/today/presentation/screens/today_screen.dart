@@ -7,6 +7,9 @@ import '../../../../features/habits/presentation/widgets/habit_tile.dart';
 import '../../../../features/tasks/data/models/task_model.dart';
 import '../../../../features/tasks/presentation/providers/tasks_providers.dart';
 import '../../../../features/tasks/presentation/widgets/task_tile.dart';
+import '../../../../features/trackers/data/models/tracker_item_model.dart';
+import '../../../../features/trackers/data/models/tracker_today_status.dart';
+import '../../../../features/trackers/presentation/providers/trackers_providers.dart';
 import '../../../../features/workout/data/models/program_session_model.dart';
 import '../../../../features/workout/presentation/providers/program_providers.dart';
 import '../../../../features/workout/presentation/providers/workout_providers.dart';
@@ -31,6 +34,8 @@ class TodayScreen extends ConsumerWidget {
         ref.watch(overdueTasksProvider);
     final AsyncValue<List<TaskModel>> todayAsync =
         ref.watch(tasksDueTodayProvider);
+    final AsyncValue<List<TrackerTodayStatus>> trackersAsync =
+        ref.watch(checklistTrackersForTodayProvider);
     final suggestedSession =
         ref.watch(todaysSuggestedSessionProvider).valueOrNull;
     final activeWorkout = ref.watch(activeWorkoutProvider).valueOrNull;
@@ -60,6 +65,9 @@ class TodayScreen extends ConsumerWidget {
                   icon: Icons.loop_rounded,
                 ),
                 ..._buildHabitsSection(habitsAsync),
+
+                // ── Trackers section (daily checklists only) ──────────────
+                ..._buildTrackersSection(trackersAsync),
 
                 const SizedBox(height: 8),
 
@@ -163,6 +171,31 @@ class TodayScreen extends ConsumerWidget {
           return [const _EmptyNote(text: 'No habits set up yet')];
         }
         return habits.map((h) => HabitTile(item: h)).toList();
+      },
+    );
+  }
+
+  List<Widget> _buildTrackersSection(
+      AsyncValue<List<TrackerTodayStatus>> trackersAsync) {
+    // Only render when there's something to show — silently hidden otherwise.
+    return trackersAsync.when(
+      loading: () => [],
+      error: (_, __) => [],
+      data: (List<TrackerTodayStatus> trackers) {
+        if (trackers.isEmpty) return [];
+        return [
+          const _SectionHeader(
+            label: 'Trackers',
+            icon: Icons.bar_chart_rounded,
+          ),
+          ...trackers.map(
+            (t) => Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: _TrackerInlineCard(status: t),
+            ),
+          ),
+          const SizedBox(height: 4),
+        ];
       },
     );
   }
@@ -300,6 +333,189 @@ class _ErrorTile extends StatelessWidget {
       child: Text(
         message,
         style: TextStyle(color: Theme.of(context).colorScheme.error),
+      ),
+    );
+  }
+}
+
+// ── Tracker inline card ───────────────────────────────────────────────────────
+
+/// An expandable card for a daily-checklist tracker shown on Today.
+///
+/// The header shows the tracker name + "X/Y" progress badge; tapping it
+/// toggles the item list. Each item has a circular checkbox that saves
+/// the new check state to the DB immediately on tap.
+///
+/// Local [_checkedIds] state gives instant visual feedback without waiting
+/// for the Riverpod stream to re-emit. [didUpdateWidget] syncs back from
+/// the stream when external changes arrive (e.g. from the Trackers tab).
+class _TrackerInlineCard extends ConsumerStatefulWidget {
+  const _TrackerInlineCard({required this.status});
+
+  final TrackerTodayStatus status;
+
+  @override
+  ConsumerState<_TrackerInlineCard> createState() => _TrackerInlineCardState();
+}
+
+class _TrackerInlineCardState extends ConsumerState<_TrackerInlineCard> {
+  bool _expanded = false;
+  late Set<int> _checkedIds;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkedIds = Set.from(widget.status.checkedItemIds);
+  }
+
+  @override
+  void didUpdateWidget(_TrackerInlineCard old) {
+    super.didUpdateWidget(old);
+    // Sync from the stream so changes made on the Trackers detail screen
+    // are reflected here when the Today tab is revisited.
+    _checkedIds = Set.from(widget.status.checkedItemIds);
+  }
+
+  void _toggle(int itemId) {
+    final Set<int> updated = Set.from(_checkedIds);
+    if (updated.contains(itemId)) {
+      updated.remove(itemId);
+    } else {
+      updated.add(itemId);
+    }
+    setState(() => _checkedIds = updated);
+    // Persist immediately — logChecklist does a full replace for today.
+    ref.read(logChecklistProvider.notifier).save(
+          trackerId: widget.status.trackerId,
+          checkedItemIds: updated,
+          allItems: widget.status.items,
+        );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme cs = Theme.of(context).colorScheme;
+    final Color accent = Color(widget.status.colorValue);
+    final bool allDone = _checkedIds.length == widget.status.totalItems &&
+        widget.status.totalItems > 0;
+
+    return Card(
+      child: Column(
+        children: [
+          // ── Header ─────────────────────────────────────────────────────
+          InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: () => setState(() => _expanded = !_expanded),
+            child: Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: Row(
+                children: [
+                  Text(widget.status.icon,
+                      style: const TextStyle(fontSize: 20)),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      widget.status.name,
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            fontWeight: FontWeight.w500,
+                            color: allDone
+                                ? cs.onSurface.withAlpha(130)
+                                : cs.onSurface,
+                            decoration: allDone
+                                ? TextDecoration.lineThrough
+                                : null,
+                          ),
+                    ),
+                  ),
+                  // X/Y progress badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: allDone
+                          ? accent.withAlpha(40)
+                          : cs.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '${_checkedIds.length}/${widget.status.totalItems}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: allDone ? accent : cs.onSurface.withAlpha(160),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  // Animated chevron rotates 90° when expanded.
+                  AnimatedRotation(
+                    turns: _expanded ? 0.25 : 0,
+                    duration: const Duration(milliseconds: 200),
+                    child: Icon(
+                      Icons.chevron_right_rounded,
+                      color: cs.onSurface.withAlpha(120),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // ── Item list (animated height) ────────────────────────────────
+          AnimatedSize(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeInOut,
+            child: _expanded
+                ? Column(
+                    children: [
+                      Divider(height: 1, color: cs.outlineVariant),
+                      ...widget.status.items.map((TrackerItemModel item) {
+                        final bool done = _checkedIds.contains(item.id);
+                        return ListTile(
+                          dense: true,
+                          contentPadding:
+                              const EdgeInsets.symmetric(horizontal: 16),
+                          leading: GestureDetector(
+                            onTap: () => _toggle(item.id),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              width: 22,
+                              height: 22,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: done ? accent : Colors.transparent,
+                                border: Border.all(
+                                  color: done ? accent : cs.outline,
+                                  width: 2,
+                                ),
+                              ),
+                              child: done
+                                  ? const Icon(Icons.check_rounded,
+                                      size: 13, color: Colors.white)
+                                  : null,
+                            ),
+                          ),
+                          title: Text(
+                            item.name,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: done
+                                  ? cs.onSurface.withAlpha(130)
+                                  : cs.onSurface,
+                              decoration:
+                                  done ? TextDecoration.lineThrough : null,
+                            ),
+                          ),
+                          onTap: () => _toggle(item.id),
+                        );
+                      }),
+                      const SizedBox(height: 8),
+                    ],
+                  )
+                : const SizedBox.shrink(),
+          ),
+        ],
       ),
     );
   }

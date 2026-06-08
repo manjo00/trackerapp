@@ -5,6 +5,7 @@ import '../dao/trackers_dao.dart';
 import '../models/tracker_item_model.dart';
 import '../models/tracker_log_model.dart';
 import '../models/tracker_model.dart';
+import '../models/tracker_today_status.dart';
 
 final DateFormat _dateFmt = DateFormat('yyyy-MM-dd');
 String _today() => _dateFmt.format(DateTime.now());
@@ -51,6 +52,51 @@ class TrackersRepository {
           trackerType: TrackerType.fromString(row.templateType),
           totalItems: items.length,
           doneToday: doneToday,
+        ));
+      }
+
+      return result;
+    });
+  }
+
+  /// Stream of daily-checklist trackers enriched with today's check state.
+  ///
+  /// Only returns [TrackerType.dailyChecklist] trackers — session logs are
+  /// not suitable for inline check-off on the Today screen.
+  Stream<List<TrackerTodayStatus>> watchChecklistTrackersForToday() {
+    return _dao.watchAllTrackers().asyncMap((rows) async {
+      final String today = _today();
+      final List<TrackerTodayStatus> result = [];
+
+      for (final CustomTracker row in rows) {
+        // Skip non-checklist trackers and template placeholders.
+        if (row.templateType != TrackerType.dailyChecklist.value) continue;
+        if (row.isTemplate) continue;
+
+        final List<TrackerItem> itemRows =
+            await _dao.getItemsForTracker(row.id);
+        final List<TrackerItemModel> items =
+            itemRows.map(_itemFromRow).toList();
+
+        // Collect which item IDs are checked today.
+        final List<TrackerLog> todayLogs =
+            await _dao.getLogsForDate(row.id, today);
+        final Set<int> checkedIds = {};
+        for (final TrackerLog log in todayLogs) {
+          final List<TrackerLogValue> vals =
+              await _dao.getValuesForLog(log.id);
+          for (final TrackerLogValue val in vals) {
+            if (val.valueText == 'true') checkedIds.add(val.itemId);
+          }
+        }
+
+        result.add(TrackerTodayStatus(
+          trackerId: row.id,
+          name: row.name,
+          icon: row.icon,
+          colorValue: row.colorValue,
+          items: items,
+          checkedItemIds: checkedIds,
         ));
       }
 
