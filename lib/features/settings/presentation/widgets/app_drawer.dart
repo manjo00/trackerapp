@@ -161,6 +161,15 @@ class AppDrawer extends ConsumerWidget {
                 context.go('/workout');
               },
             ),
+            _DrawerTile(
+              icon: Icons.calendar_month_rounded,
+              label: 'Work schedule',
+              subtitle: 'Day / night shifts calendar',
+              onTap: () {
+                Navigator.of(context).pop();
+                context.push('/schedule');
+              },
+            ),
 
             Divider(color: cs.outlineVariant),
 
