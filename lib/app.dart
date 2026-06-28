@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'core/database/database_provider.dart';
 import 'core/notifications/notification_service.dart';
 import 'core/router/app_router.dart';
 import 'core/settings/settings_provider.dart';
 import 'core/theme/app_theme.dart';
+import 'core/widget/home_widget_service.dart';
 import 'features/habits/presentation/providers/habits_providers.dart';
 import 'features/tasks/presentation/providers/tasks_providers.dart';
 import 'features/trackers/presentation/providers/trackers_providers.dart';
@@ -47,13 +49,23 @@ class _LifeTrackerAppState extends ConsumerState<LifeTrackerApp>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state != AppLifecycleState.resumed) return;
-    final DateTime today = _dayOf(DateTime.now());
-    if (today != _lastActiveDay) {
-      // Resumed on a new day — rebuild everything that depends on "today".
-      _lastActiveDay = today;
-      _refreshDateSensitiveProviders();
+    if (state == AppLifecycleState.resumed) {
+      final DateTime today = _dayOf(DateTime.now());
+      if (today != _lastActiveDay) {
+        // Resumed on a new day — rebuild everything that depends on "today".
+        _lastActiveDay = today;
+        _refreshDateSensitiveProviders();
+      }
+      _syncWidget();
+    } else if (state == AppLifecycleState.paused) {
+      // Backgrounded — refresh the home-screen widget with the latest state.
+      _syncWidget();
     }
+  }
+
+  /// Pushes the current Today snapshot to the native home-screen widget.
+  void _syncWidget() {
+    HomeWidgetService.sync(ref.read(appDatabaseProvider));
   }
 
   /// Invalidates providers whose results are anchored to the current date, so
@@ -83,6 +95,9 @@ class _LifeTrackerAppState extends ConsumerState<LifeTrackerApp>
       tasks: tasks,
       trackers: trackers,
     );
+
+    // Seed the home-screen widget with today's snapshot on launch.
+    await HomeWidgetService.sync(ref.read(appDatabaseProvider));
   }
 
   @override
@@ -90,7 +105,7 @@ class _LifeTrackerAppState extends ConsumerState<LifeTrackerApp>
     final ThemeMode themeMode = ref.watch(settingsProvider).themeMode;
 
     return MaterialApp.router(
-      title: 'Life Tracker',
+      title: 'Uplan',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),

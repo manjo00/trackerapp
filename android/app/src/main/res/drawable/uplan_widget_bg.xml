@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Rounded dark surface behind the widget content. Home-screen widgets don't
+     inherit the app theme, so we give it its own background + light text. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#FF202024" />
+    <corners android:radius="20dp" />
+</shape>

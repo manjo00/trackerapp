@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Describes the widget to the launcher: default size, layout, resizability.
+     updatePeriodMillis=0 → the system never auto-refreshes it; the app pushes
+     updates instead (system minimum is 30 min anyway, too slow for our needs). -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="180dp"
+    android:minHeight="80dp"
+    android:targetCellWidth="3"
+    android:targetCellHeight="1"
+    android:updatePeriodMillis="0"
+    android:initialLayout="@layout/uplan_widget"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen" />

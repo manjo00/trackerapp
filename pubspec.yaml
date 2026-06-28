@@ -62,6 +62,11 @@ dependencies:
   # (Flutter-team plugin — avoids file_picker's transitive Android SDK clashes.)
   file_selector: ^1.0.3
 
+  # --- Home-screen widget ---
+  # home_widget: bridges Flutter and the native Android home-screen widget.
+  # Flutter saves small values; the native AppWidgetProvider displays them.
+  home_widget: ^0.7.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
