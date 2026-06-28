@@ -7,6 +7,7 @@ import 'core/theme/app_theme.dart';
 import 'features/habits/presentation/providers/habits_providers.dart';
 import 'features/tasks/presentation/providers/tasks_providers.dart';
 import 'features/trackers/presentation/providers/trackers_providers.dart';
+import 'features/workout/presentation/providers/program_providers.dart';
 
 /// Root widget of the app.
 ///
@@ -21,12 +22,49 @@ class LifeTrackerApp extends ConsumerStatefulWidget {
   ConsumerState<LifeTrackerApp> createState() => _LifeTrackerAppState();
 }
 
-class _LifeTrackerAppState extends ConsumerState<LifeTrackerApp> {
+class _LifeTrackerAppState extends ConsumerState<LifeTrackerApp>
+    with WidgetsBindingObserver {
+  /// The calendar day the date-sensitive data was last built for. Used to
+  /// detect "the app was resumed on a new day" so Today/streaks don't get
+  /// stuck showing yesterday.
+  DateTime _lastActiveDay = _dayOf(DateTime.now());
+
+  static DateTime _dayOf(DateTime d) => DateTime(d.year, d.month, d.day);
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     // Run rescheduleAll after the first frame so providers are ready.
     WidgetsBinding.instance.addPostFrameCallback((_) => _reschedule());
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) return;
+    final DateTime today = _dayOf(DateTime.now());
+    if (today != _lastActiveDay) {
+      // Resumed on a new day — rebuild everything that depends on "today".
+      _lastActiveDay = today;
+      _refreshDateSensitiveProviders();
+    }
+  }
+
+  /// Invalidates providers whose results are anchored to the current date, so
+  /// they recompute against the new day. Cheap — only fires on a day change.
+  void _refreshDateSensitiveProviders() {
+    ref.invalidate(habitsWithStatusProvider);
+    ref.invalidate(tasksDueTodayProvider);
+    ref.invalidate(overdueTasksProvider);
+    ref.invalidate(checklistTrackersForTodayProvider);
+    ref.invalidate(trackersWithProgressProvider);
+    ref.invalidate(todaysSuggestedSessionProvider);
   }
 
   Future<void> _reschedule() async {

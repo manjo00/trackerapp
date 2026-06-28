@@ -39,32 +39,27 @@ class HabitsRepository {
   /// Using [asyncMap] lets us do async work (DB fetch) inside the stream
   /// pipeline without blocking.
   Stream<List<HabitWithStatus>> watchHabitsWithStatus() {
-    final String today = _dateStr(DateTime.now());
+    // A single JOIN-backed stream: re-emits on habit OR completion changes,
+    // and "today"/"now" are computed per-emission so a long-open app doesn't
+    // get stuck on yesterday's done-state.
+    return _dao.watchHabitsWithCompletions().map((rows) {
+      final String today = _dateStr(DateTime.now());
+      final DateTime now = DateTime.now();
 
-    return _dao.watchAllHabits().asyncMap((rawHabits) async {
-      final List<HabitWithStatus> result = [];
-
-      for (final Habit raw in rawHabits) {
-        final List<HabitCompletion> rawCompletions =
-            await _dao.getCompletionsForHabit(raw.id);
-
-        final List<HabitCompletionModel> completions = rawCompletions
-            .map(_completionFromRow)
-            .toList();
+      return rows.map((row) {
+        final List<HabitCompletionModel> completions =
+            row.completions.map(_completionFromRow).toList();
 
         final bool isDone = completions.any((c) => c.date == today);
-        final int streak = HabitsRepository.calculateStreak(completions, DateTime.now());
+        final int streak =
+            HabitsRepository.calculateStreak(completions, now);
 
-        result.add(
-          HabitWithStatus(
-            habit: _habitFromRow(raw),
-            isDoneToday: isDone,
-            streak: streak,
-          ),
+        return HabitWithStatus(
+          habit: _habitFromRow(row.habit),
+          isDoneToday: isDone,
+          streak: streak,
         );
-      }
-
-      return result;
+      }).toList();
     });
   }
 

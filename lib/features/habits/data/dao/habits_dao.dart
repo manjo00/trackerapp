@@ -92,6 +92,45 @@ class HabitsDao extends DatabaseAccessor<AppDatabase> with _$HabitsDaoMixin {
     return select(habitCompletions).watch();
   }
 
+  /// Streams every habit together with all its completions, grouped per habit.
+  ///
+  /// Because this is a JOIN across both tables, Drift re-emits whenever EITHER
+  /// `habits` or `habit_completions` changes — so toggling a completion updates
+  /// the stream automatically (no manual provider invalidation needed), and it
+  /// avoids the previous N+1 (one completion query per habit).
+  Stream<List<({Habit habit, List<HabitCompletion> completions})>>
+      watchHabitsWithCompletions() {
+    final query = select(habits).join([
+      leftOuterJoin(
+        habitCompletions,
+        habitCompletions.habitId.equalsExp(habits.id),
+      ),
+    ])
+      ..orderBy([OrderingTerm.asc(habits.createdAt)]);
+
+    return query.watch().map((rows) {
+      final Map<int, Habit> habitById = {};
+      final Map<int, List<HabitCompletion>> completionsByHabit = {};
+      final List<int> order = [];
+
+      for (final row in rows) {
+        final Habit h = row.readTable(habits);
+        if (!habitById.containsKey(h.id)) {
+          habitById[h.id] = h;
+          completionsByHabit[h.id] = [];
+          order.add(h.id);
+        }
+        final HabitCompletion? c = row.readTableOrNull(habitCompletions);
+        if (c != null) completionsByHabit[h.id]!.add(c);
+      }
+
+      return order
+          .map((id) =>
+              (habit: habitById[id]!, completions: completionsByHabit[id]!))
+          .toList();
+    });
+  }
+
   /// Returns true if [habitId] has a completion row for [date].
   Future<bool> isCompletedOn(int habitId, String date) async {
     final row = await (select(habitCompletions)
