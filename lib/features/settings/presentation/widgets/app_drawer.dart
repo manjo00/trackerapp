@@ -67,6 +67,11 @@ class AppDrawer extends ConsumerWidget {
               ),
             ),
 
+            // ── Scrollable middle (prevents overflow on short screens) ──
+            Expanded(
+              child: ListView(
+                padding: EdgeInsets.zero,
+                children: [
             Divider(color: cs.outlineVariant),
 
             // ── Quick theme switcher ────────────────────────────────────
@@ -204,8 +209,9 @@ class AppDrawer extends ConsumerWidget {
               subtitle: 'Version 1.0.0',
               enabled: false,
             ),
-
-            const Spacer(),
+                ],
+              ),
+            ),
 
             // ── Footer ──────────────────────────────────────────────────
             Padding(
