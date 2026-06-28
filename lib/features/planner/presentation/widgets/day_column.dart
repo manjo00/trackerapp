@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../shifts/data/models/work_shift_model.dart';
+import '../../../shifts/presentation/providers/shifts_providers.dart';
+import '../../../shifts/presentation/shift_style.dart';
 import '../providers/planner_providers.dart';
 
 /// One column in the week strip — shows the weekday label, date number,
@@ -33,6 +36,11 @@ class DayColumn extends ConsumerWidget {
     final String dateStr =
         '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
     final DotSummary? summary = ref.watch(dayDotSummaryProvider(dateStr));
+
+    // Look up this day's shift (null = free day).
+    final Map<String, WorkShiftModel>? shiftMap =
+        ref.watch(shiftsByDateProvider).valueOrNull;
+    final WorkShiftModel? shift = shiftMap == null ? null : shiftMap[dateStr];
 
     final bool isFuture = date.isAfter(
       DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day),
@@ -79,25 +87,54 @@ class DayColumn extends ConsumerWidget {
 
             const SizedBox(height: 4),
 
-            // ── Day number ────────────────────────────────────────────────
-            Container(
-              width: 28,
-              height: 28,
-              decoration: isToday
-                  ? BoxDecoration(
+            // ── Day number (shift-aware) ──────────────────────────────────
+            // When the day has a shift, the circle takes the shift fill and a
+            // sun/moon badge sits on the corner. ShiftStyle.foreground keeps
+            // the number readable in both light and dark themes.
+            SizedBox(
+              width: 30,
+              height: 30,
+              child: Stack(
+                clipBehavior: Clip.none,
+                alignment: Alignment.center,
+                children: [
+                  Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: cs.primary,
-                    )
-                  : null,
-              child: Center(
-                child: Text(
-                  '${date.day}',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: numberWeight,
-                    color: isToday ? cs.onPrimary : numberColor,
+                      color: shift != null
+                          ? ShiftStyle.fill(shift.type)
+                          : (isToday ? cs.primary : null),
+                      // Today + shift: ring marks today over the shift fill.
+                      border: (shift != null && isToday)
+                          ? Border.all(color: cs.primary, width: 2)
+                          : null,
+                    ),
+                    child: Center(
+                      child: Text(
+                        '${date.day}',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: numberWeight,
+                          color: shift != null
+                              ? ShiftStyle.foreground(shift.type)
+                              : (isToday ? cs.onPrimary : numberColor),
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                  if (shift != null)
+                    Positioned(
+                      top: -1,
+                      right: -1,
+                      child: Icon(
+                        ShiftStyle.icon(shift.type),
+                        size: 11,
+                        color: ShiftStyle.iconColor(shift.type),
+                      ),
+                    ),
+                ],
               ),
             ),
 

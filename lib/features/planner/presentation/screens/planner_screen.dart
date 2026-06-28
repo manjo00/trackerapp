@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../shifts/presentation/widgets/shift_month_calendar.dart';
 import '../widgets/day_detail_view.dart';
 import '../widgets/week_strip.dart';
 
@@ -21,6 +22,9 @@ class PlannerScreen extends StatefulWidget {
 class _PlannerScreenState extends State<PlannerScreen> {
   late DateTime _selectedDate;
 
+  /// Whether the calendar shows a full month (true) or the week strip (false).
+  bool _monthView = false;
+
   @override
   void initState() {
     super.initState();
@@ -28,6 +32,9 @@ class _PlannerScreenState extends State<PlannerScreen> {
     final DateTime now = DateTime.now();
     _selectedDate = DateTime(now.year, now.month, now.day);
   }
+
+  static String _dateStr(DateTime d) =>
+      '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
   String get _selectedDateLabel {
     const List<String> weekdays = [
@@ -59,12 +66,46 @@ class _PlannerScreenState extends State<PlannerScreen> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // ── Week strip ──────────────────────────────────────────────────
-          WeekStrip(
-            selectedDate: _selectedDate,
-            onDateSelected: (DateTime d) =>
-                setState(() => _selectedDate = d),
+          // ── Week / Month toggle ─────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: SegmentedButton<bool>(
+              style: SegmentedButton.styleFrom(
+                minimumSize: const Size.fromHeight(36),
+              ),
+              segments: const [
+                ButtonSegment(
+                  value: false,
+                  icon: Icon(Icons.view_week_rounded, size: 16),
+                  label: Text('Week'),
+                ),
+                ButtonSegment(
+                  value: true,
+                  icon: Icon(Icons.calendar_view_month_rounded, size: 16),
+                  label: Text('Month'),
+                ),
+              ],
+              selected: {_monthView},
+              onSelectionChanged: (Set<bool> s) =>
+                  setState(() => _monthView = s.first),
+            ),
           ),
+
+          // ── Calendar: week strip or month grid ──────────────────────────
+          if (_monthView)
+            ShiftMonthCalendar(
+              initialMonth: _selectedDate,
+              selectedDate: _dateStr(_selectedDate),
+              showSummary: false,
+              onDaySelected: (String ds) =>
+                  setState(() => _selectedDate = DateTime.parse(ds)),
+            )
+          else
+            WeekStrip(
+              selectedDate: _selectedDate,
+              onDateSelected: (DateTime d) =>
+                  setState(() => _selectedDate = d),
+            ),
 
           // ── Selected day label ──────────────────────────────────────────
           Container(
