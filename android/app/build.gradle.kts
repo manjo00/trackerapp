@@ -6,9 +6,9 @@ plugins {
 
 android {
     namespace = "com.lifetracker.life_tracker"
-    // Pinned to 35 (was flutter.compileSdkVersion): file_picker's transitive
-    // deps require apps to compile against android-34+.
-    compileSdk = 35
+    // Pinned (was flutter.compileSdkVersion): file_picker + updated
+    // shared_preferences/lifecycle plugins require compiling against android-36.
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
