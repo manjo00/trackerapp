@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/notifications/notification_service.dart';
+import '../../../shifts/presentation/widgets/shift_date_picker_sheet.dart';
 import '../../data/models/task_model.dart';
 import '../../data/models/task_priority.dart';
 import '../providers/tasks_providers.dart';
@@ -139,12 +140,11 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
   // ── Date / time pickers ───────────────────────────────────────────────────
 
   Future<void> _pickDate() async {
-    final DateTime now = DateTime.now();
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: _dueDate ?? now,
-      firstDate: now.subtract(const Duration(days: 365)),
-      lastDate: now.add(const Duration(days: 365 * 5)),
+    // Custom shift-aware picker: shows work days shaded so they're easy to
+    // avoid. Returns null when dismissed (keeps the current value).
+    final DateTime? picked = await showShiftDatePicker(
+      context,
+      initialDate: _dueDate,
     );
     if (picked != null) setState(() => _dueDate = picked);
   }

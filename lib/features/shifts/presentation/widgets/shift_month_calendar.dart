@@ -14,7 +14,27 @@ import '../shift_style.dart';
 /// It watches [shiftsByDateProvider] (the single source of truth), so any
 /// change here also updates the Today tiles and, later, the date-picker.
 class ShiftMonthCalendar extends ConsumerStatefulWidget {
-  const ShiftMonthCalendar({super.key});
+  const ShiftMonthCalendar({
+    this.onDaySelected,
+    this.selectedDate,
+    this.initialMonth,
+    this.showSummary = true,
+    super.key,
+  });
+
+  /// When provided, tapping a day calls this with its "yyyy-MM-dd" string
+  /// instead of cycling its shift. This is what turns the calendar into a
+  /// date-picker (used by [showShiftDatePicker]).
+  final void Function(String dateStr)? onDaySelected;
+
+  /// "yyyy-MM-dd" of the day to highlight as selected (picker mode only).
+  final String? selectedDate;
+
+  /// The month shown first. Defaults to the current month.
+  final DateTime? initialMonth;
+
+  /// Whether to show the working/free count tiles (hidden in the picker).
+  final bool showSummary;
 
   @override
   ConsumerState<ShiftMonthCalendar> createState() =>
@@ -33,8 +53,8 @@ class _ShiftMonthCalendarState extends ConsumerState<ShiftMonthCalendar> {
   @override
   void initState() {
     super.initState();
-    final DateTime now = DateTime.now();
-    _visibleMonth = DateTime(now.year, now.month);
+    final DateTime base = widget.initialMonth ?? DateTime.now();
+    _visibleMonth = DateTime(base.year, base.month);
   }
 
   void _prevMonth() => setState(() =>
@@ -91,7 +111,17 @@ class _ShiftMonthCalendarState extends ConsumerState<ShiftMonthCalendar> {
         day: d,
         shift: shifts[ds],
         isToday: ds == todayStr,
-        onTap: () => ref.read(shiftEditorProvider.notifier).cycle(ds),
+        isSelected: widget.selectedDate == ds,
+        onTap: () {
+          final void Function(String)? onSelect = widget.onDaySelected;
+          if (onSelect != null) {
+            // Picker mode: report the tapped date.
+            onSelect(ds);
+          } else {
+            // Schedule mode: cycle the shift.
+            ref.read(shiftEditorProvider.notifier).cycle(ds);
+          }
+        },
       ));
     }
 
@@ -183,20 +213,23 @@ class _ShiftMonthCalendarState extends ConsumerState<ShiftMonthCalendar> {
           ),
         ),
 
-        const SizedBox(height: 12),
+        if (widget.showSummary) ...[
+          const SizedBox(height: 12),
 
-        // ── Working / free summary ──────────────────────────────────────
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            children: [
-              _CountTile(label: 'Working', value: working, color: cs.primary),
-              const SizedBox(width: 12),
-              _CountTile(
-                  label: 'Free', value: free, color: cs.onSurfaceVariant),
-            ],
+          // ── Working / free summary ────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                _CountTile(
+                    label: 'Working', value: working, color: cs.primary),
+                const SizedBox(width: 12),
+                _CountTile(
+                    label: 'Free', value: free, color: cs.onSurfaceVariant),
+              ],
+            ),
           ),
-        ),
+        ],
       ],
     );
   }
@@ -210,11 +243,13 @@ class _DayCell extends StatelessWidget {
     required this.shift,
     required this.isToday,
     required this.onTap,
+    this.isSelected = false,
   });
 
   final int day;
   final WorkShiftModel? shift;
   final bool isToday;
+  final bool isSelected;
   final VoidCallback onTap;
 
   @override
@@ -233,9 +268,11 @@ class _DayCell extends StatelessWidget {
         decoration: BoxDecoration(
           color: bg,
           borderRadius: BorderRadius.circular(8),
-          border: isToday
+          border: isSelected
               ? Border.all(color: cs.primary, width: 2)
-              : Border.all(color: Colors.transparent, width: 2),
+              : isToday
+                  ? Border.all(color: cs.primary.withAlpha(120), width: 1.5)
+                  : Border.all(color: Colors.transparent, width: 2),
         ),
         child: Stack(
           children: [
