@@ -1,5 +1,11 @@
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
+import '../../../../../core/backup/backup_service.dart';
+import '../../../../../core/database/database_provider.dart';
 import '../../../../../core/notifications/notification_service.dart';
 import '../../../../../core/settings/app_settings.dart';
 import '../../../../../core/settings/settings_provider.dart';
@@ -129,6 +135,25 @@ class SettingsScreen extends ConsumerWidget {
 
           const Divider(indent: 16, endIndent: 16),
 
+          // ── Data / backup ──────────────────────────────────────────────
+          const _SectionHeader(label: 'Data'),
+
+          ListTile(
+            leading: Icon(Icons.upload_file_rounded, color: cs.primary),
+            title: const Text('Export data'),
+            subtitle: const Text(
+                'Save a backup file (share to Drive, email, etc.)'),
+            onTap: () => _exportData(context, ref),
+          ),
+          ListTile(
+            leading: Icon(Icons.download_rounded, color: cs.primary),
+            title: const Text('Import data'),
+            subtitle: const Text('Restore from a backup file — replaces all data'),
+            onTap: () => _importData(context, ref),
+          ),
+
+          const Divider(indent: 16, endIndent: 16),
+
           // ── Navigation tabs ────────────────────────────────────────────
           const _SectionHeader(label: 'Navigation tabs'),
 
@@ -159,6 +184,86 @@ class SettingsScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  // ── Backup handlers ───────────────────────────────────────────────────────
+
+  /// Serialises the database to JSON, writes a temp file, and opens the share
+  /// sheet so the user can save it anywhere (Google Drive, email, etc.).
+  Future<void> _exportData(BuildContext context, WidgetRef ref) async {
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    try {
+      final String json =
+          await BackupService(ref.read(appDatabaseProvider)).exportToJson();
+      final Directory dir = await getTemporaryDirectory();
+      final String stamp = DateTime.now()
+          .toIso8601String()
+          .split('.')
+          .first
+          .replaceAll(':', '-');
+      final File file =
+          File('${dir.path}/life_tracker_backup_$stamp.json');
+      await file.writeAsString(json);
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        subject: 'Life Tracker backup',
+      );
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('Export failed: $e')),
+      );
+    }
+  }
+
+  /// Confirms, lets the user pick a backup file, then replaces all data.
+  Future<void> _importData(BuildContext context, WidgetRef ref) async {
+    // Capture before any await so we don't use context across an async gap.
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext ctx) => AlertDialog(
+        title: const Text('Import backup?'),
+        content: const Text(
+          'This replaces ALL current habits, tasks, trackers, workouts and '
+          'shifts with the contents of the backup file. This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Replace data'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    final FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['json'],
+    );
+    final String? path = result?.files.single.path;
+    if (path == null) return;
+
+    try {
+      final String content = await File(path).readAsString();
+      await BackupService(ref.read(appDatabaseProvider))
+          .importFromJson(content);
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text(
+              'Backup restored. Restart the app if anything looks off.'),
+          duration: Duration(seconds: 4),
+        ),
+      );
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('Import failed: $e')),
+      );
+    }
   }
 }
 

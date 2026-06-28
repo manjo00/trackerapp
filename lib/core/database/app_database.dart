@@ -124,6 +124,12 @@ class AppDatabase extends _$AppDatabase {
             await m.createTable(workShifts);
           }
         },
+        beforeOpen: (details) async {
+          // SQLite ignores foreign keys unless this is set per-connection.
+          // Without it, onDelete CASCADE / SET NULL never fire and deleting a
+          // parent (habit, tracker, program) leaves orphaned child rows.
+          await customStatement('PRAGMA foreign_keys = ON');
+        },
       );
 
   Future<void> _seedExerciseLibrary(Migrator m) async {
