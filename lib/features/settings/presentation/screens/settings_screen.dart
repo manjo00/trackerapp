@@ -1,5 +1,5 @@
 import 'dart:io';
-import 'package:file_picker/file_picker.dart';
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
@@ -241,15 +241,15 @@ class SettingsScreen extends ConsumerWidget {
     );
     if (confirmed != true) return;
 
-    final FilePickerResult? result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['json'],
+    const XTypeGroup typeGroup = XTypeGroup(
+      label: 'Backup (JSON)',
+      extensions: ['json'],
     );
-    final String? path = result?.files.single.path;
-    if (path == null) return;
+    final XFile? file = await openFile(acceptedTypeGroups: [typeGroup]);
+    if (file == null) return;
 
     try {
-      final String content = await File(path).readAsString();
+      final String content = await file.readAsString();
       await BackupService(ref.read(appDatabaseProvider))
           .importFromJson(content);
       messenger.showSnackBar(

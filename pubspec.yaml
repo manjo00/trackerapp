@@ -58,8 +58,9 @@ dependencies:
   # share_plus: hands the exported JSON file to the system share sheet so the
   # user can save it to Google Drive, email it, etc.
   share_plus: ^10.1.2
-  # file_picker: lets the user choose a backup .json file when importing.
-  file_picker: ^8.1.6
+  # file_selector: lets the user choose a backup .json file when importing.
+  # (Flutter-team plugin — avoids file_picker's transitive Android SDK clashes.)
+  file_selector: ^1.0.3
 
 dev_dependencies:
   flutter_test:
