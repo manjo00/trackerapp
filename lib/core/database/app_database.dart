@@ -6,6 +6,8 @@ import 'package:path_provider/path_provider.dart';
 import '../../features/habits/data/dao/habits_dao.dart';
 import '../../features/habits/data/tables/habit_completions_table.dart';
 import '../../features/habits/data/tables/habits_table.dart';
+import '../../features/shifts/data/dao/shifts_dao.dart';
+import '../../features/shifts/data/tables/work_shifts_table.dart';
 import '../../features/tasks/data/dao/tasks_dao.dart';
 import '../../features/tasks/data/tables/tasks_table.dart';
 import '../../features/trackers/data/dao/trackers_dao.dart';
@@ -53,8 +55,10 @@ part 'app_database.g.dart';
     Programs,
     ProgramSessions,
     ProgramExercises,
+    // ── Shifts (v6) ──────────────────────────────────────────────────────────
+    WorkShifts,
   ],
-  daos: [HabitsDao, TasksDao, TrackersDao, WorkoutDao, ProgramDao],
+  daos: [HabitsDao, TasksDao, TrackersDao, WorkoutDao, ProgramDao, ShiftsDao],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
@@ -72,8 +76,9 @@ class AppDatabase extends _$AppDatabase {
   ///       workout tables (exercise_library, workout_sessions, workout_sets)
   /// v5 → added programs, program_sessions, program_exercises tables;
   ///       added programSessionId FK to workout_sessions
+  /// v6 → added work_shifts table (hospital shift schedule)
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -113,6 +118,10 @@ class AppDatabase extends _$AppDatabase {
             // New FK column on existing table
             await m.addColumn(
                 workoutSessions, workoutSessions.programSessionId);
+          }
+          if (from < 6) {
+            // Hospital shift schedule
+            await m.createTable(workShifts);
           }
         },
       );
