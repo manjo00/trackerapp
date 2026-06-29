@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
+import '../../../shifts/data/models/work_shift_model.dart';
+import '../../../shifts/presentation/providers/shifts_providers.dart';
+import '../../../shifts/presentation/shift_style.dart';
+import '../../../shifts/presentation/widgets/shift_date_picker_sheet.dart';
 import '../../data/models/task_priority.dart';
 import '../providers/tasks_providers.dart';
 
 /// A lightweight quick-add half-sheet, opened by the home-screen widget "+".
 ///
-/// Unlike the full [AddTaskScreen], this is a fast capture surface: type a
-/// name, optionally toggle Today / cycle priority, hit send. It renders as a
-/// bottom card over a dimmed scrim so it feels like an overlay rather than a
-/// full screen. Tapping the scrim (or back) dismisses it.
+/// Fast capture over a see-through scrim: type a name, pick an exact date
+/// (shift-aware — work days are shaded) and time, set priority, send.
+/// Dismissing or saving closes the activity so you return to the home screen.
 class QuickAddTaskScreen extends ConsumerStatefulWidget {
   const QuickAddTaskScreen({super.key});
 
@@ -20,9 +23,15 @@ class QuickAddTaskScreen extends ConsumerStatefulWidget {
 class _QuickAddTaskScreenState extends ConsumerState<QuickAddTaskScreen> {
   final TextEditingController _titleCtrl = TextEditingController();
   final TextEditingController _noteCtrl = TextEditingController();
-  bool _dueToday = false;
+  DateTime? _dueDate;
+  TimeOfDay? _dueTime;
   TaskPriority _priority = TaskPriority.medium;
   bool _saving = false;
+
+  static const List<String> _months = [
+    '', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  ];
 
   @override
   void dispose() {
@@ -31,34 +40,37 @@ class _QuickAddTaskScreenState extends ConsumerState<QuickAddTaskScreen> {
     super.dispose();
   }
 
-  String _todayStr() {
-    final DateTime n = DateTime.now();
-    return '${n.year}-${n.month.toString().padLeft(2, '0')}-${n.day.toString().padLeft(2, '0')}';
+  static String _dateStr(DateTime d) =>
+      '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+  String _dateLabel(DateTime d) {
+    final DateTime now = DateTime.now();
+    final DateTime today = DateTime(now.year, now.month, now.day);
+    final int diff = DateTime(d.year, d.month, d.day).difference(today).inDays;
+    if (diff == 0) return 'Today';
+    if (diff == 1) return 'Tomorrow';
+    return '${d.day} ${_months[d.month]}';
   }
 
+  /// Closes the whole activity → returns to the home screen (the widget's
+  /// launch context), rather than dropping the user into the app.
   void _dismiss() {
-    if (context.canPop()) {
-      context.pop();
-    } else {
-      // Opened directly from the widget — no in-app history to pop to.
-      context.go('/today');
-    }
+    SystemNavigator.pop();
   }
 
-  Future<void> _save() async {
-    final String title = _titleCtrl.text.trim();
-    if (title.isEmpty) {
-      _dismiss();
-      return;
-    }
-    setState(() => _saving = true);
-    await ref.read(addTaskProvider.notifier).add(
-          title,
-          note: _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
-          dueDate: _dueToday ? _todayStr() : null,
-          priority: _priority,
-        );
-    if (mounted) _dismiss();
+  Future<void> _pickDate() async {
+    FocusScope.of(context).unfocus();
+    final DateTime? picked =
+        await showShiftDatePicker(context, initialDate: _dueDate);
+    if (picked != null) setState(() => _dueDate = picked);
+  }
+
+  Future<void> _pickTime() async {
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: _dueTime ?? const TimeOfDay(hour: 9, minute: 0),
+    );
+    if (picked != null) setState(() => _dueTime = picked);
   }
 
   void _cyclePriority() {
@@ -71,20 +83,42 @@ class _QuickAddTaskScreenState extends ConsumerState<QuickAddTaskScreen> {
     });
   }
 
+  Future<void> _save() async {
+    final String title = _titleCtrl.text.trim();
+    if (title.isEmpty) {
+      _dismiss();
+      return;
+    }
+    setState(() => _saving = true);
+    await ref.read(addTaskProvider.notifier).add(
+          title,
+          note: _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
+          dueDate: _dueDate != null ? _dateStr(_dueDate!) : null,
+          dueTime: _dueTime != null
+              ? '${_dueTime!.hour.toString().padLeft(2, '0')}:${_dueTime!.minute.toString().padLeft(2, '0')}'
+              : null,
+          priority: _priority,
+        );
+    _dismiss();
+  }
+
   @override
   Widget build(BuildContext context) {
     final ColorScheme cs = Theme.of(context).colorScheme;
 
+    // Shift for the chosen date — lets us show working / rest right on the chip.
+    final WorkShiftModel? shift = _dueDate == null
+        ? null
+        : ref.watch(shiftsByDateProvider).valueOrNull?[_dateStr(_dueDate!)];
+
     return Scaffold(
-      backgroundColor: Colors.black.withAlpha(120), // dim scrim
+      backgroundColor: Colors.black.withAlpha(120),
       resizeToAvoidBottomInset: true,
       body: GestureDetector(
-        // Tap outside the card → dismiss.
         onTap: _dismiss,
         child: Align(
           alignment: Alignment.bottomCenter,
           child: GestureDetector(
-            // Swallow taps on the card so they don't dismiss.
             onTap: () {},
             child: Container(
               decoration: BoxDecoration(
@@ -102,7 +136,6 @@ class _QuickAddTaskScreenState extends ConsumerState<QuickAddTaskScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Drag handle
                   Center(
                     child: Container(
                       width: 40,
@@ -115,7 +148,6 @@ class _QuickAddTaskScreenState extends ConsumerState<QuickAddTaskScreen> {
                     ),
                   ),
 
-                  // Task name (autofocus → keyboard opens immediately)
                   TextField(
                     controller: _titleCtrl,
                     autofocus: true,
@@ -130,8 +162,6 @@ class _QuickAddTaskScreenState extends ConsumerState<QuickAddTaskScreen> {
                       isDense: true,
                     ),
                   ),
-
-                  // Description (optional)
                   TextField(
                     controller: _noteCtrl,
                     textCapitalization: TextCapitalization.sentences,
@@ -145,26 +175,67 @@ class _QuickAddTaskScreenState extends ConsumerState<QuickAddTaskScreen> {
 
                   const SizedBox(height: 12),
 
-                  // Quick options + send
+                  // Chips row — scrolls if it gets crowded.
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        // Date (shift-aware: colour + icon when it's a shift day)
+                        _Chip(
+                          icon: shift != null
+                              ? ShiftStyle.icon(shift.type)
+                              : Icons.event_rounded,
+                          label: _dueDate == null
+                              ? 'No date'
+                              : (shift != null
+                                  ? '${_dateLabel(_dueDate!)} · ${shift.type.label}'
+                                  : _dateLabel(_dueDate!)),
+                          active: _dueDate != null,
+                          activeColor: shift != null
+                              ? ShiftStyle.foreground(shift.type)
+                              : cs.primary,
+                          onTap: _pickDate,
+                        ),
+                        const SizedBox(width: 8),
+                        // Time
+                        _Chip(
+                          icon: Icons.access_time_rounded,
+                          label: _dueTime == null
+                              ? 'No time'
+                              : _dueTime!.format(context),
+                          active: _dueTime != null,
+                          activeColor: cs.primary,
+                          onTap: _pickTime,
+                        ),
+                        const SizedBox(width: 8),
+                        // Priority
+                        _Chip(
+                          icon: Icons.flag_rounded,
+                          label: _priority.label,
+                          active: true,
+                          activeColor: _priority.color,
+                          onTap: _cyclePriority,
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+
                   Row(
                     children: [
-                      _Chip(
-                        icon: Icons.event_rounded,
-                        label: _dueToday ? 'Today' : 'No date',
-                        active: _dueToday,
-                        activeColor: cs.primary,
-                        onTap: () => setState(() => _dueToday = !_dueToday),
-                      ),
-                      const SizedBox(width: 8),
-                      _Chip(
-                        icon: Icons.flag_rounded,
-                        label: _priority.label,
-                        active: true,
-                        activeColor: _priority.color,
-                        onTap: _cyclePriority,
-                      ),
-                      const Spacer(),
-                      // Send button
+                      if (shift != null && _dueDate != null)
+                        Expanded(
+                          child: Text(
+                            'Heads up: ${shift.type.label.toLowerCase()} that day',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: ShiftStyle.foreground(shift.type),
+                            ),
+                          ),
+                        )
+                      else
+                        const Spacer(),
                       Material(
                         color: cs.primary,
                         shape: const CircleBorder(),
@@ -199,7 +270,6 @@ class _QuickAddTaskScreenState extends ConsumerState<QuickAddTaskScreen> {
   }
 }
 
-/// A small toggle/cycle chip used for Today + priority in the quick-add sheet.
 class _Chip extends StatelessWidget {
   const _Chip({
     required this.icon,

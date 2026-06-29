@@ -56,7 +56,9 @@ class _LifeTrackerAppState extends ConsumerState<LifeTrackerApp>
 
   Future<void> _onWidgetMethod(MethodCall call) async {
     if (call.method == 'openQuickAdd') {
-      appRouter.push('/quick-add');
+      // Replace (not push) so no opaque app screen sits behind the sheet —
+      // the translucent window then shows the home screen through the scrim.
+      appRouter.go('/quick-add');
     }
   }
 
