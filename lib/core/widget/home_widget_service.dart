@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:home_widget/home_widget.dart';
 import '../../features/habits/data/dao/habits_dao.dart';
 import '../../features/shifts/data/dao/shifts_dao.dart';
@@ -16,9 +17,19 @@ import '../database/app_database.dart';
 class HomeWidgetService {
   const HomeWidgetService._();
 
-  /// Fully-qualified name of the native provider (package + class).
+  /// Fully-qualified names of the native widget providers (package + class).
   static const String _androidProvider =
       'com.lifetracker.life_tracker.UplanWidgetProvider';
+  static const String _agendaProvider =
+      'com.lifetracker.life_tracker.UplanAgendaWidgetProvider';
+
+  // Agenda row colours (read on the widget's dark background).
+  static const int _overdueColor = 0xFFE57373; // red
+  static const int _todayColor = 0xFF8AB4F8; // blue
+  static const int _laterColor = 0xFFB0B8C4; // muted
+
+  /// How many days ahead the agenda widget looks.
+  static const int _agendaHorizonDays = 7;
 
   // Light accent colours that read on the widget's dark background.
   static const int _dayColor = 0xFF5FC6D8; // cyan
@@ -68,6 +79,9 @@ class HomeWidgetService {
       final int tasksDue =
           tasks.where((t) => t.dueDate == today && !t.isCompleted).length;
 
+      // ── Agenda list (overdue + next week) for the agenda widget ────────
+      final List<Map<String, dynamic>> agenda = _buildAgenda(tasks, now);
+
       final String counts;
       if (habitsLeft == 0 && tasksDue == 0) {
         counts = 'All done for today 🎉';
@@ -84,9 +98,57 @@ class HomeWidgetService {
       await HomeWidget.saveWidgetData<String>('today_shift', shiftText);
       await HomeWidget.saveWidgetData<int>('today_shift_color', shiftColor);
       await HomeWidget.saveWidgetData<String>('today_counts', counts);
+      await HomeWidget.saveWidgetData<String>(
+          'agenda_items', jsonEncode(agenda));
+
       await HomeWidget.updateWidget(qualifiedAndroidName: _androidProvider);
+      await HomeWidget.updateWidget(qualifiedAndroidName: _agendaProvider);
     } catch (_) {
       // A widget refresh must never crash the app — swallow any failure.
     }
+  }
+
+  /// Builds the agenda widget's rows: incomplete tasks that are overdue or due
+  /// within the next [_agendaHorizonDays], sorted by date (overdue first).
+  static List<Map<String, dynamic>> _buildAgenda(
+      List<dynamic> tasks, DateTime now) {
+    final DateTime today = DateTime(now.year, now.month, now.day);
+    final DateTime horizon =
+        today.add(const Duration(days: _agendaHorizonDays));
+
+    final List<({String title, DateTime date})> raw = [];
+    for (final t in tasks) {
+      if (t.isCompleted || t.dueDate == null) continue;
+      DateTime parsed;
+      try {
+        parsed = DateTime.parse(t.dueDate as String);
+      } catch (_) {
+        continue;
+      }
+      final DateTime d = DateTime(parsed.year, parsed.month, parsed.day);
+      if (d.isAfter(horizon)) continue; // too far out
+      raw.add((title: t.title as String, date: d));
+    }
+    raw.sort((a, b) => a.date.compareTo(b.date));
+
+    return raw.take(25).map((it) {
+      final int diff = it.date.difference(today).inDays;
+      final String sub;
+      final int color;
+      if (diff < 0) {
+        sub = 'Overdue · ${it.date.day} ${_months[it.date.month]}';
+        color = _overdueColor;
+      } else if (diff == 0) {
+        sub = 'Today';
+        color = _todayColor;
+      } else if (diff == 1) {
+        sub = 'Tomorrow';
+        color = _laterColor;
+      } else {
+        sub = '${_weekdays[it.date.weekday]} ${it.date.day} ${_months[it.date.month]}';
+        color = _laterColor;
+      }
+      return {'title': it.title, 'sub': sub, 'color': color};
+    }).toList();
   }
 }

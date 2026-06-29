@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The "Upcoming" agenda widget: a header row + a scrolling ListView whose
+     rows come from AgendaRemoteViewsFactory. The empty view shows when there
+     are no upcoming tasks. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/agenda_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/uplan_widget_bg"
+    android:padding="12dp">
+
+    <!-- Header: title + quick-add -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/agenda_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_gravity="center_vertical"
+            android:text="Upcoming"
+            android:textColor="#FFFFFFFF"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/agenda_add"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="+"
+            android:textColor="#FFFFFFFF"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:paddingBottom="2dp"
+            android:background="@drawable/uplan_widget_add_bg" />
+    </LinearLayout>
+
+    <!-- Shown only when the list is empty -->
+    <TextView
+        android:id="@+id/agenda_empty"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:text="Nothing upcoming 🎉"
+        android:textColor="#B0FFFFFF"
+        android:textSize="13sp" />
+
+    <ListView
+        android:id="@+id/agenda_list"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginTop="8dp"
+        android:divider="#22FFFFFF"
+        android:dividerHeight="1dp" />
+</LinearLayout>
