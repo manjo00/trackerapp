@@ -22,6 +22,21 @@ class HomeWidgetService {
       'com.lifetracker.life_tracker.UplanWidgetProvider';
   static const String _agendaProvider =
       'com.lifetracker.life_tracker.UplanAgendaWidgetProvider';
+  static const String _monthProvider =
+      'com.lifetracker.life_tracker.UplanMonthWidgetProvider';
+
+  // Month-cell colours (hex strings — parsed natively, avoids int overflow).
+  static const String _monthDayBg = '#FFDEEDEF';
+  static const String _monthDayFg = '#FF0F5B6B';
+  static const String _monthNightBg = '#FFD7DBEC';
+  static const String _monthNightFg = '#FF2E3270';
+  static const String _monthWhiteFg = '#FFFFFFFF';
+  static const String _monthTodayBg = '#33B39DDB'; // subtle highlight
+
+  static const List<String> _fullMonths = [
+    '', 'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December',
+  ];
 
   // Agenda row colours (read on the widget's dark background).
   static const int _overdueColor = 0xFFE57373; // red
@@ -82,6 +97,18 @@ class HomeWidgetService {
       // ── Agenda list (overdue + next week) for the agenda widget ────────
       final List<Map<String, dynamic>> agenda = _buildAgenda(tasks, now);
 
+      // ── Month grid for the month widget ────────────────────────────────
+      final allShifts = await ShiftsDao(db).getAllShifts();
+      final Map<String, String> shiftTypeByDate = {
+        for (final s in allShifts) s.date: s.shiftType,
+      };
+      final Set<String> taskDays = {
+        for (final t in tasks)
+          if (!t.isCompleted && t.dueDate != null) t.dueDate as String,
+      };
+      final List<Map<String, dynamic>> monthCells =
+          _buildMonthCells(now, shiftTypeByDate, taskDays);
+
       final String counts;
       if (habitsLeft == 0 && tasksDue == 0) {
         counts = 'All done for today 🎉';
@@ -100,9 +127,14 @@ class HomeWidgetService {
       await HomeWidget.saveWidgetData<String>('today_counts', counts);
       await HomeWidget.saveWidgetData<String>(
           'agenda_items', jsonEncode(agenda));
+      await HomeWidget.saveWidgetData<String>(
+          'month_title', '${_fullMonths[now.month]} ${now.year}');
+      await HomeWidget.saveWidgetData<String>(
+          'month_cells', jsonEncode(monthCells));
 
       await HomeWidget.updateWidget(qualifiedAndroidName: _androidProvider);
       await HomeWidget.updateWidget(qualifiedAndroidName: _agendaProvider);
+      await HomeWidget.updateWidget(qualifiedAndroidName: _monthProvider);
     } catch (_) {
       // A widget refresh must never crash the app — swallow any failure.
     }
@@ -150,5 +182,41 @@ class HomeWidgetService {
       }
       return {'title': it.title, 'sub': sub, 'color': color};
     }).toList();
+  }
+
+  /// Builds the month-grid cells for the current month: leading blanks, then
+  /// one cell per day with shift colours + a task dot. Colours are hex strings
+  /// (parsed natively) to avoid 32-bit int overflow over the platform channel.
+  static List<Map<String, dynamic>> _buildMonthCells(
+    DateTime now,
+    Map<String, String> shiftTypeByDate,
+    Set<String> taskDays,
+  ) {
+    final DateTime first = DateTime(now.year, now.month, 1);
+    final int daysInMonth = DateTime(now.year, now.month + 1, 0).day;
+    final int leading = first.weekday - 1; // Monday = 1 → 0 blanks
+    final String todayStr = _dateKey(DateTime(now.year, now.month, now.day));
+
+    final List<Map<String, dynamic>> cells = [];
+    for (int i = 0; i < leading; i++) {
+      cells.add({'day': 0});
+    }
+    for (int d = 1; d <= daysInMonth; d++) {
+      final String ds = _dateKey(DateTime(now.year, now.month, d));
+      final String? type = shiftTypeByDate[ds];
+      String bg = '';
+      String fg = _monthWhiteFg;
+      if (type == 'day') {
+        bg = _monthDayBg;
+        fg = _monthDayFg;
+      } else if (type == 'night') {
+        bg = _monthNightBg;
+        fg = _monthNightFg;
+      } else if (ds == todayStr) {
+        bg = _monthTodayBg;
+      }
+      cells.add({'day': d, 'bg': bg, 'fg': fg, 'dot': taskDays.contains(ds)});
+    }
+    return cells;
   }
 }

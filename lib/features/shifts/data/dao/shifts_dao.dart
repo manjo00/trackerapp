@@ -21,6 +21,9 @@ class ShiftsDao extends DatabaseAccessor<AppDatabase> with _$ShiftsDaoMixin {
       (select(workShifts)..where((s) => s.date.equals(date)))
           .getSingleOrNull();
 
+  /// One-shot fetch of every shift — used to build the month-grid widget.
+  Future<List<WorkShift>> getAllShifts() => select(workShifts).get();
+
   // ── Writes ────────────────────────────────────────────────────────────────
 
   Future<int> insertShift(WorkShiftsCompanion companion) =>
