@@ -50,6 +50,16 @@ import 'shell_scaffold.dart';
 /// ```
 final GoRouter appRouter = GoRouter(
   initialLocation: '/today',
+  // Home-screen widget deep links arrive as custom-scheme URIs
+  // (e.g. uplan://add_task). Translate them to real in-app routes here,
+  // before go_router tries — and fails — to match them as paths.
+  redirect: (BuildContext context, GoRouterState state) {
+    final Uri uri = state.uri;
+    if (uri.host == 'add_task' || uri.toString().contains('add_task')) {
+      return '/tasks/add';
+    }
+    return null;
+  },
   routes: [
     // ── Tabbed shell ──────────────────────────────────────────────────────
     StatefulShellRoute.indexedStack(
