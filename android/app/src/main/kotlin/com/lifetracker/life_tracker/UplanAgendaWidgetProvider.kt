@@ -23,6 +23,7 @@ class UplanAgendaWidgetProvider : HomeWidgetProvider() {
         widgetData: SharedPreferences
     ) {
         appWidgetIds.forEach { widgetId ->
+          try {
             val views = RemoteViews(context.packageName, R.layout.uplan_agenda_widget)
 
             // Point the ListView at our RemoteViewsService.
@@ -55,6 +56,9 @@ class UplanAgendaWidgetProvider : HomeWidgetProvider() {
             appWidgetManager.updateAppWidget(widgetId, views)
             // Force the list to re-read its data (covers data-only refreshes).
             appWidgetManager.notifyAppWidgetViewDataChanged(widgetId, R.id.agenda_list)
+          } catch (_: Exception) {
+            // Never let a widget update crash the host app process.
+          }
         }
     }
 }

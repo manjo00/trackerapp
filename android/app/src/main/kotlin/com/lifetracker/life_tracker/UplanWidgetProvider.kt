@@ -22,12 +22,15 @@ class UplanWidgetProvider : HomeWidgetProvider() {
         widgetData: SharedPreferences
     ) {
         appWidgetIds.forEach { widgetId ->
+          try {
             val views = RemoteViews(context.packageName, R.layout.uplan_widget)
 
             val date = widgetData.getString("today_date", "") ?: ""
             val shift = widgetData.getString("today_shift", "Rest day") ?: "Rest day"
             val counts = widgetData.getString("today_counts", "Tap to open") ?: "Tap to open"
-            val shiftColor = widgetData.getInt("today_shift_color", 0xFFFFFFFF.toInt())
+            // home_widget stores Dart ints as Long, so read as Long then narrow.
+            val shiftColor =
+                widgetData.getLong("today_shift_color", 0xFFFFFFFF).toInt()
 
             views.setTextViewText(R.id.widget_date, date)
             views.setTextViewText(R.id.widget_shift, shift)
@@ -50,6 +53,9 @@ class UplanWidgetProvider : HomeWidgetProvider() {
             views.setOnClickPendingIntent(R.id.widget_add, addIntent)
 
             appWidgetManager.updateAppWidget(widgetId, views)
+          } catch (_: Exception) {
+            // Never let a widget update crash the host app process.
+          }
         }
     }
 }
