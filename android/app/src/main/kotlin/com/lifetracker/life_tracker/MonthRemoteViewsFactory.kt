@@ -22,7 +22,7 @@ class MonthRemoteViewsFactory(
         val date: String,
         val bg: String,
         val fg: String,
-        val dot: Boolean,
+        val dots: List<String>,
     )
 
     private var cells: List<Cell> = emptyList()
@@ -38,13 +38,20 @@ class MonthRemoteViewsFactory(
             val arr = JSONArray(json)
             for (i in 0 until arr.length()) {
                 val o = arr.getJSONObject(i)
+                val dotsArr = o.optJSONArray("dots")
+                val dotColors = mutableListOf<String>()
+                if (dotsArr != null) {
+                    for (j in 0 until dotsArr.length()) {
+                        dotColors.add(dotsArr.optString(j))
+                    }
+                }
                 parsed.add(
                     Cell(
                         day = o.optInt("day", 0),
                         date = o.optString("date", ""),
                         bg = o.optString("bg", ""),
                         fg = o.optString("fg", "#FFFFFFFF"),
-                        dot = o.optBoolean("dot", false),
+                        dots = dotColors,
                     )
                 )
             }
@@ -63,10 +70,11 @@ class MonthRemoteViewsFactory(
         val cell = cells[position]
         val rv = RemoteViews(context.packageName, R.layout.uplan_month_cell)
 
+        val dotIds = intArrayOf(R.id.cell_dot1, R.id.cell_dot2, R.id.cell_dot3)
         if (cell.day == 0) {
             // Leading blank.
             rv.setTextViewText(R.id.cell_day, "")
-            rv.setViewVisibility(R.id.cell_dot, View.GONE)
+            for (id in dotIds) rv.setViewVisibility(id, View.GONE)
             rv.setInt(R.id.cell_root, "setBackgroundColor", Color.TRANSPARENT)
         } else {
             rv.setTextViewText(R.id.cell_day, cell.day.toString())
@@ -82,14 +90,17 @@ class MonthRemoteViewsFactory(
             } else {
                 rv.setInt(R.id.cell_root, "setBackgroundColor", Color.TRANSPARENT)
             }
-            if (cell.dot) {
-                rv.setViewVisibility(R.id.cell_dot, View.VISIBLE)
-                try {
-                    rv.setTextColor(R.id.cell_dot, Color.parseColor(cell.fg))
-                } catch (_: Exception) {
+            // Up to 3 priority-coloured dots.
+            for (i in dotIds.indices) {
+                if (i < cell.dots.size) {
+                    rv.setViewVisibility(dotIds[i], View.VISIBLE)
+                    try {
+                        rv.setTextColor(dotIds[i], Color.parseColor(cell.dots[i]))
+                    } catch (_: Exception) {
+                    }
+                } else {
+                    rv.setViewVisibility(dotIds[i], View.GONE)
                 }
-            } else {
-                rv.setViewVisibility(R.id.cell_dot, View.GONE)
             }
         }
 

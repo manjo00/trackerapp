@@ -1,12 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- One row in the combined widget's side task list: title + date label. -->
+<!-- One task row under a date headline: priority dot + title. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/ctask_root"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:paddingTop="6dp"
-    android:paddingBottom="6dp">
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:paddingTop="5dp"
+    android:paddingBottom="5dp"
+    android:paddingStart="4dp">
+
+    <TextView
+        android:id="@+id/ctask_dot"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="•"
+        android:textSize="15sp"
+        android:paddingEnd="6dp" />
 
     <TextView
         android:id="@+id/ctask_title"
@@ -16,11 +26,4 @@
         android:ellipsize="end"
         android:textColor="#FFFFFFFF"
         android:textSize="13sp" />
-
-    <TextView
-        android:id="@+id/ctask_sub"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textColor="#80FFFFFF"
-        android:textSize="11sp" />
 </LinearLayout>

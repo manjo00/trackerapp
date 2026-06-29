@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- One day cell in the month-grid widget: day number + a task dot.
+<!-- One day cell in the month-grid widget: day number + up to 3 priority dots.
      Background colour is set at runtime for shift days. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/cell_root"
@@ -17,12 +17,13 @@
         android:textColor="#FFFFFFFF"
         android:textSize="13sp" />
 
-    <TextView
-        android:id="@+id/cell_dot"
+    <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="•"
-        android:textColor="#FFFFFFFF"
-        android:textSize="12sp"
-        android:visibility="gone" />
+        android:orientation="horizontal">
+
+        <TextView android:id="@+id/cell_dot1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="•" android:textSize="11sp" android:visibility="gone" />
+        <TextView android:id="@+id/cell_dot2" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="•" android:textSize="11sp" android:paddingStart="1dp" android:visibility="gone" />
+        <TextView android:id="@+id/cell_dot3" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="•" android:textSize="11sp" android:paddingStart="1dp" android:visibility="gone" />
+    </LinearLayout>
 </LinearLayout>

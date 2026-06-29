@@ -62,6 +62,13 @@ class HomeWidgetService {
   static String _dateKey(DateTime d) =>
       '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
+  /// Task priority (0 low / 1 med / 2 high) → dot colour hex.
+  static String _priorityHex(int p) => switch (p) {
+        2 => '#FFE07070', // high — soft red
+        0 => '#FF8E9AAF', // low — muted slate
+        _ => '#FFFFB347', // medium — warm amber
+      };
+
   static Future<void> sync(AppDatabase db) async {
     try {
       final DateTime now = DateTime.now();
@@ -102,12 +109,22 @@ class HomeWidgetService {
       final Map<String, String> shiftTypeByDate = {
         for (final s in allShifts) s.date: s.shiftType,
       };
-      final Set<String> taskDays = {
-        for (final t in tasks)
-          if (!t.isCompleted && t.dueDate != null) t.dueDate as String,
+      // Per-day priority dot colours (most urgent first, up to 3).
+      final Map<String, List<({int p, String hex})>> dotsTmp = {};
+      for (final t in tasks) {
+        if (t.isCompleted || t.dueDate == null) continue;
+        (dotsTmp[t.dueDate as String] ??= [])
+            .add((p: t.priority, hex: _priorityHex(t.priority)));
+      }
+      final Map<String, List<String>> dotsByDate = {
+        for (final e in dotsTmp.entries)
+          e.key: (e.value..sort((a, b) => b.p.compareTo(a.p)))
+              .take(3)
+              .map((x) => x.hex)
+              .toList(),
       };
       final List<Map<String, dynamic>> monthCells =
-          _buildMonthCells(now, shiftTypeByDate, taskDays);
+          _buildMonthCells(now, shiftTypeByDate, dotsByDate);
 
       // ── All dated tasks for the combined widget's side list ────────────
       final List<Map<String, dynamic>> combinedTasks =
@@ -197,7 +214,7 @@ class HomeWidgetService {
       List<dynamic> tasks, DateTime now) {
     final DateTime today = DateTime(now.year, now.month, now.day);
 
-    final List<({String title, DateTime date})> raw = [];
+    final List<({String title, DateTime date, String color})> raw = [];
     for (final t in tasks) {
       if (t.isCompleted || t.dueDate == null) continue;
       DateTime parsed;
@@ -209,6 +226,7 @@ class HomeWidgetService {
       raw.add((
         title: t.title as String,
         date: DateTime(parsed.year, parsed.month, parsed.day),
+        color: _priorityHex(t.priority),
       ));
     }
     raw.sort((a, b) => a.date.compareTo(b.date));
@@ -226,7 +244,12 @@ class HomeWidgetService {
         label =
             '${_weekdays[it.date.weekday]} ${it.date.day} ${_months[it.date.month]}';
       }
-      return {'title': it.title, 'date': _dateKey(it.date), 'label': label};
+      return {
+        'title': it.title,
+        'date': _dateKey(it.date),
+        'label': label,
+        'color': it.color,
+      };
     }).toList();
   }
 
@@ -236,7 +259,7 @@ class HomeWidgetService {
   static List<Map<String, dynamic>> _buildMonthCells(
     DateTime now,
     Map<String, String> shiftTypeByDate,
-    Set<String> taskDays,
+    Map<String, List<String>> dotsByDate,
   ) {
     final DateTime first = DateTime(now.year, now.month, 1);
     final int daysInMonth = DateTime(now.year, now.month + 1, 0).day;
@@ -266,7 +289,7 @@ class HomeWidgetService {
         'date': ds,
         'bg': bg,
         'fg': fg,
-        'dot': taskDays.contains(ds),
+        'dots': dotsByDate[ds] ?? const <String>[],
       });
     }
     return cells;

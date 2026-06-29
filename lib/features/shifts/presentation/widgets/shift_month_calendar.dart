@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../planner/presentation/providers/planner_providers.dart';
+import '../../../tasks/data/models/task_model.dart';
 import '../../data/models/work_shift_model.dart';
 import '../providers/shifts_providers.dart';
 import '../shift_style.dart';
@@ -266,17 +267,26 @@ class _DayCell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final ColorScheme cs = Theme.of(context).colorScheme;
     final bool hasShift = shift != null;
-    final Color bg =
-        hasShift ? ShiftStyle.fill(shift!.type) : Colors.transparent;
     final Color fg =
         hasShift ? ShiftStyle.foreground(shift!.type) : cs.onSurface;
 
-    // Task-count dots for this day.
-    final DotSummary? summary = ref.watch(dayDotSummaryProvider(dateStr));
-    final int tasksDue = summary?.tasksDue ?? 0;
-    final int dots = tasksDue > 3 ? 3 : tasksDue;
-    final Color dotColor =
-        hasShift ? ShiftStyle.foreground(shift!.type) : cs.primary;
+    // Incomplete tasks for this day → up to 3 dots coloured by priority
+    // (most urgent first).
+    final List<TaskModel> tasks =
+        ref.watch(tasksForDateProvider(dateStr)).valueOrNull ?? const [];
+    final List<TaskModel> due = tasks.where((t) => !t.isCompleted).toList()
+      ..sort((a, b) => b.priority.toInt().compareTo(a.priority.toInt()));
+    final List<TaskModel> dotTasks = due.take(3).toList();
+
+    // Selected day gets a bold, filled highlight; today only a faint ring.
+    final Color cellBg = isSelected && !hasShift
+        ? cs.primary.withAlpha(45)
+        : (hasShift ? ShiftStyle.fill(shift!.type) : Colors.transparent);
+    final BoxBorder border = isSelected
+        ? Border.all(color: cs.primary, width: 2.5)
+        : isToday
+            ? Border.all(color: cs.primary.withAlpha(90), width: 1.5)
+            : Border.all(color: Colors.transparent, width: 2);
 
     return GestureDetector(
       onTap: onTap,
@@ -284,13 +294,9 @@ class _DayCell extends ConsumerWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         decoration: BoxDecoration(
-          color: bg,
+          color: cellBg,
           borderRadius: BorderRadius.circular(8),
-          border: isSelected
-              ? Border.all(color: cs.primary, width: 2)
-              : isToday
-                  ? Border.all(color: cs.primary.withAlpha(120), width: 1.5)
-                  : Border.all(color: Colors.transparent, width: 2),
+          border: border,
         ),
         child: Stack(
           children: [
@@ -312,21 +318,21 @@ class _DayCell extends ConsumerWidget {
                   color: ShiftStyle.iconColor(shift!.type),
                 ),
               ),
-            if (dots > 0)
+            if (dotTasks.isNotEmpty)
               Positioned(
                 bottom: 5,
                 left: 6,
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    for (int i = 0; i < dots; i++)
+                    for (final TaskModel t in dotTasks)
                       Container(
                         width: 5,
                         height: 5,
                         margin: const EdgeInsets.only(right: 2),
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: dotColor,
+                          color: t.priority.color,
                         ),
                       ),
                   ],
