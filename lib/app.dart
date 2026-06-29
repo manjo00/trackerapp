@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:home_widget/home_widget.dart';
 import 'core/database/database_provider.dart';
 import 'core/notifications/notification_service.dart';
 import 'core/router/app_router.dart';
@@ -33,18 +35,38 @@ class _LifeTrackerAppState extends ConsumerState<LifeTrackerApp>
 
   static DateTime _dayOf(DateTime d) => DateTime(d.year, d.month, d.day);
 
+  /// Subscription to taps on home-screen widget elements (e.g. the "+").
+  StreamSubscription<Uri?>? _widgetTapSub;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     // Run rescheduleAll after the first frame so providers are ready.
     WidgetsBinding.instance.addPostFrameCallback((_) => _reschedule());
+    _listenForWidgetTaps();
   }
 
   @override
   void dispose() {
+    _widgetTapSub?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  /// Handles deep links fired by the home-screen widget. Cold launches go
+  /// through [initiallyLaunchedFromHomeWidget]; taps while running come via
+  /// the [widgetClicked] stream.
+  void _listenForWidgetTaps() {
+    HomeWidget.initiallyLaunchedFromHomeWidget().then(_onWidgetUri);
+    _widgetTapSub = HomeWidget.widgetClicked.listen(_onWidgetUri);
+  }
+
+  void _onWidgetUri(Uri? uri) {
+    if (uri == null) return;
+    if (uri.host == 'add_task') {
+      appRouter.push('/tasks/add');
+    }
   }
 
   @override

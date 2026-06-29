@@ -3,6 +3,7 @@ package com.lifetracker.life_tracker
 import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.SharedPreferences
+import android.net.Uri
 import android.widget.RemoteViews
 import es.antonborri.home_widget.HomeWidgetLaunchIntent
 import es.antonborri.home_widget.HomeWidgetProvider
@@ -33,12 +34,20 @@ class UplanWidgetProvider : HomeWidgetProvider() {
             views.setTextViewText(R.id.widget_counts, counts)
             views.setTextColor(R.id.widget_shift, shiftColor)
 
-            // Tapping anywhere on the widget opens the app.
-            val pendingIntent = HomeWidgetLaunchIntent.getActivity(
+            // Tapping the body opens the app on its last screen.
+            val openIntent = HomeWidgetLaunchIntent.getActivity(
                 context,
                 MainActivity::class.java
             )
-            views.setOnClickPendingIntent(R.id.widget_root, pendingIntent)
+            views.setOnClickPendingIntent(R.id.widget_root, openIntent)
+
+            // Tapping "+" opens the app and deep-links to the New Task screen.
+            val addIntent = HomeWidgetLaunchIntent.getActivity(
+                context,
+                MainActivity::class.java,
+                Uri.parse("uplan://add_task")
+            )
+            views.setOnClickPendingIntent(R.id.widget_add, addIntent)
 
             appWidgetManager.updateAppWidget(widgetId, views)
         }
