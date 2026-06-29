@@ -1,4 +1,5 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <!-- Show notifications (required on Android 13+; silently ignored below). -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Re-schedule notifications after a device reboot. -->
@@ -47,6 +48,21 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+
+        <!-- WorkManager is pulled in transitively (by home_widget) but we never
+             use it. Its androidx.startup auto-initializer was crashing on
+             launch ("Failed to create WorkDatabase") on some devices, so we
+             remove it from the startup provider. -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup"
+                tools:node="remove" />
+        </provider>
 
         <!-- Uplan "Today" home-screen widget. Exported so the launcher (a
              separate process) can host it. -->
