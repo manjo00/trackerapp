@@ -7,6 +7,7 @@ import '../../features/habits/data/dao/habits_dao.dart';
 import '../../features/habits/data/tables/habit_completions_table.dart';
 import '../../features/habits/data/tables/habits_table.dart';
 import '../../features/shifts/data/dao/shifts_dao.dart';
+import '../../features/shifts/data/tables/shift_rotations_table.dart';
 import '../../features/shifts/data/tables/work_shifts_table.dart';
 import '../../features/tasks/data/dao/tasks_dao.dart';
 import '../../features/tasks/data/tables/tasks_table.dart';
@@ -57,6 +58,8 @@ part 'app_database.g.dart';
     ProgramExercises,
     // ── Shifts (v6) ──────────────────────────────────────────────────────────
     WorkShifts,
+    // ── Shift rotations (v7) ─────────────────────────────────────────────────
+    ShiftRotations,
   ],
   daos: [HabitsDao, TasksDao, TrackersDao, WorkoutDao, ProgramDao, ShiftsDao],
 )
@@ -77,14 +80,17 @@ class AppDatabase extends _$AppDatabase {
   /// v5 → added programs, program_sessions, program_exercises tables;
   ///       added programSessionId FK to workout_sessions
   /// v6 → added work_shifts table (hospital shift schedule)
+  /// v7 → added shift_rotations table + rotationLabel/rotationColor on
+  ///       work_shifts (editable rotation labels per day)
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (Migrator m) async {
           await m.createAll();
           await _seedExerciseLibrary(m);
+          await _seedRotations();
         },
         onUpgrade: (Migrator m, int from, int to) async {
           if (from < 2) {
@@ -123,6 +129,13 @@ class AppDatabase extends _$AppDatabase {
             // Hospital shift schedule
             await m.createTable(workShifts);
           }
+          if (from < 7) {
+            // Editable rotation labels per shift.
+            await m.createTable(shiftRotations);
+            await m.addColumn(workShifts, workShifts.rotationLabel);
+            await m.addColumn(workShifts, workShifts.rotationColor);
+            await _seedRotations();
+          }
         },
         beforeOpen: (details) async {
           // SQLite ignores foreign keys unless this is set per-connection.
@@ -131,6 +144,22 @@ class AppDatabase extends _$AppDatabase {
           await customStatement('PRAGMA foreign_keys = ON');
         },
       );
+
+  /// Seeds the default rotation labels (from the hospital rota). Editable later.
+  Future<void> _seedRotations() async {
+    const List<String> names = [
+      'ICU1', 'ICU2', 'ICU3CB', 'ICU4B', 'Cardiac', 'ER', 'ERW', 'NICU',
+      'TICU', 'Ward', 'Sleep', 'Float', 'E', 'Home', 'PFT', 'OR', 'Pedia',
+    ];
+    for (int i = 0; i < names.length; i++) {
+      await into(shiftRotations).insert(
+        ShiftRotationsCompanion.insert(
+          name: names[i],
+          orderIndex: Value(i),
+        ),
+      );
+    }
+  }
 
   Future<void> _seedExerciseLibrary(Migrator m) async {
     for (final exercise in kSeedExercises) {

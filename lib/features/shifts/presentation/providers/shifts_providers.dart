@@ -23,6 +23,12 @@ Stream<Map<String, WorkShiftModel>> shiftsByDate(ShiftsByDateRef ref) {
   return ref.watch(shiftsRepositoryProvider).watchShiftsByDate();
 }
 
+/// The editable list of rotation labels (ICU1, ER, …), in display order.
+@riverpod
+Stream<List<ShiftRotationModel>> rotations(RotationsRef ref) {
+  return ref.watch(shiftsRepositoryProvider).watchRotations();
+}
+
 // ── Write provider ────────────────────────────────────────────────────────
 
 /// Edits the shift schedule. Holds the tap-to-cycle logic so the UI only has
@@ -54,6 +60,30 @@ class ShiftEditor extends _$ShiftEditor {
   /// Directly sets [date] to [type] (used by future explicit pickers).
   Future<void> setShift(String date, ShiftType type) =>
       ref.read(shiftsRepositoryProvider).setShift(date, type);
+
+  /// Assigns [date] a [type] (day/night) with an optional rotation label.
+  Future<void> assign(
+    String date,
+    ShiftType type, {
+    String? rotationLabel,
+    int? rotationColor,
+  }) =>
+      ref.read(shiftsRepositoryProvider).setShift(
+            date,
+            type,
+            rotationLabel: rotationLabel,
+            rotationColor: rotationColor,
+          );
+
+  /// Rotation CRUD (used by the rotations editor).
+  Future<void> addRotation(String name, int colorValue) =>
+      ref.read(shiftsRepositoryProvider).addRotation(name, colorValue);
+
+  Future<void> updateRotation(ShiftRotationModel rotation) =>
+      ref.read(shiftsRepositoryProvider).updateRotation(rotation);
+
+  Future<void> deleteRotation(int id) =>
+      ref.read(shiftsRepositoryProvider).deleteRotation(id);
 
   /// Marks [date] as OFF.
   Future<void> clear(String date) =>

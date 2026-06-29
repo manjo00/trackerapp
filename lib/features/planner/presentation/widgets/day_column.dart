@@ -138,6 +138,22 @@ class DayColumn extends ConsumerWidget {
               ),
             ),
 
+            // ── Rotation label (week view) ────────────────────────────────
+            if (shift != null && shift.rotationLabel != null)
+              Text(
+                shift.rotationLabel!,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w600,
+                  color: shift.rotationColor != null
+                      ? Color(shift.rotationColor!)
+                      : const Color(0xFFFFB347),
+                ),
+              ),
+
             const SizedBox(height: 6),
 
             // ── Habit dots ────────────────────────────────────────────────

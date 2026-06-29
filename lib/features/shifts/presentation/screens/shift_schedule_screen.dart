@@ -36,7 +36,7 @@ class ShiftScheduleScreen extends StatelessWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Tap a day to cycle it: Off → Day → Night → Off',
+                      'Tap a day to set its shift — day/night + rotation',
                       style: TextStyle(
                         fontSize: 13,
                         color: cs.onSurface.withAlpha(180),

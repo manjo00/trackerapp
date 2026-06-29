@@ -1,13 +1,33 @@
 import 'package:drift/drift.dart';
 import '../../../../core/database/app_database.dart';
+import '../tables/shift_rotations_table.dart';
 import '../tables/work_shifts_table.dart';
 
 part 'shifts_dao.g.dart';
 
 /// All database queries for the work-shift schedule feature.
-@DriftAccessor(tables: [WorkShifts])
+@DriftAccessor(tables: [WorkShifts, ShiftRotations])
 class ShiftsDao extends DatabaseAccessor<AppDatabase> with _$ShiftsDaoMixin {
   ShiftsDao(super.db);
+
+  // ── Rotations ───────────────────────────────────────────────────────────────
+
+  Stream<List<ShiftRotation>> watchRotations() =>
+      (select(shiftRotations)..orderBy([(r) => OrderingTerm.asc(r.orderIndex)]))
+          .watch();
+
+  Future<List<ShiftRotation>> getRotations() =>
+      (select(shiftRotations)..orderBy([(r) => OrderingTerm.asc(r.orderIndex)]))
+          .get();
+
+  Future<int> insertRotation(ShiftRotationsCompanion c) =>
+      into(shiftRotations).insert(c);
+
+  Future<void> updateRotation(ShiftRotationsCompanion c) =>
+      (update(shiftRotations)..where((r) => r.id.equals(c.id.value))).write(c);
+
+  Future<void> deleteRotation(int id) =>
+      (delete(shiftRotations)..where((r) => r.id.equals(id))).go();
 
   // ── Streams ───────────────────────────────────────────────────────────────
 

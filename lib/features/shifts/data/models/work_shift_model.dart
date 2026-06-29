@@ -56,5 +56,22 @@ abstract class WorkShiftModel with _$WorkShiftModel {
 
     /// End time as "HH:mm".
     required String endTime,
+
+    /// Rotation label drawn on the tile (e.g. "ICU1"). Null = plain day/night.
+    String? rotationLabel,
+
+    /// ARGB colour for the rotation label.
+    int? rotationColor,
   }) = _WorkShiftModel;
+}
+
+/// An editable rotation/placement (e.g. "ICU1", "ER", "Cardiac").
+@freezed
+abstract class ShiftRotationModel with _$ShiftRotationModel {
+  const factory ShiftRotationModel({
+    required int id,
+    required String name,
+    required int colorValue,
+    required int orderIndex,
+  }) = _ShiftRotationModel;
 }

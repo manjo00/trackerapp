@@ -6,6 +6,7 @@ import '../../../tasks/data/models/task_model.dart';
 import '../../data/models/work_shift_model.dart';
 import '../providers/shifts_providers.dart';
 import '../shift_style.dart';
+import 'shift_picker_sheet.dart';
 
 /// A reusable month-grid calendar for entering and viewing the work schedule.
 ///
@@ -122,8 +123,8 @@ class _ShiftMonthCalendarState extends ConsumerState<ShiftMonthCalendar> {
             // Picker mode: report the tapped date.
             onSelect(ds);
           } else {
-            // Schedule mode: cycle the shift.
-            ref.read(shiftEditorProvider.notifier).cycle(ds);
+            // Schedule mode: open the rotation + day/night picker.
+            showShiftPicker(context, ds);
           }
         },
         // Long-press any day to add a task pre-filled with that date.
@@ -278,6 +279,10 @@ class _DayCell extends ConsumerWidget {
       ..sort((a, b) => b.priority.toInt().compareTo(a.priority.toInt()));
     final List<TaskModel> dotTasks = due.take(3).toList();
 
+    // Locals (widget fields don't promote) for the rotation label.
+    final String? rotLabel = shift?.rotationLabel;
+    final int? rotColor = shift?.rotationColor;
+
     // Selected day gets a bold, filled highlight; today only a faint ring.
     final Color cellBg = isSelected && !hasShift
         ? cs.primary.withAlpha(45)
@@ -300,36 +305,63 @@ class _DayCell extends ConsumerWidget {
         ),
         child: Stack(
           children: [
+            // Day number (top-left)
             Positioned(
-              top: 4,
-              left: 6,
+              top: 3,
+              left: 5,
               child: Text(
                 '$day',
                 style: TextStyle(fontSize: 12, color: fg),
               ),
             ),
+            // Sun/moon (top-right)
             if (hasShift)
               Positioned(
-                bottom: 3,
+                top: 3,
                 right: 4,
                 child: Icon(
                   ShiftStyle.icon(shift!.type),
-                  size: 13,
+                  size: 12,
                   color: ShiftStyle.iconColor(shift!.type),
                 ),
               ),
+            // Rotation label (centred)
+            if (rotLabel != null)
+              Positioned(
+                left: 0,
+                right: 0,
+                top: 19,
+                child: Center(
+                  child: Text(
+                    rotLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w600,
+                      color: rotColor != null
+                          ? Color(rotColor)
+                          : const Color(0xFFFFB347),
+                    ),
+                  ),
+                ),
+              ),
+            // Task dots (bottom-centre)
             if (dotTasks.isNotEmpty)
               Positioned(
-                bottom: 5,
-                left: 6,
+                bottom: 3,
+                left: 0,
+                right: 0,
                 child: Row(
-                  mainAxisSize: MainAxisSize.min,
+                  mainAxisSize: MainAxisSize.max,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     for (final TaskModel t in dotTasks)
                       Container(
                         width: 5,
                         height: 5,
-                        margin: const EdgeInsets.only(right: 2),
+                        margin: const EdgeInsets.symmetric(horizontal: 1),
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           color: t.priority.color,

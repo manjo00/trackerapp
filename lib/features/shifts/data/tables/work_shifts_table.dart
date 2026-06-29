@@ -26,6 +26,13 @@ class WorkShifts extends Table {
   /// next morning — spanning is a rendering concern, not stored here.
   TextColumn get endTime => text()();
 
+  /// Rotation label drawn on the tile (e.g. "ICU1", "ER"). Null = a plain
+  /// day/night shift with no rotation. ✨ v7
+  TextColumn get rotationLabel => text().nullable()();
+
+  /// Colour (ARGB int) for the rotation label. ✨ v7
+  IntColumn get rotationColor => integer().nullable()();
+
   /// One shift per calendar day.
   @override
   List<Set<Column>> get uniqueKeys => [
