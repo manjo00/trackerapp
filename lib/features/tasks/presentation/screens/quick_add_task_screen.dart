@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/database/database_provider.dart';
+import '../../../../core/widget/home_widget_service.dart';
 import '../../../shifts/data/models/work_shift_model.dart';
 import '../../../shifts/presentation/providers/shifts_providers.dart';
 import '../../../shifts/presentation/shift_style.dart';
@@ -99,6 +101,9 @@ class _QuickAddTaskScreenState extends ConsumerState<QuickAddTaskScreen> {
               : null,
           priority: _priority,
         );
+    // Push the new task to the home-screen widgets *before* closing — once the
+    // activity finishes, the lifecycle sync may not complete in time.
+    await HomeWidgetService.sync(ref.read(appDatabaseProvider));
     _dismiss();
   }
 
