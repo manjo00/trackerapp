@@ -7,6 +7,7 @@ import '../../features/inbox/presentation/screens/inbox_screen.dart';
 import '../../features/tasks/data/models/task_model.dart';
 import '../../features/tasks/presentation/screens/task_list_screen.dart';
 import '../../features/tasks/presentation/screens/add_task_screen.dart';
+import '../../features/tasks/presentation/screens/quick_add_task_screen.dart';
 import '../../features/planner/presentation/screens/planner_screen.dart';
 import '../../features/settings/presentation/screens/settings_screen.dart';
 import '../../features/shifts/presentation/screens/shift_schedule_screen.dart';
@@ -56,7 +57,11 @@ final GoRouter appRouter = GoRouter(
   redirect: (BuildContext context, GoRouterState state) {
     final Uri uri = state.uri;
     if (uri.host == 'add_task' || uri.toString().contains('add_task')) {
-      return '/tasks/add';
+      return '/quick-add';
+    }
+    // Some launch paths report a bare "/" which has no route — send to Today.
+    if (uri.path.isEmpty || uri.path == '/') {
+      return '/today';
     }
     return null;
   },
@@ -170,6 +175,12 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/schedule',
       builder: (context, state) => const ShiftScheduleScreen(),
+    ),
+
+    // Lightweight quick-add half-sheet, opened by the home-screen widget "+".
+    GoRoute(
+      path: '/quick-add',
+      builder: (context, state) => const QuickAddTaskScreen(),
     ),
 
     GoRoute(

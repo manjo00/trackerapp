@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/database/database_provider.dart';
 import 'core/notifications/notification_service.dart';
@@ -33,18 +34,30 @@ class _LifeTrackerAppState extends ConsumerState<LifeTrackerApp>
 
   static DateTime _dayOf(DateTime d) => DateTime(d.year, d.month, d.day);
 
+  /// Channel MainActivity uses to tell us a widget "+" was tapped while the
+  /// app was already running (cold starts are handled by getInitialRoute).
+  static const MethodChannel _widgetChannel = MethodChannel('uplan/widget');
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     // Run rescheduleAll after the first frame so providers are ready.
     WidgetsBinding.instance.addPostFrameCallback((_) => _reschedule());
+    _widgetChannel.setMethodCallHandler(_onWidgetMethod);
   }
 
   @override
   void dispose() {
+    _widgetChannel.setMethodCallHandler(null);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  Future<void> _onWidgetMethod(MethodCall call) async {
+    if (call.method == 'openQuickAdd') {
+      appRouter.push('/quick-add');
+    }
   }
 
   @override
