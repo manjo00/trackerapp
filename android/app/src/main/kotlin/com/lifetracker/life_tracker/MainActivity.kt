@@ -2,18 +2,12 @@ package com.lifetracker.life_tracker
 
 import android.content.Intent
 import io.flutter.embedding.android.FlutterActivity
-import io.flutter.embedding.android.FlutterActivityLaunchConfigs.BackgroundMode
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
     private val channelName = "uplan/widget"
     private var methodChannel: MethodChannel? = null
-
-    /// Render with a transparent surface so the quick-add sheet's scrim can
-    /// reveal the home screen behind it. Opaque app screens are unaffected
-    /// (their Scaffolds paint over the transparent surface).
-    override fun getBackgroundMode(): BackgroundMode = BackgroundMode.transparent
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
