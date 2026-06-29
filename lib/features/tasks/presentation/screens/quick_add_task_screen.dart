@@ -114,12 +114,18 @@ class _QuickAddTaskScreenState extends ConsumerState<QuickAddTaskScreen> {
     return Scaffold(
       backgroundColor: Colors.black.withAlpha(120),
       resizeToAvoidBottomInset: true,
-      body: GestureDetector(
-        onTap: _dismiss,
-        child: Align(
-          alignment: Alignment.bottomCenter,
-          child: GestureDetector(
-            onTap: () {},
+      body: Stack(
+        children: [
+          // Scrim layer — tapping empty space dismisses. Kept separate from
+          // the card so the card's buttons reliably receive their own taps.
+          Positioned.fill(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: _dismiss,
+            ),
+          ),
+          Align(
+            alignment: Alignment.bottomCenter,
             child: Container(
               decoration: BoxDecoration(
                 color: cs.surface,
@@ -264,7 +270,7 @@ class _QuickAddTaskScreenState extends ConsumerState<QuickAddTaskScreen> {
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
