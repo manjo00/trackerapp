@@ -390,6 +390,9 @@ class _NumberField extends StatelessWidget {
         ),
       ),
       style: Theme.of(context).textTheme.bodyMedium,
+      // Persist on every keystroke so a typed value is never lost if the user
+      // taps Finish (or away) without pressing the keyboard's "done".
+      onChanged: (_) => onEditingComplete(),
       onEditingComplete: onEditingComplete,
     );
   }
