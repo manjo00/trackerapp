@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import '../../../planner/presentation/providers/planner_providers.dart';
 import '../../data/models/work_shift_model.dart';
 import '../providers/shifts_providers.dart';
 import '../shift_style.dart';
@@ -109,6 +111,7 @@ class _ShiftMonthCalendarState extends ConsumerState<ShiftMonthCalendar> {
       final String ds = _dateStr(date);
       cells.add(_DayCell(
         day: d,
+        dateStr: ds,
         shift: shifts[ds],
         isToday: ds == todayStr,
         isSelected: widget.selectedDate == ds,
@@ -122,6 +125,8 @@ class _ShiftMonthCalendarState extends ConsumerState<ShiftMonthCalendar> {
             ref.read(shiftEditorProvider.notifier).cycle(ds);
           }
         },
+        // Long-press any day to add a task pre-filled with that date.
+        onLongPress: () => context.push('/tasks/add', extra: ds),
       ));
     }
 
@@ -235,25 +240,30 @@ class _ShiftMonthCalendarState extends ConsumerState<ShiftMonthCalendar> {
   }
 }
 
-/// A single tappable day cell. Fills with the shift colour + icon when the day
-/// has a shift; today gets a ring.
-class _DayCell extends StatelessWidget {
+/// A single day cell. Fills with the shift colour + icon when the day has a
+/// shift; today gets a ring; small dots show how many tasks are due that day.
+/// Tap = select/cycle; long-press = add a task for the day.
+class _DayCell extends ConsumerWidget {
   const _DayCell({
     required this.day,
+    required this.dateStr,
     required this.shift,
     required this.isToday,
     required this.onTap,
+    required this.onLongPress,
     this.isSelected = false,
   });
 
   final int day;
+  final String dateStr;
   final WorkShiftModel? shift;
   final bool isToday;
   final bool isSelected;
   final VoidCallback onTap;
+  final VoidCallback onLongPress;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final ColorScheme cs = Theme.of(context).colorScheme;
     final bool hasShift = shift != null;
     final Color bg =
@@ -261,8 +271,16 @@ class _DayCell extends StatelessWidget {
     final Color fg =
         hasShift ? ShiftStyle.foreground(shift!.type) : cs.onSurface;
 
+    // Task-count dots for this day.
+    final DotSummary? summary = ref.watch(dayDotSummaryProvider(dateStr));
+    final int tasksDue = summary?.tasksDue ?? 0;
+    final int dots = tasksDue > 3 ? 3 : tasksDue;
+    final Color dotColor =
+        hasShift ? ShiftStyle.foreground(shift!.type) : cs.primary;
+
     return GestureDetector(
       onTap: onTap,
+      onLongPress: onLongPress,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         decoration: BoxDecoration(
@@ -292,6 +310,26 @@ class _DayCell extends StatelessWidget {
                   ShiftStyle.icon(shift!.type),
                   size: 13,
                   color: ShiftStyle.iconColor(shift!.type),
+                ),
+              ),
+            if (dots > 0)
+              Positioned(
+                bottom: 5,
+                left: 6,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (int i = 0; i < dots; i++)
+                      Container(
+                        width: 5,
+                        height: 5,
+                        margin: const EdgeInsets.only(right: 2),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: dotColor,
+                        ),
+                      ),
+                  ],
                 ),
               ),
           ],
