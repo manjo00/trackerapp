@@ -19,6 +19,7 @@ class MonthRemoteViewsFactory(
 
     private data class Cell(
         val day: Int,
+        val date: String,
         val bg: String,
         val fg: String,
         val dot: Boolean,
@@ -40,6 +41,7 @@ class MonthRemoteViewsFactory(
                 parsed.add(
                     Cell(
                         day = o.optInt("day", 0),
+                        date = o.optString("date", ""),
                         bg = o.optString("bg", ""),
                         fg = o.optString("fg", "#FFFFFFFF"),
                         dot = o.optBoolean("dot", false),
@@ -91,7 +93,9 @@ class MonthRemoteViewsFactory(
             }
         }
 
-        rv.setOnClickFillInIntent(R.id.cell_root, Intent())
+        // Fill-in carries the date so the SELECT_DAY broadcast knows which day.
+        val fill = Intent().putExtra(UplanMonthWidgetProvider.EXTRA_DAY, cell.date)
+        rv.setOnClickFillInIntent(R.id.cell_root, fill)
         return rv
     }
 

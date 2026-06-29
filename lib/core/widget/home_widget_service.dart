@@ -109,6 +109,10 @@ class HomeWidgetService {
       final List<Map<String, dynamic>> monthCells =
           _buildMonthCells(now, shiftTypeByDate, taskDays);
 
+      // ── All dated tasks for the combined widget's side list ────────────
+      final List<Map<String, dynamic>> combinedTasks =
+          _buildCombinedTasks(tasks, now);
+
       final String counts;
       if (habitsLeft == 0 && tasksDue == 0) {
         counts = 'All done for today 🎉';
@@ -131,6 +135,9 @@ class HomeWidgetService {
           'month_title', '${_fullMonths[now.month]} ${now.year}');
       await HomeWidget.saveWidgetData<String>(
           'month_cells', jsonEncode(monthCells));
+      await HomeWidget.saveWidgetData<String>('widget_today', today);
+      await HomeWidget.saveWidgetData<String>(
+          'combined_tasks', jsonEncode(combinedTasks));
 
       await HomeWidget.updateWidget(qualifiedAndroidName: _androidProvider);
       await HomeWidget.updateWidget(qualifiedAndroidName: _agendaProvider);
@@ -184,6 +191,45 @@ class HomeWidgetService {
     }).toList();
   }
 
+  /// All incomplete tasks that have a due date, as { title, date, label },
+  /// sorted by date. The native side re-sorts the selected day to the top.
+  static List<Map<String, dynamic>> _buildCombinedTasks(
+      List<dynamic> tasks, DateTime now) {
+    final DateTime today = DateTime(now.year, now.month, now.day);
+
+    final List<({String title, DateTime date})> raw = [];
+    for (final t in tasks) {
+      if (t.isCompleted || t.dueDate == null) continue;
+      DateTime parsed;
+      try {
+        parsed = DateTime.parse(t.dueDate as String);
+      } catch (_) {
+        continue;
+      }
+      raw.add((
+        title: t.title as String,
+        date: DateTime(parsed.year, parsed.month, parsed.day),
+      ));
+    }
+    raw.sort((a, b) => a.date.compareTo(b.date));
+
+    return raw.map((it) {
+      final int diff = it.date.difference(today).inDays;
+      final String label;
+      if (diff < 0) {
+        label = 'Overdue · ${it.date.day} ${_months[it.date.month]}';
+      } else if (diff == 0) {
+        label = 'Today';
+      } else if (diff == 1) {
+        label = 'Tomorrow';
+      } else {
+        label =
+            '${_weekdays[it.date.weekday]} ${it.date.day} ${_months[it.date.month]}';
+      }
+      return {'title': it.title, 'date': _dateKey(it.date), 'label': label};
+    }).toList();
+  }
+
   /// Builds the month-grid cells for the current month: leading blanks, then
   /// one cell per day with shift colours + a task dot. Colours are hex strings
   /// (parsed natively) to avoid 32-bit int overflow over the platform channel.
@@ -215,7 +261,13 @@ class HomeWidgetService {
       } else if (ds == todayStr) {
         bg = _monthTodayBg;
       }
-      cells.add({'day': d, 'bg': bg, 'fg': fg, 'dot': taskDays.contains(ds)});
+      cells.add({
+        'day': d,
+        'date': ds,
+        'bg': bg,
+        'fg': fg,
+        'dot': taskDays.contains(ds),
+      });
     }
     return cells;
   }
