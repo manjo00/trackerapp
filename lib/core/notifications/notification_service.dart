@@ -127,6 +127,32 @@ class NotificationService {
     );
   }
 
+  /// Schedules a one-shot notification [delay] from now via zonedSchedule —
+  /// the same exact-alarm path task reminders use. Lets the user verify timed
+  /// reminders actually fire (lock the phone and wait).
+  Future<void> scheduleTestIn(Duration delay) async {
+    final tz.TZDateTime fireAt = _toTzUtc(DateTime.now().add(delay));
+    debugPrint('[Notifications] test scheduled at $fireAt (mode: $_scheduleMode)');
+    await _plugin.zonedSchedule(
+      997,
+      'Scheduled reminder works ⏰',
+      'This fired ${delay.inMinutes} min after you tapped — timed reminders are working.',
+      fireAt,
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          _itemChannel.id,
+          _itemChannel.name,
+          channelDescription: _itemChannel.description,
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+      ),
+      androidScheduleMode: _scheduleMode,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.wallClockTime,
+    );
+  }
+
   // ── Rest-timer complete ─────────────────────────────────────────────────────
 
   /// Fires an immediate notification when the workout rest timer reaches zero.

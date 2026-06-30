@@ -137,6 +137,23 @@ class SettingsScreen extends ConsumerWidget {
             },
           ),
 
+          // Scheduled-notification self-test (uses the same path as task
+          // reminders) so the user can confirm timed reminders fire.
+          ListTile(
+            leading: Icon(Icons.timer_outlined, color: cs.primary),
+            title: const Text('Test scheduled reminder (1 min)'),
+            subtitle: const Text(
+                'Fires in 1 minute — lock your phone and wait to confirm'),
+            onTap: () async {
+              final ScaffoldMessengerState m = ScaffoldMessenger.of(context);
+              await NotificationService.instance
+                  .scheduleTestIn(const Duration(minutes: 1));
+              m.showSnackBar(const SnackBar(
+                content: Text('Scheduled — you can lock the phone now ⏰'),
+              ));
+            },
+          ),
+
           // Exact-alarm fix — task/time reminders need exact alarms on
           // Android 13+; without them they fall back to inexact alarms that
           // Samsung/aggressive battery managers drop.
