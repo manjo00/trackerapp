@@ -1,61 +1,98 @@
+import 'dart:convert';
+import 'dart:ui' show DartPluginRegistrant;
+import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:timezone/data/latest_all.dart' as tz;
-import 'package:timezone/timezone.dart' as tz;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../features/habits/data/models/habit_model.dart';
 import '../../features/tasks/data/models/task_model.dart';
 import '../../features/trackers/data/models/tracker_model.dart';
 
-/// Wraps [FlutterLocalNotificationsPlugin] with everything the app needs.
+// ── Channel identifiers (shared by the app + the background alarm isolate) ────
+const String kDailyChannelId = 'life_tracker_reminders';
+const String kItemChannelId = 'life_tracker_item_reminders';
+const String _kPrefPrefix = 'alarm_notif_'; // + alarm id → JSON payload
+
+/// Runs in a BACKGROUND ISOLATE when an alarm fires (android_alarm_manager_plus).
 ///
-/// ## Notification ID ranges (never overlap these)
-/// | Range              | Owner                                            |
-/// |--------------------|--------------------------------------------------|
-/// | 0                  | Global daily reminder                            |
-/// | 1 – 9 999          | Habit reminders (one per habit, keyed by habitId)|
-/// | 10 000 + id×3 + 0  | Task — 1 day before                              |
-/// | 10 000 + id×3 + 1  | Task — 3 hours before                            |
-/// | 10 000 + id×3 + 2  | Task — 5 minutes before                          |
-/// | 30 000 + trackerId | Tracker daily reminders                          |
-/// | 999                | Test notification (transient, never persisted)   |
+/// flutter_local_notifications' own scheduling silently fails on One UI, but an
+/// *immediate* `show()` always works — so we schedule a reliable alarm and post
+/// the notification from here. The content was stashed in shared_preferences
+/// under [_kPrefPrefix]+id when the alarm was scheduled.
+@pragma('vm:entry-point')
+Future<void> alarmNotificationCallback(int id) async {
+  DartPluginRegistrant.ensureInitialized();
+
+  final SharedPreferences prefs = await SharedPreferences.getInstance();
+  await prefs.reload();
+  final String? raw = prefs.getString('$_kPrefPrefix$id');
+  if (raw == null) return;
+
+  final Map<String, dynamic> data =
+      jsonDecode(raw) as Map<String, dynamic>;
+  final String channelId = (data['channel'] as String?) ?? kItemChannelId;
+  final bool repeat = data['repeat'] == true;
+
+  final FlutterLocalNotificationsPlugin plugin =
+      FlutterLocalNotificationsPlugin();
+  await plugin.initialize(
+    const InitializationSettings(
+      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+    ),
+  );
+
+  await plugin.show(
+    id,
+    data['title'] as String? ?? 'Uplan',
+    data['body'] as String? ?? '',
+    NotificationDetails(
+      android: AndroidNotificationDetails(
+        channelId,
+        channelId == kDailyChannelId ? 'Daily Reminders' : 'Item Reminders',
+        importance: Importance.high,
+        priority: Priority.high,
+      ),
+    ),
+  );
+
+  // One-shot reminders clean up their stored payload; daily ones keep it.
+  if (!repeat) await prefs.remove('$_kPrefPrefix$id');
+}
+
+/// Notification scheduling + display for the whole app.
 ///
-/// ## Timezone fix
-/// `flutter_timezone` (the native plugin) is incompatible with Flutter 3's
-/// embedding API, so we skip it. Instead we compute the UTC equivalent of
-/// the target local time by reading `DateTime.now().timeZoneOffset`.
-/// This is 100% portable and needs no native code.
+/// - Immediate notifications (test, rest-timer) use flutter_local_notifications
+///   directly — these work fine.
+/// - Scheduled notifications use android_alarm_manager_plus to run
+///   [alarmNotificationCallback] at the exact time, which then shows an
+///   immediate notification. This sidesteps flutter_local_notifications'
+///   scheduled-display failure on Samsung/One UI.
 ///
-/// ## Exact vs inexact alarms
-/// Exact alarms (`exactAllowWhileIdle`) are far more reliable but require
-/// `SCHEDULE_EXACT_ALARM` permission. On API 31–32 this is auto-granted; on
-/// API 33+ the user must enable it in Special App Access.
-/// [init] checks [canScheduleExactAlarms()] and stores the result in
-/// [_canUseExact]. All schedule calls use [_scheduleMode] so they
-/// automatically use the best mode available.
+/// ## Notification / alarm ID ranges (never overlap)
+/// | 0 | daily reminder · 1–9999 habits · 10000+id×3+slot tasks
+/// | 30000+id trackers · 997 scheduled test · 998 rest · 999 immediate test
 class NotificationService {
   NotificationService._();
   static final NotificationService instance = NotificationService._();
 
-  // ── Notification IDs ───────────────────────────────────────────────────────
   static const int _dailyReminderId = 0;
-  static int _habitId(int habitId) => habitId;                       // 1–9999
+  static int _habitId(int habitId) => habitId;
   static int _taskId(int taskId, int slot) => 10000 + taskId * 3 + slot;
   static int _trackerId(int trackerId) => 30000 + trackerId;
   static const int _testId = 999;
-  static const int _restCompleteId = 998; // transient, rest-timer finished
+  static const int _testScheduledId = 997;
+  static const int _restCompleteId = 998;
 
-  // ── Channels ───────────────────────────────────────────────────────────────
   static const AndroidNotificationChannel _globalChannel =
       AndroidNotificationChannel(
-    'life_tracker_reminders',
+    kDailyChannelId,
     'Daily Reminders',
     description: 'Daily habit and task check-in',
     importance: Importance.defaultImportance,
   );
-
   static const AndroidNotificationChannel _itemChannel =
       AndroidNotificationChannel(
-    'life_tracker_item_reminders',
+    kItemChannelId,
     'Item Reminders',
     description: 'Per-habit, per-task, and per-tracker reminders',
     importance: Importance.high,
@@ -64,25 +101,16 @@ class NotificationService {
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
 
-  /// True when [SCHEDULE_EXACT_ALARM] is granted on the device.
-  /// Set once in [init]; read everywhere via [_scheduleMode].
   bool _canUseExact = false;
+  bool get canUseExactAlarms => _canUseExact;
 
-  /// Best scheduling mode available on this device.
-  AndroidScheduleMode get _scheduleMode => _canUseExact
-      ? AndroidScheduleMode.exactAllowWhileIdle
-      : AndroidScheduleMode.inexactAllowWhileIdle;
+  // ── Init ────────────────────────────────────────────────────────────────────
 
-  // ── Initialisation ────────────────────────────────────────────────────────
-
-  /// Must be called once in [main] before [runApp].
+  /// Call once in [main] before runApp. [AndroidAlarmManager.initialize] must
+  /// also be called there (see main.dart).
   Future<void> init() async {
-    tz.initializeTimeZones();
-    // No setLocalLocation needed — we schedule in UTC directly.
-
     const AndroidInitializationSettings androidSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
-
     await _plugin.initialize(
       const InitializationSettings(android: androidSettings),
     );
@@ -90,176 +118,110 @@ class NotificationService {
     final AndroidFlutterLocalNotificationsPlugin? android =
         _plugin.resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
-
     await android?.createNotificationChannel(_globalChannel);
     await android?.createNotificationChannel(_itemChannel);
 
-    // Request POST_NOTIFICATIONS permission (Android 13+).
     final bool? granted = await android?.requestNotificationsPermission();
-    debugPrint('[Notifications] POST_NOTIFICATIONS granted: $granted');
-
-    // Check exact-alarm availability and store for all schedule calls.
-    // On API 31-32 this is auto-granted; on API 33+ the user must enable
-    // "Alarms & Reminders" for this app in Special App Access.
     _canUseExact = await android?.canScheduleExactNotifications() ?? false;
-    debugPrint('[Notifications] canScheduleExactNotifications: $_canUseExact');
+    debugPrint('[Notifications] init — notif:$granted exact:$_canUseExact');
   }
 
-  // ── Test notification ─────────────────────────────────────────────────────
+  // ── Immediate notifications (these already work) ─────────────────────────────
 
-  /// Fires an immediate notification to verify permission + channels work.
-  /// Call from Settings → "Send test notification".
-  Future<void> showTestNotification() async {
-    debugPrint('[Notifications] Sending test notification immediately');
-    await _plugin.show(
-      _testId,
-      'Life Tracker',
-      'Notifications are working! 🎉',
-      NotificationDetails(
-        android: AndroidNotificationDetails(
-          _itemChannel.id,
-          _itemChannel.name,
-          channelDescription: _itemChannel.description,
-          importance: Importance.high,
-          priority: Priority.high,
-        ),
-      ),
-    );
-  }
-
-  /// Schedules a one-shot notification [delay] from now via zonedSchedule —
-  /// the same exact-alarm path task reminders use. Lets the user verify timed
-  /// reminders actually fire (lock the phone and wait).
-  Future<void> scheduleTestIn(Duration delay) async {
-    final tz.TZDateTime fireAt = _toTzUtc(DateTime.now().add(delay));
-    debugPrint('[Notifications] test scheduled at $fireAt (mode: $_scheduleMode)');
-    await _plugin.zonedSchedule(
-      997,
-      'Scheduled reminder works ⏰',
-      'This fired ${delay.inMinutes} min after you tapped — timed reminders are working.',
-      fireAt,
-      NotificationDetails(
-        android: AndroidNotificationDetails(
-          _itemChannel.id,
-          _itemChannel.name,
-          channelDescription: _itemChannel.description,
-          importance: Importance.high,
-          priority: Priority.high,
-        ),
-      ),
-      androidScheduleMode: _scheduleMode,
-    );
-  }
-
-  // ── Rest-timer complete ─────────────────────────────────────────────────────
-
-  /// Fires an immediate notification when the workout rest timer reaches zero.
-  /// Transient (id 998) — safe to overwrite on each rest period.
-  Future<void> showRestComplete() async {
-    await _plugin.show(
-      _restCompleteId,
-      'Rest over 💪',
-      'Time for your next set',
-      NotificationDetails(
-        android: AndroidNotificationDetails(
-          _itemChannel.id,
-          _itemChannel.name,
-          channelDescription: _itemChannel.description,
-          importance: Importance.high,
-          priority: Priority.high,
-          // Auto-dismiss shortly after — it's just a nudge.
-          timeoutAfter: 10000,
-        ),
-      ),
-    );
-  }
-
-  // ── Global daily reminder ──────────────────────────────────────────────────
-
-  /// Schedules (or replaces) the global daily reminder at [time] every day.
-  Future<bool> scheduleDailyReminder(TimeOfDay time) async {
-    try {
-      final target = _nextDailyUtc(time);
-      debugPrint('[Notifications] Scheduling global reminder at $target (mode: $_scheduleMode)');
-      await _plugin.zonedSchedule(
-        _dailyReminderId,
-        'Life Tracker',
-        'Time to check your habits and tasks for today 🎯',
-        target,
-        NotificationDetails(
-          android: AndroidNotificationDetails(
-            _globalChannel.id,
-            _globalChannel.name,
-            channelDescription: _globalChannel.description,
-            importance: Importance.defaultImportance,
-            priority: Priority.defaultPriority,
-          ),
-        ),
-        androidScheduleMode: _scheduleMode,
-        matchDateTimeComponents: DateTimeComponents.time,
+  Future<void> showTestNotification() => _showNow(
+        _testId,
+        'Uplan',
+        'Notifications are working! 🎉',
       );
-      return true;
-    } catch (e, st) {
-      debugPrint('[Notifications] scheduleDailyReminder failed: $e\n$st');
-      return false;
-    }
-  }
 
-  Future<void> cancelDailyReminder() => _plugin.cancel(_dailyReminderId);
-  Future<void> cancelAll() => _plugin.cancelAll();
+  Future<void> showRestComplete() => _showNow(
+        _restCompleteId,
+        'Rest over 💪',
+        'Time for your next set',
+        timeoutMs: 10000,
+      );
+
+  Future<void> _showNow(int id, String title, String body,
+      {int? timeoutMs}) async {
+    await _plugin.show(
+      id,
+      title,
+      body,
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          _itemChannel.id,
+          _itemChannel.name,
+          channelDescription: _itemChannel.description,
+          importance: Importance.high,
+          priority: Priority.high,
+          timeoutAfter: timeoutMs,
+        ),
+      ),
+    );
+  }
 
   // ── Exact-alarm permission ─────────────────────────────────────────────────
 
-  /// Whether exact alarms are currently available (set in [init], refreshed by
-  /// [requestExactAlarms]).
-  bool get canUseExactAlarms => _canUseExact;
-
-  /// Re-checks and, if needed, prompts for the exact-alarm permission. Returns
-  /// whether exact alarms are now available.
-  ///
-  /// Scheduled (zonedSchedule) reminders need this on Android 13+; without it
-  /// the app falls back to inexact alarms, which aggressive battery managers
-  /// (e.g. Samsung) routinely delay or drop. Immediate `show()` notifications
-  /// are unaffected — which is why the test button works but task reminders
-  /// may not.
   Future<bool> requestExactAlarms() async {
     final AndroidFlutterLocalNotificationsPlugin? android =
         _plugin.resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
     if (android == null) return false;
-
     bool can = await android.canScheduleExactNotifications() ?? false;
     if (!can) {
       await android.requestExactAlarmsPermission();
       can = await android.canScheduleExactNotifications() ?? false;
     }
     _canUseExact = can;
-    debugPrint('[Notifications] requestExactAlarms → $can');
     return can;
   }
 
-  // ── Per-habit reminders ────────────────────────────────────────────────────
+  // ── Scheduled self-test ─────────────────────────────────────────────────────
 
-  /// Schedules a daily reminder for [habit] at its stored [reminderTime].
-  ///
-  /// Does nothing if [habit.reminderEnabled] is false or [habit.reminderTime]
-  /// is null.
+  Future<void> scheduleTestIn(Duration delay) => _scheduleOneShot(
+        id: _testScheduledId,
+        when: DateTime.now().add(delay),
+        channelId: kItemChannelId,
+        title: 'Scheduled reminder works ⏰',
+        body: 'This fired ${delay.inMinutes} min after you tapped it.',
+      );
+
+  // ── Global daily reminder ──────────────────────────────────────────────────
+
+  Future<bool> scheduleDailyReminder(TimeOfDay time) => _scheduleDaily(
+        id: _dailyReminderId,
+        time: time,
+        channelId: kDailyChannelId,
+        title: 'Uplan',
+        body: 'Time to check your habits and tasks for today 🎯',
+      );
+
+  Future<void> cancelDailyReminder() => _cancel(_dailyReminderId);
+
+  Future<void> cancelAll() async {
+    // No bulk cancel in alarm manager; clear the daily reminder (the common one).
+    await _cancel(_dailyReminderId);
+    await _plugin.cancelAll();
+  }
+
+  // ── Per-habit ───────────────────────────────────────────────────────────────
+
   Future<bool> scheduleHabitReminder(HabitModel habit) async {
     if (!habit.reminderEnabled || habit.reminderTime == null) return false;
     final TimeOfDay? time = _parseTime(habit.reminderTime!);
     if (time == null) return false;
     return _scheduleDaily(
       id: _habitId(habit.id),
+      time: time,
+      channelId: kItemChannelId,
       title: habit.name,
       body: 'Don\'t forget to mark your habit today ✅',
-      time: time,
     );
   }
 
-  Future<void> cancelHabitReminder(int habitId) =>
-      _plugin.cancel(_habitId(habitId));
+  Future<void> cancelHabitReminder(int habitId) => _cancel(_habitId(habitId));
 
-  // ── Per-tracker reminders ─────────────────────────────────────────────────
+  // ── Per-tracker ─────────────────────────────────────────────────────────────
 
   Future<bool> scheduleTrackerReminder(TrackerModel tracker) async {
     if (!tracker.reminderEnabled || tracker.reminderTime == null) return false;
@@ -267,104 +229,64 @@ class NotificationService {
     if (time == null) return false;
     return _scheduleDaily(
       id: _trackerId(tracker.id),
+      time: time,
+      channelId: kItemChannelId,
       title: '${tracker.icon} ${tracker.name}',
       body: 'Time to log your tracker 📋',
-      time: time,
     );
   }
 
   Future<void> cancelTrackerReminder(int trackerId) =>
-      _plugin.cancel(_trackerId(trackerId));
+      _cancel(_trackerId(trackerId));
 
-  // ── Per-task reminders ─────────────────────────────────────────────────────
+  // ── Per-task (one-shot per lead time) ───────────────────────────────────────
 
-  /// Schedules up to 3 one-shot notifications for [task] based on its
-  /// [reminderLeadTimes].
-  ///
-  /// Does nothing if:
-  ///   - [task.reminderEnabled] is false
-  ///   - [task.dueDate] is null (no deadline to count back from)
-  ///   - All computed fire times are already in the past
   Future<bool> scheduleTaskReminders(TaskModel task) async {
-    await cancelTaskReminders(task.id); // clear stale slots first
+    await cancelTaskReminders(task.id);
     if (!task.reminderEnabled || task.dueDate == null) return false;
-
     final List<int> leadTimes = task.leadTimeMinutes;
     if (leadTimes.isEmpty) return false;
 
-    // Parse due date + time. Fall back to 09:00 when no dueTime is set.
     DateTime due;
     try {
       due = DateTime.parse(task.dueDate!);
-    } catch (e) {
-      debugPrint('[Notifications] Invalid dueDate "${task.dueDate}": $e');
+    } catch (_) {
       return false;
     }
+    final TimeOfDay dueTime = _parseTime(task.dueTime ?? '09:00') ??
+        const TimeOfDay(hour: 9, minute: 0);
+    due = DateTime(due.year, due.month, due.day, dueTime.hour, dueTime.minute);
 
-    final TimeOfDay dueTimeParsed =
-        _parseTime(task.dueTime ?? '09:00') ?? const TimeOfDay(hour: 9, minute: 0);
-
-    due = DateTime(
-      due.year, due.month, due.day,
-      dueTimeParsed.hour, dueTimeParsed.minute,
-    );
-
-    bool anyScheduled = false;
+    bool any = false;
     for (int slot = 0; slot < leadTimes.length; slot++) {
       final DateTime fireTime =
           due.subtract(Duration(minutes: leadTimes[slot]));
-
-      if (fireTime.isBefore(DateTime.now())) {
-        debugPrint('[Notifications] Task ${task.id} slot $slot is in the past, skipping');
-        continue;
-      }
-
-      final String leadLabel = _leadLabel(leadTimes[slot]);
-
-      try {
-        debugPrint('[Notifications] Scheduling task ${task.id} slot $slot at $fireTime');
-        await _plugin.zonedSchedule(
-          _taskId(task.id, slot),
-          task.title,
-          'Due $leadLabel ⏰',
-          _toTzUtc(fireTime),
-          NotificationDetails(
-            android: AndroidNotificationDetails(
-              _itemChannel.id,
-              _itemChannel.name,
-              channelDescription: _itemChannel.description,
-              importance: Importance.high,
-              priority: Priority.high,
-            ),
-          ),
-          androidScheduleMode: _scheduleMode,
-          // One-shot — no matchDateTimeComponents.
-        );
-        anyScheduled = true;
-      } catch (e, st) {
-        debugPrint('[Notifications] scheduleTaskReminders slot $slot failed: $e\n$st');
-      }
+      if (fireTime.isBefore(DateTime.now())) continue;
+      await _scheduleOneShot(
+        id: _taskId(task.id, slot),
+        when: fireTime,
+        channelId: kItemChannelId,
+        title: task.title,
+        body: 'Due ${_leadLabel(leadTimes[slot])} ⏰',
+      );
+      any = true;
     }
-    return anyScheduled;
+    return any;
   }
 
-  /// Cancels all 3 notification slots for [taskId].
   Future<void> cancelTaskReminders(int taskId) async {
     for (int slot = 0; slot < 3; slot++) {
-      await _plugin.cancel(_taskId(taskId, slot));
+      await _cancel(_taskId(taskId, slot));
     }
   }
 
   // ── Reschedule on app start ───────────────────────────────────────────────
 
-  /// Re-schedules every currently-enabled reminder across habits, tasks, and
-  /// trackers. Called once in [app.dart] after init.
   Future<void> rescheduleAll({
     required List<HabitModel> habits,
     required List<TaskModel> tasks,
     required List<TrackerModel> trackers,
   }) async {
-    debugPrint('[Notifications] rescheduleAll — habits:${habits.length} tasks:${tasks.length} trackers:${trackers.length}');
     for (final h in habits) {
       if (h.reminderEnabled) await scheduleHabitReminder(h);
     }
@@ -378,87 +300,74 @@ class NotificationService {
     }
   }
 
-  // ── Private helpers ────────────────────────────────────────────────────────
+  // ── Alarm scheduling helpers ────────────────────────────────────────────────
 
-  /// Schedules a repeating daily notification.
-  Future<bool> _scheduleDaily({
+  Future<void> _stash(int id, String channelId, String title, String body,
+      {required bool repeat}) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      '$_kPrefPrefix$id',
+      jsonEncode({
+        'channel': channelId,
+        'title': title,
+        'body': body,
+        'repeat': repeat,
+      }),
+    );
+  }
+
+  Future<void> _scheduleOneShot({
     required int id,
+    required DateTime when,
+    required String channelId,
     required String title,
     required String body,
-    required TimeOfDay time,
   }) async {
-    try {
-      final target = _nextDailyUtc(time);
-      debugPrint('[Notifications] _scheduleDaily id=$id at $target (mode: $_scheduleMode)');
-      await _plugin.zonedSchedule(
-        id,
-        title,
-        body,
-        target,
-        NotificationDetails(
-          android: AndroidNotificationDetails(
-            _itemChannel.id,
-            _itemChannel.name,
-            channelDescription: _itemChannel.description,
-            importance: Importance.high,
-            priority: Priority.high,
-          ),
-        ),
-        androidScheduleMode: _scheduleMode,
-        matchDateTimeComponents: DateTimeComponents.time,
-      );
-      return true;
-    } catch (e, st) {
-      debugPrint('[Notifications] _scheduleDaily id=$id failed: $e\n$st');
-      return false;
-    }
-  }
-
-  /// Returns the next UTC [tz.TZDateTime] at which local-time [time] occurs.
-  ///
-  /// We avoid `tz.local` (defaults to UTC; requires a native plugin to detect
-  /// correctly). Instead: UTC_fire = local_time − device_offset.
-  /// If the result is already in the past, add 24 hours.
-  tz.TZDateTime _nextDailyUtc(TimeOfDay time) {
-    final Duration offset = DateTime.now().timeZoneOffset;
-    final tz.TZDateTime nowUtc = tz.TZDateTime.now(tz.UTC);
-
-    int utcHour = time.hour - offset.inHours;
-    int utcMinute = time.minute - offset.inMinutes.remainder(60);
-
-    if (utcMinute < 0) {
-      utcMinute += 60;
-      utcHour -= 1;
-    } else if (utcMinute >= 60) {
-      utcMinute -= 60;
-      utcHour += 1;
-    }
-    utcHour = utcHour % 24;
-
-    tz.TZDateTime target = tz.TZDateTime(
-      tz.UTC,
-      nowUtc.year, nowUtc.month, nowUtc.day,
-      utcHour, utcMinute,
-    );
-
-    if (target.isBefore(nowUtc)) {
-      target = target.add(const Duration(days: 1));
-    }
-    debugPrint('[Notifications] _nextDailyUtc: local=${time.hour}:${time.minute} offset=$offset → UTC target=$target');
-    return target;
-  }
-
-  /// Converts a plain local [DateTime] to a UTC [tz.TZDateTime].
-  tz.TZDateTime _toTzUtc(DateTime localDt) {
-    final utcDt = localDt.toUtc();
-    return tz.TZDateTime(
-      tz.UTC,
-      utcDt.year, utcDt.month, utcDt.day,
-      utcDt.hour, utcDt.minute,
+    await _stash(id, channelId, title, body, repeat: false);
+    await AndroidAlarmManager.oneShotAt(
+      when,
+      id,
+      alarmNotificationCallback,
+      exact: true,
+      wakeup: true,
+      allowWhileIdle: true,
+      rescheduleOnReboot: true,
     );
   }
 
-  /// Parses "HH:mm" → [TimeOfDay]. Returns null on parse error.
+  Future<bool> _scheduleDaily({
+    required int id,
+    required TimeOfDay time,
+    required String channelId,
+    required String title,
+    required String body,
+  }) async {
+    await _stash(id, channelId, title, body, repeat: true);
+    final DateTime now = DateTime.now();
+    DateTime next =
+        DateTime(now.year, now.month, now.day, time.hour, time.minute);
+    if (!next.isAfter(now)) next = next.add(const Duration(days: 1));
+    return AndroidAlarmManager.periodic(
+      const Duration(days: 1),
+      id,
+      alarmNotificationCallback,
+      startAt: next,
+      exact: true,
+      wakeup: true,
+      allowWhileIdle: true,
+      rescheduleOnReboot: true,
+    );
+  }
+
+  Future<void> _cancel(int id) async {
+    await AndroidAlarmManager.cancel(id);
+    await _plugin.cancel(id);
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.remove('$_kPrefPrefix$id');
+  }
+
+  // ── Misc helpers ────────────────────────────────────────────────────────────
+
   TimeOfDay? _parseTime(String s) {
     final parts = s.split(':');
     if (parts.length != 2) return null;
@@ -469,10 +378,13 @@ class NotificationService {
     return TimeOfDay(hour: hour, minute: minute);
   }
 
-  /// Human-readable label for a lead time in minutes.
   String _leadLabel(int minutes) {
-    if (minutes >= 1440) return 'in ${minutes ~/ 1440} day${minutes >= 2880 ? 's' : ''}';
-    if (minutes >= 60) return 'in ${minutes ~/ 60} hour${minutes >= 120 ? 's' : ''}';
+    if (minutes >= 1440) {
+      return 'in ${minutes ~/ 1440} day${minutes >= 2880 ? 's' : ''}';
+    }
+    if (minutes >= 60) {
+      return 'in ${minutes ~/ 60} hour${minutes >= 120 ? 's' : ''}';
+    }
     return 'in $minutes minute${minutes != 1 ? 's' : ''}';
   }
 }

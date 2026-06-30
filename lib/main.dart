@@ -1,3 +1,4 @@
+import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -17,6 +18,10 @@ import 'core/settings/settings_provider.dart';
 /// call an async platform API before [runApp].
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Background alarm scheduler — runs alarmNotificationCallback at the exact
+  // scheduled time (even when the app is killed) to fire reminders reliably.
+  await AndroidAlarmManager.initialize();
 
   // Run both async inits in parallel — neither depends on the other.
   final results = await Future.wait([

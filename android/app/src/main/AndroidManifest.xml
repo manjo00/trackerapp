@@ -10,6 +10,8 @@
          a Play Store release — so reminders are always exact and fire in Doze. -->
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <!-- android_alarm_manager_plus: wake the device to run alarm callbacks. -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <application
         android:label="Uplan"
@@ -64,6 +66,25 @@
                 android:value="androidx.startup"
                 tools:node="remove" />
         </provider>
+
+        <!-- android_alarm_manager_plus: background alarm service + receivers.
+             Declared explicitly because the plugin enables RebootBroadcastReceiver
+             at runtime (rescheduleOnReboot) and it must exist in the manifest. -->
+        <service
+            android:name="dev.fluttercommunity.plus.androidalarmmanager.AlarmService"
+            android:permission="android.permission.BIND_JOB_SERVICE"
+            android:exported="false" />
+        <receiver
+            android:name="dev.fluttercommunity.plus.androidalarmmanager.AlarmBroadcastReceiver"
+            android:exported="false" />
+        <receiver
+            android:name="dev.fluttercommunity.plus.androidalarmmanager.RebootBroadcastReceiver"
+            android:enabled="false"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
 
         <!-- Uplan "Today" home-screen widget. Exported so the launcher (a
              separate process) can host it. -->
