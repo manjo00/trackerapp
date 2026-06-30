@@ -138,7 +138,10 @@ class ActiveWorkoutState {
         completedSetIds: completedSetIds ?? this.completedSetIds,
       );
 
-  bool get isProgramDriven => programSessionId != null;
+  /// True when the session has a planned exercise list — either a real program
+  /// session or an ad-hoc quick-start template (which has no programSessionId).
+  bool get isProgramDriven =>
+      programSessionId != null || programExercises.isNotEmpty;
 
   /// Whether [setId] has been checked off.
   bool isCompleted(int setId) => completedSetIds.contains(setId);

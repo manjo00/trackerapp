@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../data/models/exercise_model.dart';
+import '../../data/models/program_exercise_model.dart';
 import '../../data/models/program_model.dart';
 import '../../data/models/program_session_model.dart';
+import '../../data/models/quick_start_templates.dart';
 import '../../data/models/workout_session_model.dart';
 import '../providers/program_providers.dart';
 import '../providers/workout_providers.dart';
@@ -43,6 +46,13 @@ class WorkoutHomeScreen extends ConsumerWidget {
 
             // ── Weekly target scoreboard ──────────────────────────────────
             const SliverToBoxAdapter(child: WeeklyScoreboardCard()),
+
+            // ── Quick-start sessions ──────────────────────────────────────
+            SliverToBoxAdapter(
+              child: _QuickStartRow(
+                onStart: (t) => _startTemplate(context, ref, t),
+              ),
+            ),
 
             // ── Program card / empty state ────────────────────────────────
             SliverToBoxAdapter(
@@ -152,6 +162,47 @@ class WorkoutHomeScreen extends ConsumerWidget {
         );
     if (context.mounted) context.push('/workout/active');
   }
+
+  /// Starts an ad-hoc session from a quick-start template: looks up each
+  /// exercise in the library and pre-loads them (no program link).
+  Future<void> _startTemplate(
+    BuildContext context,
+    WidgetRef ref,
+    QuickStartTemplate template,
+  ) async {
+    final active = ref.read(activeWorkoutProvider).valueOrNull;
+    if (active != null) {
+      context.push('/workout/active');
+      return;
+    }
+
+    final List<ExerciseModel> library =
+        await ref.read(workoutRepositoryProvider).getAllExercises();
+    final Map<String, ExerciseModel> byName = {
+      for (final ExerciseModel e in library) e.name: e,
+    };
+
+    final List<ProgramExerciseModel> planned = [];
+    int order = 0;
+    for (final String name in template.exercises) {
+      final ExerciseModel? ex = byName[name];
+      if (ex == null) continue; // skip anything not in the library
+      planned.add(ProgramExerciseModel(
+        id: -1 - order, // synthetic (no DB row); negative to avoid clashes
+        programSessionId: -1,
+        exerciseId: ex.id,
+        exerciseName: ex.name,
+        orderIndex: order,
+      ));
+      order++;
+    }
+
+    await ref.read(activeWorkoutProvider.notifier).start(
+          programExercises: planned,
+          programSessionName: template.name,
+        );
+    if (context.mounted) context.push('/workout/active');
+  }
 }
 
 /// Program-session ids that have a workout logged within the current ISO week.
@@ -168,6 +219,53 @@ Set<int> _loggedThisWeek(List<WorkoutSessionModel> sessions) {
     }
   }
   return ids;
+}
+
+// ── Quick-start row ─────────────────────────────────────────────────────────────
+
+class _QuickStartRow extends StatelessWidget {
+  const _QuickStartRow({required this.onStart});
+
+  final void Function(QuickStartTemplate template) onStart;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'QUICK START',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1,
+              color: cs.onSurface.withAlpha(130),
+            ),
+          ),
+          const SizedBox(height: 8),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (final QuickStartTemplate t in kQuickStartTemplates)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: FilledButton.tonalIcon(
+                      onPressed: () => onStart(t),
+                      icon: const Icon(Icons.play_arrow_rounded, size: 18),
+                      label: Text(t.name),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 // ── This-week attendance strip ─────────────────────────────────────────────────

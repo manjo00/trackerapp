@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/group_score.dart';
 import '../../data/models/muscle_groups.dart';
 import '../providers/workout_providers.dart';
+import '../screens/muscle_targets_editor_screen.dart';
 
 /// "This week" scoreboard: each muscle's sessions + sets vs target, auto-computed
 /// from logged workouts and grouped under push/pull/… headers. Per-muscle so one
@@ -55,6 +56,16 @@ class WeeklyScoreboardCard extends ConsumerWidget {
                     color: metCount == total && total > 0
                         ? Colors.green
                         : cs.onSurface.withAlpha(150),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.tune_rounded, size: 18),
+                  visualDensity: VisualDensity.compact,
+                  tooltip: 'Edit weekly goals',
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const MuscleTargetsEditorScreen(),
+                    ),
                   ),
                 ),
               ],
