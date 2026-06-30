@@ -91,12 +91,12 @@
         <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="S" android:textColor="#CCFFFFFF" android:textSize="11sp" />
     </LinearLayout>
 
-    <!-- Calendar grid: full width, top section -->
+    <!-- Calendar grid: full width, natural height (just its rows) so the extra
+         vertical space goes to the task list below, not into a gap here. -->
     <GridView
         android:id="@+id/month_grid"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="5"
+        android:layout_height="wrap_content"
         android:layout_marginTop="2dp"
         android:numColumns="7"
         android:stretchMode="columnWidth"
@@ -124,12 +124,13 @@
         android:textSize="12sp"
         android:visibility="gone" />
 
-    <!-- Tasks list: bottom section -->
+    <!-- Tasks list: fills all remaining height, so it grows as the widget is
+         made taller. -->
     <ListView
         android:id="@+id/task_list"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="3"
+        android:layout_weight="1"
         android:layout_marginTop="4dp"
         android:divider="#26FFFFFF"
         android:dividerHeight="1dp" />
