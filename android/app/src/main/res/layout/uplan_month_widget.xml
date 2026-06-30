@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Combined month widget: calendar grid (left) + scrollable task list (right).
-     Tapping a day broadcasts SELECT_DAY; the task list re-sorts that day first.
-     Both the grid and the list are RemoteViews collection views. -->
+<!-- Combined month widget: a full-width calendar grid on top + a scrollable
+     task list below. Tapping a day broadcasts SELECT_DAY; the ‹ › arrows page
+     between months. Both the grid and the list are RemoteViews collections. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/month_root"
     android:layout_width="match_parent"
@@ -10,7 +10,7 @@
     android:background="@drawable/uplan_widget_bg"
     android:padding="12dp">
 
-    <!-- Header: month title + quick-add -->
+    <!-- Header: ‹ month › + quick-add -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -23,10 +23,10 @@
             android:layout_gravity="center_vertical"
             android:text="‹"
             android:textColor="#FFFFFFFF"
-            android:textSize="20sp"
+            android:textSize="22sp"
             android:textStyle="bold"
             android:paddingStart="6dp"
-            android:paddingEnd="10dp" />
+            android:paddingEnd="12dp" />
 
         <TextView
             android:id="@+id/month_title"
@@ -35,7 +35,7 @@
             android:layout_weight="1"
             android:layout_gravity="center_vertical"
             android:textColor="#FFFFFFFF"
-            android:textSize="15sp"
+            android:textSize="16sp"
             android:textStyle="bold" />
 
         <TextView
@@ -45,10 +45,10 @@
             android:layout_gravity="center_vertical"
             android:text="›"
             android:textColor="#FFFFFFFF"
-            android:textSize="20sp"
+            android:textSize="22sp"
             android:textStyle="bold"
-            android:paddingStart="10dp"
-            android:paddingEnd="10dp" />
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp" />
 
         <TextView
             android:id="@+id/month_add"
@@ -58,84 +58,67 @@
             android:textColor="#FFFFFFFF"
             android:textSize="20sp"
             android:textStyle="bold"
-            android:paddingStart="8dp"
-            android:paddingEnd="8dp"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
             android:paddingBottom="2dp"
             android:background="@drawable/uplan_widget_add_bg" />
     </LinearLayout>
 
-    <!-- Body: calendar | tasks -->
+    <!-- Weekday header (full width) -->
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
+        android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:orientation="horizontal">
-
-        <!-- Left: calendar -->
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="7"
-            android:orientation="vertical">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal">
-                <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="M" android:textColor="#80FFFFFF" android:textSize="10sp" />
-                <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="T" android:textColor="#80FFFFFF" android:textSize="10sp" />
-                <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="W" android:textColor="#80FFFFFF" android:textSize="10sp" />
-                <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="T" android:textColor="#80FFFFFF" android:textSize="10sp" />
-                <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="F" android:textColor="#80FFFFFF" android:textSize="10sp" />
-                <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="S" android:textColor="#80FFFFFF" android:textSize="10sp" />
-                <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="S" android:textColor="#80FFFFFF" android:textSize="10sp" />
-            </LinearLayout>
-
-            <GridView
-                android:id="@+id/month_grid"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:layout_marginTop="2dp"
-                android:numColumns="7"
-                android:stretchMode="columnWidth"
-                android:verticalSpacing="1dp"
-                android:horizontalSpacing="1dp" />
-        </LinearLayout>
-
-        <!-- Right: scrollable tasks -->
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="5"
-            android:layout_marginStart="10dp"
-            android:orientation="vertical">
-
-            <TextView
-                android:id="@+id/tasks_label"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Tasks"
-                android:textColor="#80FFFFFF"
-                android:textSize="11sp" />
-
-            <TextView
-                android:id="@+id/tasks_empty"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:text="No tasks"
-                android:textColor="#80FFFFFF"
-                android:textSize="12sp"
-                android:visibility="gone" />
-
-            <ListView
-                android:id="@+id/task_list"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:layout_marginTop="4dp"
-                android:divider="#1AFFFFFF"
-                android:dividerHeight="1dp" />
-        </LinearLayout>
+        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="M" android:textColor="#CCFFFFFF" android:textSize="11sp" />
+        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="T" android:textColor="#CCFFFFFF" android:textSize="11sp" />
+        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="W" android:textColor="#CCFFFFFF" android:textSize="11sp" />
+        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="T" android:textColor="#CCFFFFFF" android:textSize="11sp" />
+        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="F" android:textColor="#CCFFFFFF" android:textSize="11sp" />
+        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="S" android:textColor="#CCFFFFFF" android:textSize="11sp" />
+        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="S" android:textColor="#CCFFFFFF" android:textSize="11sp" />
     </LinearLayout>
+
+    <!-- Calendar grid: full width, top section -->
+    <GridView
+        android:id="@+id/month_grid"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="5"
+        android:layout_marginTop="2dp"
+        android:numColumns="7"
+        android:stretchMode="columnWidth"
+        android:verticalSpacing="2dp"
+        android:horizontalSpacing="2dp" />
+
+    <!-- Tasks header -->
+    <TextView
+        android:id="@+id/tasks_label"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Tasks"
+        android:textColor="#CCFFFFFF"
+        android:textSize="12sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/tasks_empty"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:text="No tasks"
+        android:textColor="#99FFFFFF"
+        android:textSize="12sp"
+        android:visibility="gone" />
+
+    <!-- Tasks list: bottom section -->
+    <ListView
+        android:id="@+id/task_list"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="3"
+        android:layout_marginTop="4dp"
+        android:divider="#26FFFFFF"
+        android:dividerHeight="1dp" />
 </LinearLayout>

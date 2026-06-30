@@ -87,15 +87,15 @@ class MonthRemoteViewsFactory(
                 rv.setTextColor(R.id.cell_day, Color.parseColor(cell.fg))
             } catch (_: Exception) {
             }
-            // Rotation label under the day number.
+            // Rotation label under the day number. Coloured with the cell's
+            // dark foreground (not the pale rotation colour) so it always reads
+            // on the light shift fill.
             if (cell.rot.isNotEmpty()) {
                 rv.setViewVisibility(R.id.cell_rot, View.VISIBLE)
                 rv.setTextViewText(R.id.cell_rot, cell.rot)
-                if (cell.rotColor.isNotEmpty()) {
-                    try {
-                        rv.setTextColor(R.id.cell_rot, Color.parseColor(cell.rotColor))
-                    } catch (_: Exception) {
-                    }
+                try {
+                    rv.setTextColor(R.id.cell_rot, Color.parseColor(cell.fg))
+                } catch (_: Exception) {
                 }
             } else {
                 rv.setViewVisibility(R.id.cell_rot, View.GONE)

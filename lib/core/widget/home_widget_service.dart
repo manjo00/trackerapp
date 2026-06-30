@@ -26,12 +26,13 @@ class HomeWidgetService {
       'com.lifetracker.life_tracker.UplanMonthWidgetProvider';
 
   // Month-cell colours (hex strings — parsed natively, avoids int overflow).
-  static const String _monthDayBg = '#FFDEEDEF';
-  static const String _monthDayFg = '#FF0F5B6B';
-  static const String _monthNightBg = '#FFD7DBEC';
-  static const String _monthNightFg = '#FF2E3270';
+  // Saturated pastel fills + near-black text for high contrast on the widget.
+  static const String _monthDayBg = '#FFB7E4EC';
+  static const String _monthDayFg = '#FF06414D';
+  static const String _monthNightBg = '#FFC4C9EC';
+  static const String _monthNightFg = '#FF1E2156';
   static const String _monthWhiteFg = '#FFFFFFFF';
-  static const String _monthTodayBg = '#33B39DDB'; // subtle highlight
+  static const String _monthTodayBg = '#5CB39DDB'; // clearer today highlight
 
   static const List<String> _fullMonths = [
     '', 'January', 'February', 'March', 'April', 'May', 'June',
