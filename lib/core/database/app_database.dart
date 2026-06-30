@@ -20,6 +20,7 @@ import '../../features/workout/data/dao/program_dao.dart';
 import '../../features/workout/data/dao/workout_dao.dart';
 import '../../features/workout/data/models/exercise_seed_data.dart';
 import '../../features/workout/data/tables/exercise_library_table.dart';
+import '../../features/workout/data/tables/muscle_targets_table.dart';
 import '../../features/workout/data/tables/program_exercises_table.dart';
 import '../../features/workout/data/tables/program_sessions_table.dart';
 import '../../features/workout/data/tables/programs_table.dart';
@@ -60,6 +61,8 @@ part 'app_database.g.dart';
     WorkShifts,
     // ── Shift rotations (v7) ─────────────────────────────────────────────────
     ShiftRotations,
+    // ── Weekly muscle targets (v9) ───────────────────────────────────────────
+    MuscleTargets,
   ],
   daos: [HabitsDao, TasksDao, TrackersDao, WorkoutDao, ProgramDao, ShiftsDao],
 )
@@ -84,8 +87,10 @@ class AppDatabase extends _$AppDatabase {
   ///       work_shifts (editable rotation labels per day)
   /// v8 → recolour the default rotation label colour (washed-out orange →
   ///       a deeper, higher-contrast orange) on existing data
+  /// v9 → added muscle_targets (weekly targets per muscle group); re-tagged the
+  ///       "Arms" exercises into Biceps / Triceps / Forearms
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   /// The old vs. new default rotation-label colour (see v8 migration).
   static const int _oldRotationColor = 0xFFFFB347;
@@ -97,6 +102,7 @@ class AppDatabase extends _$AppDatabase {
           await m.createAll();
           await _seedExerciseLibrary(m);
           await _seedRotations();
+          await _seedMuscleTargets();
         },
         onUpgrade: (Migrator m, int from, int to) async {
           if (from < 2) {
@@ -154,6 +160,13 @@ class AppDatabase extends _$AppDatabase {
                 .write(const WorkShiftsCompanion(
                     rotationColor: Value(_newRotationColor)));
           }
+          if (from < 9) {
+            // Weekly muscle targets + split the broad "Arms" tag into
+            // Biceps / Triceps / Forearms so push vs pull can be tracked.
+            await m.createTable(muscleTargets);
+            await _seedMuscleTargets();
+            await _retagArmExercises();
+          }
         },
         beforeOpen: (details) async {
           // SQLite ignores foreign keys unless this is set per-connection.
@@ -177,6 +190,46 @@ class AppDatabase extends _$AppDatabase {
         ),
       );
     }
+  }
+
+  /// Seeds the five trackable muscle groups with your default weekly targets
+  /// (frequency, sets/session). Editable later in the targets editor.
+  Future<void> _seedMuscleTargets() async {
+    // (groupKey, frequency, setsPerSession)
+    const List<(String, int, int)> defaults = [
+      ('push', 2, 3),
+      ('pull', 2, 3),
+      ('legs', 2, 3),
+      ('forearms', 1, 3),
+      ('core', 2, 3),
+    ];
+    for (int i = 0; i < defaults.length; i++) {
+      final (String key, int freq, int sets) = defaults[i];
+      await into(muscleTargets).insert(
+        MuscleTargetsCompanion.insert(
+          groupKey: key,
+          frequency: Value(freq),
+          setsPerSession: Value(sets),
+          orderIndex: Value(i),
+        ),
+      );
+    }
+  }
+
+  /// Splits the broad "Arms" muscle tag on existing library rows into
+  /// Biceps / Triceps / Forearms (so push and pull can be tracked separately).
+  Future<void> _retagArmExercises() async {
+    Future<void> retag(String name, String muscle) =>
+        (update(exerciseLibrary)..where((t) => t.name.equals(name))).write(
+          ExerciseLibraryCompanion(primaryMuscle: Value(muscle)),
+        );
+    await retag('Barbell Curl', 'Biceps');
+    await retag('Dumbbell Curl', 'Biceps');
+    await retag('Preacher Curl', 'Biceps');
+    await retag('Hammer Curl', 'Forearms');
+    await retag('Tricep Pushdown', 'Triceps');
+    await retag('Skull Crusher', 'Triceps');
+    await retag('Overhead Tricep Extension', 'Triceps');
   }
 
   Future<void> _seedExerciseLibrary(Migrator m) async {

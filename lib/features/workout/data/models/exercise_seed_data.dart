@@ -43,13 +43,13 @@ const List<Map<String, String?>> kSeedExercises = [
   {'name': 'Arnold Press',         'primaryMuscle': 'Shoulders', 'secondaryMuscles': 'Triceps',           'equipment': 'Dumbbell'},
 
   // ── Arms ──────────────────────────────────────────────────────────────────
-  {'name': 'Barbell Curl',         'primaryMuscle': 'Arms',      'secondaryMuscles': null,                'equipment': 'Barbell'},
-  {'name': 'Dumbbell Curl',        'primaryMuscle': 'Arms',      'secondaryMuscles': null,                'equipment': 'Dumbbell'},
-  {'name': 'Hammer Curl',          'primaryMuscle': 'Arms',      'secondaryMuscles': null,                'equipment': 'Dumbbell'},
-  {'name': 'Tricep Pushdown',      'primaryMuscle': 'Arms',      'secondaryMuscles': null,                'equipment': 'Cable'},
-  {'name': 'Skull Crusher',        'primaryMuscle': 'Arms',      'secondaryMuscles': null,                'equipment': 'Barbell'},
-  {'name': 'Overhead Tricep Extension','primaryMuscle':'Arms',   'secondaryMuscles': null,                'equipment': 'Dumbbell'},
-  {'name': 'Preacher Curl',        'primaryMuscle': 'Arms',      'secondaryMuscles': null,                'equipment': 'Barbell'},
+  {'name': 'Barbell Curl',         'primaryMuscle': 'Biceps',    'secondaryMuscles': null,                'equipment': 'Barbell'},
+  {'name': 'Dumbbell Curl',        'primaryMuscle': 'Biceps',    'secondaryMuscles': null,                'equipment': 'Dumbbell'},
+  {'name': 'Hammer Curl',          'primaryMuscle': 'Forearms',  'secondaryMuscles': 'Biceps',            'equipment': 'Dumbbell'},
+  {'name': 'Tricep Pushdown',      'primaryMuscle': 'Triceps',   'secondaryMuscles': null,                'equipment': 'Cable'},
+  {'name': 'Skull Crusher',        'primaryMuscle': 'Triceps',   'secondaryMuscles': null,                'equipment': 'Barbell'},
+  {'name': 'Overhead Tricep Extension','primaryMuscle':'Triceps','secondaryMuscles': null,                'equipment': 'Dumbbell'},
+  {'name': 'Preacher Curl',        'primaryMuscle': 'Biceps',    'secondaryMuscles': null,                'equipment': 'Barbell'},
 
   // ── Core ──────────────────────────────────────────────────────────────────
   {'name': 'Plank',                'primaryMuscle': 'Core',      'secondaryMuscles': 'Shoulders',         'equipment': 'Bodyweight'},
