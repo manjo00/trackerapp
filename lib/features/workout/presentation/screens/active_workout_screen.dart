@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/models/exercise_model.dart';
+import '../../data/models/muscle_groups.dart';
 import '../../data/models/program_exercise_model.dart';
 import '../../data/models/workout_set_model.dart';
 import '../providers/workout_providers.dart';
@@ -38,8 +39,8 @@ class _ActiveWorkoutScreenState
   /// Exercise names whose cards are currently expanded.
   final Set<String> _expanded = {};
 
-  /// View mode: group cards by muscle vs. manual (program) order.
-  bool _byMuscle = false;
+  /// View mode: group cards under Push/Pull/Legs headers vs. a flat list.
+  bool _byMuscle = true;
 
   /// exercise name → primary muscle (loaded once from the library).
   Map<String, String> _muscleByName = const {};
@@ -69,7 +70,7 @@ class _ActiveWorkoutScreenState
     setState(() {
       _muscleByName = {for (final e in all) e.name: e.primaryMuscle};
       _viewPrefKey = key;
-      _byMuscle = prefs.getBool(key) ?? false;
+      _byMuscle = prefs.getBool(key) ?? true;
     });
   }
 
@@ -85,16 +86,19 @@ class _ActiveWorkoutScreenState
     if (!_byMuscle) {
       return exercises.map(_DisplayItem.exercise).toList();
     }
+    // Bucket exercises under their Push/Pull/Legs/… group (by primary muscle).
     final groups = <String, List<String>>{};
     for (final name in exercises) {
-      final muscle = _muscleByName[name] ?? 'Other';
-      (groups[muscle] ??= []).add(name);
+      final group = MuscleGroup.forMuscle(_muscleByName[name]) ?? 'other';
+      (groups[group] ??= []).add(name);
     }
-    final muscles = groups.keys.toList()..sort();
     final items = <_DisplayItem>[];
-    for (final m in muscles) {
-      items.add(_DisplayItem.header(m));
-      items.addAll(groups[m]!.map(_DisplayItem.exercise));
+    for (final g in [...MuscleGroup.all, 'other']) {
+      final list = groups[g];
+      if (list == null || list.isEmpty) continue;
+      items.add(_DisplayItem.header(
+          g == 'other' ? 'Other' : MuscleGroup.label(g)));
+      items.addAll(list.map(_DisplayItem.exercise));
     }
     return items;
   }
@@ -357,7 +361,7 @@ class _ActiveWorkoutScreenState
               icon: const Icon(Icons.arrow_back_rounded),
               onPressed: () => context.pop(),
             ),
-            title: Text(formatElapsed(_elapsed)),
+            title: Text(active.programSessionName ?? 'Workout'),
             actions: [
               IconButton(
                 icon: const Icon(Icons.timer_outlined),
@@ -375,7 +379,7 @@ class _ActiveWorkoutScreenState
                   CheckedPopupMenuItem(
                     value: 'muscle',
                     checked: _byMuscle,
-                    child: const Text('Group by muscle'),
+                    child: const Text('Group by Push/Pull/Legs'),
                   ),
                   const PopupMenuItem(
                       value: 'discard',
@@ -390,6 +394,7 @@ class _ActiveWorkoutScreenState
           ),
           body: Column(
             children: [
+              _DayTimerHeader(elapsed: _elapsed),
               const RestTimerBar(),
               Expanded(
                 child: exercises.isEmpty
@@ -452,6 +457,46 @@ class _DisplayItem {
 
   final String? muscleHeader;
   final String? exerciseName;
+}
+
+/// Big "whole day" workout timer pinned at the top of the session.
+class _DayTimerHeader extends StatelessWidget {
+  const _DayTimerHeader({required this.elapsed});
+  final Duration elapsed;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme cs = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      color: cs.primary.withAlpha(18),
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Column(
+        children: [
+          Text(
+            'WORKOUT TIME',
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.5,
+              color: cs.onSurface.withAlpha(130),
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            formatElapsed(elapsed),
+            style: TextStyle(
+              fontSize: 34,
+              fontWeight: FontWeight.w700,
+              fontFeatures: const [FontFeature.tabularFigures()],
+              color: cs.primary,
+              height: 1.1,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _MuscleHeader extends StatelessWidget {
