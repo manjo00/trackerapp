@@ -9,6 +9,7 @@ import '../../../../../core/database/database_provider.dart';
 import '../../../../../core/notifications/notification_service.dart';
 import '../../../../../core/settings/app_settings.dart';
 import '../../../../../core/settings/settings_provider.dart';
+import 'widget_settings_screen.dart';
 
 /// App settings screen.
 ///
@@ -150,6 +151,24 @@ class SettingsScreen extends ConsumerWidget {
             title: const Text('Import data'),
             subtitle: const Text('Restore from a backup file — replaces all data'),
             onTap: () => _importData(context, ref),
+          ),
+
+          const Divider(indent: 16, endIndent: 16),
+
+          // ── Home-screen widget ─────────────────────────────────────────
+          const _SectionHeader(label: 'Home-screen widget'),
+
+          ListTile(
+            leading: Icon(Icons.widgets_rounded, color: cs.primary),
+            title: const Text('Widget appearance'),
+            subtitle:
+                const Text('Background colour and transparency'),
+            trailing: const Icon(Icons.chevron_right_rounded),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const WidgetSettingsScreen(),
+              ),
+            ),
           ),
 
           const Divider(indent: 16, endIndent: 16),

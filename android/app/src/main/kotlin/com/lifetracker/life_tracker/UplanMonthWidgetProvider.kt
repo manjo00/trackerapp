@@ -33,6 +33,20 @@ class UplanMonthWidgetProvider : HomeWidgetProvider() {
         const val PREF_OFFSET = "month_offset"
         const val MIN_OFFSET = -1
         const val MAX_OFFSET = 3
+        const val DEFAULT_BG = 0x202024 // dark surface (RGB)
+    }
+
+    /// Reads an int that home_widget may have stored as a Long.
+    private fun readInt(prefs: SharedPreferences, key: String, def: Int): Int {
+        return try {
+            prefs.getInt(key, def)
+        } catch (_: Exception) {
+            try {
+                prefs.getLong(key, def.toLong()).toInt()
+            } catch (_: Exception) {
+                def
+            }
+        }
     }
 
     override fun onUpdate(
@@ -53,9 +67,16 @@ class UplanMonthWidgetProvider : HomeWidgetProvider() {
         // Resolve the viewed month from the stored offset into month_cells/title.
         applyOffset(prefs, prefs.getInt(PREF_OFFSET, 0))
 
+        // User-chosen background colour + transparency (from in-app settings).
+        val bgColor = 0xFF000000.toInt() or (readInt(prefs, "widget_bg_color", DEFAULT_BG) and 0xFFFFFF)
+        val bgAlpha = readInt(prefs, "widget_bg_alpha", 255).coerceIn(0, 255)
+
         appWidgetIds.forEach { widgetId ->
           try {
             val views = RemoteViews(context.packageName, R.layout.uplan_month_widget)
+
+            views.setInt(R.id.widget_bg, "setColorFilter", bgColor)
+            views.setInt(R.id.widget_bg, "setImageAlpha", bgAlpha)
 
             views.setTextViewText(
                 R.id.month_title,

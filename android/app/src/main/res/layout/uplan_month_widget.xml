@@ -2,12 +2,24 @@
 <!-- Combined month widget: a full-width calendar grid on top + a scrollable
      task list below. Tapping a day broadcasts SELECT_DAY; the ‹ › arrows page
      between months. Both the grid and the list are RemoteViews collections. -->
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/month_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- Tintable, fade-able background (colour + transparency from settings). -->
+    <ImageView
+        android:id="@+id/widget_bg"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="fitXY"
+        android:src="@drawable/uplan_widget_bg_base"
+        android:contentDescription="@null" />
+
+<LinearLayout
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@drawable/uplan_widget_bg"
     android:padding="12dp">
 
     <!-- Header: ‹ month › + quick-add -->
@@ -122,3 +134,4 @@
         android:divider="#26FFFFFF"
         android:dividerHeight="1dp" />
 </LinearLayout>
+</FrameLayout>
