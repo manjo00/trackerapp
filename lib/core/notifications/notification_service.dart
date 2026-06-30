@@ -186,6 +186,36 @@ class NotificationService {
   Future<void> cancelDailyReminder() => _plugin.cancel(_dailyReminderId);
   Future<void> cancelAll() => _plugin.cancelAll();
 
+  // ── Exact-alarm permission ─────────────────────────────────────────────────
+
+  /// Whether exact alarms are currently available (set in [init], refreshed by
+  /// [requestExactAlarms]).
+  bool get canUseExactAlarms => _canUseExact;
+
+  /// Re-checks and, if needed, prompts for the exact-alarm permission. Returns
+  /// whether exact alarms are now available.
+  ///
+  /// Scheduled (zonedSchedule) reminders need this on Android 13+; without it
+  /// the app falls back to inexact alarms, which aggressive battery managers
+  /// (e.g. Samsung) routinely delay or drop. Immediate `show()` notifications
+  /// are unaffected — which is why the test button works but task reminders
+  /// may not.
+  Future<bool> requestExactAlarms() async {
+    final AndroidFlutterLocalNotificationsPlugin? android =
+        _plugin.resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+    if (android == null) return false;
+
+    bool can = await android.canScheduleExactNotifications() ?? false;
+    if (!can) {
+      await android.requestExactAlarmsPermission();
+      can = await android.canScheduleExactNotifications() ?? false;
+    }
+    _canUseExact = can;
+    debugPrint('[Notifications] requestExactAlarms → $can');
+    return can;
+  }
+
   // ── Per-habit reminders ────────────────────────────────────────────────────
 
   /// Schedules a daily reminder for [habit] at its stored [reminderTime].

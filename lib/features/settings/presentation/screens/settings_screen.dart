@@ -9,6 +9,9 @@ import '../../../../../core/database/database_provider.dart';
 import '../../../../../core/notifications/notification_service.dart';
 import '../../../../../core/settings/app_settings.dart';
 import '../../../../../core/settings/settings_provider.dart';
+import '../../../habits/presentation/providers/habits_providers.dart';
+import '../../../tasks/presentation/providers/tasks_providers.dart';
+import '../../../trackers/presentation/providers/trackers_providers.dart';
 import 'widget_settings_screen.dart';
 
 /// App settings screen.
@@ -134,6 +137,18 @@ class SettingsScreen extends ConsumerWidget {
             },
           ),
 
+          // Exact-alarm fix — task/time reminders need exact alarms on
+          // Android 13+; without them they fall back to inexact alarms that
+          // Samsung/aggressive battery managers drop.
+          ListTile(
+            leading: Icon(Icons.alarm_on_rounded, color: cs.primary),
+            title: const Text('Fix task reminders'),
+            subtitle: const Text(
+                'If timed task reminders don\'t arrive, tap to allow exact '
+                'alarms and re-schedule'),
+            onTap: () => _fixReminders(context, ref),
+          ),
+
           const Divider(indent: 16, endIndent: 16),
 
           // ── Data / backup ──────────────────────────────────────────────
@@ -201,6 +216,35 @@ class SettingsScreen extends ConsumerWidget {
 
           const SizedBox(height: 24),
         ],
+      ),
+    );
+  }
+
+  // ── Reminder fix ──────────────────────────────────────────────────────────
+
+  /// Requests the exact-alarm permission, then re-schedules every reminder so
+  /// existing ones switch from inexact to exact alarms.
+  Future<void> _fixReminders(BuildContext context, WidgetRef ref) async {
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    final bool ok = await NotificationService.instance.requestExactAlarms();
+
+    final habits = await ref.read(habitsRepositoryProvider).getAllHabits();
+    final tasks = await ref.read(tasksRepositoryProvider).getAllTasks();
+    final trackers =
+        await ref.read(trackersRepositoryProvider).getAllTrackers();
+    await NotificationService.instance.rescheduleAll(
+      habits: habits,
+      tasks: tasks,
+      trackers: trackers,
+    );
+
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(ok
+            ? 'Exact alarms enabled — reminders re-scheduled ✅'
+            : 'Still blocked. Enable "Alarms & reminders" for Uplan in '
+                'Android Settings → Apps → Special access.'),
+        duration: const Duration(seconds: 5),
       ),
     );
   }
