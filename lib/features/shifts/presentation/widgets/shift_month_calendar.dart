@@ -336,9 +336,10 @@ class _DayCell extends ConsumerWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 8,
+                    fontSize: 8.5,
                     height: 1.0,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 0.2,
                     color: rotColor != null
                         ? Color(rotColor)
                         : const Color(0xFFF4511E),
