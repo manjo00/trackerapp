@@ -29,6 +29,7 @@ class WorkoutHomeScreen extends ConsumerWidget {
     final suggestedAsync = ref.watch(todaysSuggestedSessionProvider);
     final sessionsAsync = ref.watch(allWorkoutSessionsProvider);
     final activeWorkout = ref.watch(activeWorkoutProvider).valueOrNull;
+    final bool targetsMode = ref.watch(workoutTargetsModeProvider);
 
     return Scaffold(
       body: programAsync.when(
@@ -44,44 +45,54 @@ class WorkoutHomeScreen extends ConsumerWidget {
                 ),
               ),
 
-            // ── Weekly target scoreboard ──────────────────────────────────
-            const SliverToBoxAdapter(child: WeeklyScoreboardCard()),
-
-            // ── Quick-start sessions ──────────────────────────────────────
+            // ── Mode switch: Targets ⇄ Program ────────────────────────────
             SliverToBoxAdapter(
-              child: _QuickStartRow(
-                onStart: (t) => _startTemplate(context, ref, t),
+              child: _ModeToggle(
+                targetsMode: targetsMode,
+                onChanged: (v) =>
+                    ref.read(workoutTargetsModeProvider.notifier).set(v),
               ),
             ),
 
-            // ── Program card / empty state ────────────────────────────────
-            SliverToBoxAdapter(
-              child: program == null
-                  ? _NoProgramCard(
-                      onSetUp: () => context.push('/workout/programs/create'),
-                    )
-                  : _ProgramCard(
-                      program: program,
-                      suggestedSession: suggestedAsync.valueOrNull,
-                      onTrain: (session) => _startWorkout(
-                        context,
-                        ref,
-                        session: session,
-                      ),
-                      onManage: () =>
-                          context.push('/workout/programs/${program.id}'),
-                    ),
-            ),
-
-            // ── This week's attendance ────────────────────────────────────
-            if (program != null && program.sessions.isNotEmpty)
+            // ── Targets mode: scoreboard + quick start ────────────────────
+            if (targetsMode) ...[
+              const SliverToBoxAdapter(child: WeeklyScoreboardCard()),
               SliverToBoxAdapter(
-                child: _WeekStrip(
-                  program: program,
-                  loggedIds: _loggedThisWeek(
-                      sessionsAsync.valueOrNull ?? const []),
+                child: _QuickStartRow(
+                  onStart: (t) => _startTemplate(context, ref, t),
                 ),
               ),
+            ],
+
+            // ── Program mode: program card + attendance ───────────────────
+            if (!targetsMode) ...[
+              SliverToBoxAdapter(
+                child: program == null
+                    ? _NoProgramCard(
+                        onSetUp: () =>
+                            context.push('/workout/programs/create'),
+                      )
+                    : _ProgramCard(
+                        program: program,
+                        suggestedSession: suggestedAsync.valueOrNull,
+                        onTrain: (session) => _startWorkout(
+                          context,
+                          ref,
+                          session: session,
+                        ),
+                        onManage: () =>
+                            context.push('/workout/programs/${program.id}'),
+                      ),
+              ),
+              if (program != null && program.sessions.isNotEmpty)
+                SliverToBoxAdapter(
+                  child: _WeekStrip(
+                    program: program,
+                    loggedIds: _loggedThisWeek(
+                        sessionsAsync.valueOrNull ?? const []),
+                  ),
+                ),
+            ],
 
             // ── History header ────────────────────────────────────────────
             const SliverToBoxAdapter(
@@ -219,6 +230,41 @@ Set<int> _loggedThisWeek(List<WorkoutSessionModel> sessions) {
     }
   }
   return ids;
+}
+
+// ── Mode toggle ───────────────────────────────────────────────────────────────
+
+class _ModeToggle extends StatelessWidget {
+  const _ModeToggle({required this.targetsMode, required this.onChanged});
+
+  final bool targetsMode;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      child: SegmentedButton<bool>(
+        style: SegmentedButton.styleFrom(
+          minimumSize: const Size.fromHeight(38),
+        ),
+        segments: const [
+          ButtonSegment(
+            value: true,
+            icon: Icon(Icons.track_changes_rounded, size: 16),
+            label: Text('Targets'),
+          ),
+          ButtonSegment(
+            value: false,
+            icon: Icon(Icons.view_week_rounded, size: 16),
+            label: Text('Program'),
+          ),
+        ],
+        selected: {targetsMode},
+        onSelectionChanged: (s) => onChanged(s.first),
+      ),
+    );
+  }
 }
 
 // ── Quick-start row ─────────────────────────────────────────────────────────────

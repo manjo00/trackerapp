@@ -19,6 +19,24 @@ class WeeklyScoreboardCard extends ConsumerWidget {
     final int metCount = scores.where((s) => s.fullyMet).length;
     final int total = scores.where((s) => s.frequencyTarget > 0).length;
 
+    final ({int total, int remaining}) free = ref.watch(weekFreeDaysProvider);
+    final List<String> needing = scores
+        .where((s) => s.frequencyTarget > 0 && s.sessionsDone < s.frequencyTarget)
+        .map((s) => s.label)
+        .toList();
+    final String nudge;
+    if (free.total == 0) {
+      nudge = 'Rest week — no days off scheduled.';
+    } else if (needing.isEmpty) {
+      nudge = 'All muscles on track this week 🎉';
+    } else {
+      final String shown = needing.take(4).join(', ');
+      final String more =
+          needing.length > 4 ? ' +${needing.length - 4} more' : '';
+      nudge = '${free.remaining} free day${free.remaining == 1 ? '' : 's'} '
+          'left — still need: $shown$more';
+    }
+
     // Build rows: a group header whenever the group changes, then its muscles.
     final List<Widget> rows = [];
     String? lastGroup;
@@ -70,8 +88,37 @@ class WeeklyScoreboardCard extends ConsumerWidget {
                 ),
               ],
             ),
+            Text(
+              free.total == 0
+                  ? 'No days off scheduled this week'
+                  : 'Targets scaled to ${free.total} free day'
+                      '${free.total == 1 ? '' : 's'} this week',
+              style: TextStyle(fontSize: 11, color: cs.onSurface.withAlpha(120)),
+            ),
             const SizedBox(height: 4),
             ...rows,
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: cs.primary.withAlpha(22),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.bolt_rounded, size: 16, color: cs.primary),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      nudge,
+                      style: TextStyle(
+                          fontSize: 12, color: cs.onSurface.withAlpha(200)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),

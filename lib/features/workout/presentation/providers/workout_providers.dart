@@ -1,10 +1,14 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/database/database_provider.dart';
 import '../../../../core/notifications/notification_service.dart';
+import '../../../shifts/data/models/work_shift_model.dart';
+import '../../../shifts/presentation/providers/shifts_providers.dart';
 import '../../data/dao/workout_dao.dart';
 import '../../data/models/exercise_model.dart';
 import '../../data/models/group_score.dart';
@@ -47,6 +51,30 @@ Stream<List<SetMuscleRow>> weekSets(WeekSetsRef ref) {
   return ref.watch(workoutRepositoryProvider).watchWeekSets();
 }
 
+/// Free days (no work shift) in the current Mon..Sun week: [total] across the
+/// week and [remaining] from today onward. Read from the shift schedule.
+@riverpod
+({int total, int remaining}) weekFreeDays(WeekFreeDaysRef ref) {
+  final Map<String, WorkShiftModel> shifts =
+      ref.watch(shiftsByDateProvider).valueOrNull ?? const {};
+  final DateTime now = DateTime.now();
+  final DateTime today = DateTime(now.year, now.month, now.day);
+  final (DateTime start, DateTime _) = WorkoutRepository.weekRange(now);
+
+  int total = 0;
+  int remaining = 0;
+  for (int i = 0; i < 7; i++) {
+    final DateTime d = start.add(Duration(days: i));
+    final String key = '${d.year}-${d.month.toString().padLeft(2, '0')}-'
+        '${d.day.toString().padLeft(2, '0')}';
+    if (!shifts.containsKey(key)) {
+      total++;
+      if (!d.isBefore(today)) remaining++;
+    }
+  }
+  return (total: total, remaining: remaining);
+}
+
 /// Combines targets + this week's logged sets into a per-muscle scoreboard.
 /// Each set is credited to its exercise's PRIMARY muscle only (direct work),
 /// so assistance involvement never inflates a muscle. A muscle's frequency is
@@ -76,17 +104,72 @@ List<MuscleScore> weeklyScoreboard(WeeklyScoreboardRef ref) {
     for (final MuscleTarget t in targets) t.groupKey: t,
   };
 
+  // Adapt targets to this week's free days: drop frequency to fit, and add
+  // compensationStep sets per dropped session so weekly volume partly holds.
+  final int freeDays = ref.watch(weekFreeDaysProvider).total;
+
   return [
     for (final String muscle in MuscleGroup.trackedMuscles)
-      MuscleScore(
-        muscleKey: muscle,
+      _adaptScore(
+        muscle: muscle,
+        target: targetByKey[muscle],
+        freeDays: freeDays,
         sessionsDone: sessionsByMuscle[muscle]?.length ?? 0,
         setsDone: setsByMuscle[muscle] ?? 0,
-        frequencyTarget: targetByKey[muscle]?.frequency ?? 0,
-        setsTarget: (targetByKey[muscle]?.frequency ?? 0) *
-            (targetByKey[muscle]?.setsPerSession ?? 0),
       ),
   ];
+}
+
+MuscleScore _adaptScore({
+  required String muscle,
+  required MuscleTarget? target,
+  required int freeDays,
+  required int sessionsDone,
+  required int setsDone,
+}) {
+  final int idealFreq = target?.frequency ?? 0;
+  final int setsPerSession = target?.setsPerSession ?? 0;
+  final int comp = target?.compensationStep ?? 1;
+
+  final int effFreq = idealFreq == 0 ? 0 : math.min(idealFreq, freeDays);
+  final int dropped = idealFreq - effFreq;
+  final int effSetsPerSession = setsPerSession + dropped * comp;
+  final int setsTarget = effFreq * effSetsPerSession;
+
+  return MuscleScore(
+    muscleKey: muscle,
+    sessionsDone: sessionsDone,
+    setsDone: setsDone,
+    frequencyTarget: effFreq,
+    setsTarget: setsTarget,
+  );
+}
+
+// ── Workout home mode (Targets ⇄ Program) ────────────────────────────────────
+
+/// Whether the Workout home shows the weekly-target scoreboard (true) or the
+/// classic program/split view (false). Persisted in shared_preferences.
+@riverpod
+class WorkoutTargetsMode extends _$WorkoutTargetsMode {
+  static const String _key = 'workout_targets_mode';
+
+  @override
+  bool build() {
+    _load();
+    return true; // default to the new Targets mode
+  }
+
+  Future<void> _load() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final bool? saved = prefs.getBool(_key);
+    if (saved != null && saved != state) state = saved;
+  }
+
+  Future<void> set(bool targetsMode) async {
+    state = targetsMode;
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_key, targetsMode);
+  }
 }
 
 // ── Active workout state ──────────────────────────────────────────────────
