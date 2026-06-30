@@ -63,8 +63,8 @@ class TasksRepository {
 
   // ── Write operations ──────────────────────────────────────────────────────
 
-  /// Creates a new task.
-  Future<void> addTask(
+  /// Creates a new task and returns its auto-assigned id.
+  Future<int> addTask(
     String title, {
     String? note,
     String? dueDate,
@@ -72,8 +72,8 @@ class TasksRepository {
     TaskPriority priority = TaskPriority.medium,
     bool reminderEnabled = false,
     String? reminderLeadTimes,
-  }) async {
-    await _dao.insertTask(
+  }) {
+    return _dao.insertTask(
       TasksCompanion(
         title: Value(title.trim()),
         note: Value(note?.trim()),

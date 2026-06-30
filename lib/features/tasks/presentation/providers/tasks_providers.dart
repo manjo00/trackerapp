@@ -60,7 +60,8 @@ class AddTask extends _$AddTask {
   @override
   Future<void> build() async {}
 
-  Future<void> add(
+  /// Adds a task and returns its new id (null if the insert failed).
+  Future<int?> add(
     String title, {
     String? note,
     String? dueDate,
@@ -70,8 +71,9 @@ class AddTask extends _$AddTask {
     String? reminderLeadTimes,
   }) async {
     state = const AsyncLoading();
-    state = await AsyncValue.guard(
-      () => ref.read(tasksRepositoryProvider).addTask(
+    int? newId;
+    state = await AsyncValue.guard(() async {
+      newId = await ref.read(tasksRepositoryProvider).addTask(
             title,
             note: note,
             dueDate: dueDate,
@@ -79,8 +81,9 @@ class AddTask extends _$AddTask {
             priority: priority,
             reminderEnabled: reminderEnabled,
             reminderLeadTimes: reminderLeadTimes,
-          ),
-    );
+          );
+    });
+    return newId;
   }
 }
 

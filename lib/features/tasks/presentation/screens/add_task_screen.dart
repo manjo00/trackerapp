@@ -169,50 +169,76 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
         _dueTime != null ? _timeStr(_dueTime!) : null;
     final String? leadTimesStr = _buildLeadTimesStr();
 
-    if (_isEditing) {
-      final TaskModel updated = widget.task!.copyWith(
-        title: _titleCtrl.text.trim(),
-        note: _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
-        dueDate: dueDateStr,
-        dueTime: dueTimeStr,
-        priority: _priority,
-        reminderEnabled: _reminderEnabled,
-        reminderLeadTimes: leadTimesStr,
-      );
-      await ref.read(updateTaskProvider.notifier).save(updated);
-
-      // Apply notification change immediately for the edited task.
-      if (_reminderEnabled && dueDateStr != null) {
-        await NotificationService.instance.scheduleTaskReminders(updated);
+    try {
+      if (_isEditing) {
+        final TaskModel updated = widget.task!.copyWith(
+          title: _titleCtrl.text.trim(),
+          note: _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
+          dueDate: dueDateStr,
+          dueTime: dueTimeStr,
+          priority: _priority,
+          reminderEnabled: _reminderEnabled,
+          reminderLeadTimes: leadTimesStr,
+        );
+        await ref.read(updateTaskProvider.notifier).save(updated);
+        await _syncReminders(updated, dueDateStr);
       } else {
-        await NotificationService.instance.cancelTaskReminders(updated.id);
-      }
-    } else {
-      await ref.read(addTaskProvider.notifier).add(
-            _titleCtrl.text.trim(),
-            note: _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
+        final int? newId = await ref.read(addTaskProvider.notifier).add(
+              _titleCtrl.text.trim(),
+              note:
+                  _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
+              dueDate: dueDateStr,
+              dueTime: dueTimeStr,
+              priority: _priority,
+              reminderEnabled: _reminderEnabled,
+              reminderLeadTimes: leadTimesStr,
+            );
+        if (_reminderEnabled && dueDateStr != null && newId != null) {
+          // Schedule just the new task (bounded, like the edit path).
+          final TaskModel created = TaskModel(
+            id: newId,
+            title: _titleCtrl.text.trim(),
+            note:
+                _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
             dueDate: dueDateStr,
             dueTime: dueTimeStr,
             priority: _priority,
-            reminderEnabled: _reminderEnabled,
+            isCompleted: false,
+            createdAt: DateTime.now(),
+            reminderEnabled: true,
             reminderLeadTimes: leadTimesStr,
           );
-
-      // After creation, reschedule all tasks so the new one gets its
-      // notifications (we don't have the new ID yet, so we fetch fresh).
-      if (_reminderEnabled && dueDateStr != null) {
-        final List<TaskModel> allTasks =
-            await ref.read(tasksRepositoryProvider).getAllTasks();
-        for (final TaskModel task in allTasks) {
-          if (task.reminderEnabled && !task.isCompleted) {
-            await NotificationService.instance.scheduleTaskReminders(task);
-          }
+          await _syncReminders(created, dueDateStr);
         }
       }
+    } catch (e) {
+      debugPrint('[AddTask] save failed: $e');
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
 
     if (mounted) context.pop();
   }
+
+  /// Schedules/cancels notifications for the edited task. Best-effort and
+  /// time-bounded: notification platform calls can stall on some devices
+  /// (e.g. Samsung), and must never hang the save / leave the spinner stuck.
+  Future<void> _syncReminders(TaskModel task, String? dueDateStr) async {
+    try {
+      if (_reminderEnabled && dueDateStr != null) {
+        await NotificationService.instance
+            .scheduleTaskReminders(task)
+            .timeout(const Duration(seconds: 6), onTimeout: () => false);
+      } else {
+        await NotificationService.instance
+            .cancelTaskReminders(task.id)
+            .timeout(const Duration(seconds: 6), onTimeout: () {});
+      }
+    } catch (e) {
+      debugPrint('[AddTask] reminder sync failed: $e');
+    }
+  }
+
 
   // ── Build ─────────────────────────────────────────────────────────────────
 
