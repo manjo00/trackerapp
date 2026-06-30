@@ -341,7 +341,7 @@ class _DayCell extends ConsumerWidget {
                     fontWeight: FontWeight.w700,
                     color: rotColor != null
                         ? Color(rotColor)
-                        : const Color(0xFFFFB347),
+                        : const Color(0xFFF4511E),
                   ),
                 ),
               ),

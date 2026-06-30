@@ -82,8 +82,14 @@ class AppDatabase extends _$AppDatabase {
   /// v6 → added work_shifts table (hospital shift schedule)
   /// v7 → added shift_rotations table + rotationLabel/rotationColor on
   ///       work_shifts (editable rotation labels per day)
+  /// v8 → recolour the default rotation label colour (washed-out orange →
+  ///       a deeper, higher-contrast orange) on existing data
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
+
+  /// The old vs. new default rotation-label colour (see v8 migration).
+  static const int _oldRotationColor = 0xFFFFB347;
+  static const int _newRotationColor = 0xFFF4511E;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -135,6 +141,18 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(workShifts, workShifts.rotationLabel);
             await m.addColumn(workShifts, workShifts.rotationColor);
             await _seedRotations();
+          }
+          if (from < 8) {
+            // Recolour the old default orange to the new higher-contrast one,
+            // on both the rotation definitions and any assigned shifts.
+            await (update(shiftRotations)
+                  ..where((t) => t.colorValue.equals(_oldRotationColor)))
+                .write(const ShiftRotationsCompanion(
+                    colorValue: Value(_newRotationColor)));
+            await (update(workShifts)
+                  ..where((t) => t.rotationColor.equals(_oldRotationColor)))
+                .write(const WorkShiftsCompanion(
+                    rotationColor: Value(_newRotationColor)));
           }
         },
         beforeOpen: (details) async {

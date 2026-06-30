@@ -24,7 +24,7 @@ class ShiftScheduleScreen extends ConsumerWidget {
     30: 'ICU1', 31: 'ICU1',
   };
 
-  static const int _orange = 0xFFFFB347;
+  static const int _orange = 0xFFF4511E;
 
   Future<void> _importJuly(BuildContext context, WidgetRef ref) async {
     final bool? ok = await showDialog<bool>(

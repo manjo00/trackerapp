@@ -1,28 +1,41 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- One day cell in the month-grid widget: day number + up to 3 priority dots.
-     Background colour is set at runtime for shift days. -->
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- One day cell in the month-grid widget: day number (top-left), sun/moon
+     (top-right), rotation label (under the number) and up to 3 priority dots
+     (bottom). Background (rounded tile) is set at runtime per shift kind. -->
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/cell_root"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:minHeight="40dp"
-    android:orientation="vertical"
-    android:gravity="center"
-    android:padding="2dp">
+    android:layout_height="match_parent"
+    android:minHeight="46dp"
+    android:padding="4dp">
 
     <TextView
         android:id="@+id/cell_day"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentStart="true"
         android:textColor="#FFFFFFFF"
         android:textStyle="bold"
-        android:textSize="15sp" />
+        android:textSize="14sp" />
 
-    <!-- Rotation label (ICU1, ER, …) — small, under the day number. -->
+    <ImageView
+        android:id="@+id/cell_icon"
+        android:layout_width="13dp"
+        android:layout_height="13dp"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentEnd="true"
+        android:layout_marginTop="1dp"
+        android:visibility="gone"
+        android:contentDescription="@null" />
+
     <TextView
         android:id="@+id/cell_rot"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_below="@id/cell_day"
+        android:layout_alignParentStart="true"
+        android:layout_marginTop="-1dp"
         android:textSize="10sp"
         android:textStyle="bold"
         android:maxLines="1"
@@ -33,10 +46,12 @@
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true"
         android:orientation="horizontal">
 
-        <TextView android:id="@+id/cell_dot1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="•" android:textSize="11sp" android:visibility="gone" />
-        <TextView android:id="@+id/cell_dot2" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="•" android:textSize="11sp" android:paddingStart="1dp" android:visibility="gone" />
-        <TextView android:id="@+id/cell_dot3" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="•" android:textSize="11sp" android:paddingStart="1dp" android:visibility="gone" />
+        <TextView android:id="@+id/cell_dot1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="•" android:textSize="12sp" android:visibility="gone" />
+        <TextView android:id="@+id/cell_dot2" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="•" android:textSize="12sp" android:paddingStart="2dp" android:visibility="gone" />
+        <TextView android:id="@+id/cell_dot3" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="•" android:textSize="12sp" android:paddingStart="2dp" android:visibility="gone" />
     </LinearLayout>
-</LinearLayout>
+</RelativeLayout>

@@ -150,7 +150,7 @@ class DayColumn extends ConsumerWidget {
                   fontWeight: FontWeight.w600,
                   color: shift.rotationColor != null
                       ? Color(shift.rotationColor!)
-                      : const Color(0xFFFFB347),
+                      : const Color(0xFFF4511E),
                 ),
               ),
 

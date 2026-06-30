@@ -25,14 +25,12 @@ class HomeWidgetService {
   static const String _monthProvider =
       'com.lifetracker.life_tracker.UplanMonthWidgetProvider';
 
-  // Month-cell colours (hex strings — parsed natively, avoids int overflow).
-  // Saturated pastel fills + near-black text for high contrast on the widget.
-  static const String _monthDayBg = '#FFB7E4EC';
+  // Month-cell text colours (hex strings — parsed natively). The rounded tile
+  // fills live in drawables (uplan_cell_day/night/today); these are the matching
+  // dark text colours for the day number + rotation label.
   static const String _monthDayFg = '#FF06414D';
-  static const String _monthNightBg = '#FFC4C9EC';
   static const String _monthNightFg = '#FF1E2156';
   static const String _monthWhiteFg = '#FFFFFFFF';
-  static const String _monthTodayBg = '#5CB39DDB'; // clearer today highlight
 
   static const List<String> _fullMonths = [
     '', 'January', 'February', 'March', 'April', 'May', 'June',
@@ -62,10 +60,6 @@ class HomeWidgetService {
 
   static String _dateKey(DateTime d) =>
       '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
-
-  /// ARGB int → "#AARRGGBB" hex string (parsed natively, avoids int overflow).
-  static String _argbHex(int argb) =>
-      '#${argb.toRadixString(16).padLeft(8, '0').toUpperCase()}';
 
   /// Task priority (0 low / 1 med / 2 high) → dot colour hex.
   static String _priorityHex(int p) => switch (p) {
@@ -114,14 +108,11 @@ class HomeWidgetService {
       final Map<String, String> shiftTypeByDate = {
         for (final s in allShifts) s.date: s.shiftType,
       };
-      // Rotation label + colour per date (for the month widget tiles).
-      final Map<String, ({String label, String colorHex})> rotationByDate = {
+      // Rotation label per date (for the month widget tiles).
+      final Map<String, String> rotationByDate = {
         for (final s in allShifts)
           if (s.rotationLabel != null && (s.rotationLabel as String).isNotEmpty)
-            s.date: (
-              label: s.rotationLabel as String,
-              colorHex: _argbHex(s.rotationColor ?? 0xFFFFB347),
-            ),
+            s.date: s.rotationLabel as String,
       };
       // Per-day priority dot colours (most urgent first, up to 3).
       final Map<String, List<({int p, String hex})>> dotsTmp = {};
@@ -294,7 +285,7 @@ class HomeWidgetService {
     String todayStr,
     Map<String, String> shiftTypeByDate,
     Map<String, List<String>> dotsByDate,
-    Map<String, ({String label, String colorHex})> rotationByDate,
+    Map<String, String> rotationByDate,
   ) {
     final DateTime first = DateTime(month.year, month.month, 1);
     final int daysInMonth = DateTime(month.year, month.month + 1, 0).day;
@@ -307,25 +298,23 @@ class HomeWidgetService {
     for (int d = 1; d <= daysInMonth; d++) {
       final String ds = _dateKey(DateTime(month.year, month.month, d));
       final String? type = shiftTypeByDate[ds];
-      String bg = '';
+      String kind = '';
       String fg = _monthWhiteFg;
       if (type == 'day') {
-        bg = _monthDayBg;
+        kind = 'day';
         fg = _monthDayFg;
       } else if (type == 'night') {
-        bg = _monthNightBg;
+        kind = 'night';
         fg = _monthNightFg;
       } else if (ds == todayStr) {
-        bg = _monthTodayBg;
+        kind = 'today';
       }
-      final rot = rotationByDate[ds];
       cells.add({
         'day': d,
         'date': ds,
-        'bg': bg,
+        'kind': kind,
         'fg': fg,
-        'rot': rot?.label ?? '',
-        'rotColor': rot?.colorHex ?? '',
+        'rot': rotationByDate[ds] ?? '',
         'dots': dotsByDate[ds] ?? const <String>[],
       });
     }

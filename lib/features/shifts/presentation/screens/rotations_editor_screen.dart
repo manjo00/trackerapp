@@ -9,7 +9,7 @@ class RotationsEditorScreen extends ConsumerWidget {
 
   /// Preset label colours offered in the editor.
   static const List<int> _palette = [
-    0xFFFFB347, // orange
+    0xFFF4511E, // deep orange
     0xFF5FC6D8, // cyan
     0xFFA6ABEC, // periwinkle
     0xFFE07070, // red

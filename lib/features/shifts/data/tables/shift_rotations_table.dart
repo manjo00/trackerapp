@@ -11,9 +11,9 @@ class ShiftRotations extends Table {
   /// Short label shown on calendar tiles, e.g. "ICU1", "ER", "Cardiac".
   TextColumn get name => text().withLength(min: 1, max: 20)();
 
-  /// Label colour (ARGB int). Defaults to orange; editable per rotation.
+  /// Label colour (ARGB int). Defaults to a deep orange; editable per rotation.
   IntColumn get colorValue =>
-      integer().withDefault(const Constant(0xFFFFB347))();
+      integer().withDefault(const Constant(0xFFF4511E))();
 
   /// Display order in the picker / editor.
   IntColumn get orderIndex => integer().withDefault(const Constant(0))();

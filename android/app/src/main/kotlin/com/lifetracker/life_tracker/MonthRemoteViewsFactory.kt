@@ -20,10 +20,9 @@ class MonthRemoteViewsFactory(
     private data class Cell(
         val day: Int,
         val date: String,
-        val bg: String,
+        val kind: String, // "day" | "night" | "today" | ""
         val fg: String,
         val rot: String,
-        val rotColor: String,
         val dots: List<String>,
     )
 
@@ -51,10 +50,9 @@ class MonthRemoteViewsFactory(
                     Cell(
                         day = o.optInt("day", 0),
                         date = o.optString("date", ""),
-                        bg = o.optString("bg", ""),
+                        kind = o.optString("kind", ""),
                         fg = o.optString("fg", "#FFFFFFFF"),
                         rot = o.optString("rot", ""),
-                        rotColor = o.optString("rotColor", ""),
                         dots = dotColors,
                     )
                 )
@@ -79,6 +77,7 @@ class MonthRemoteViewsFactory(
             // Leading blank.
             rv.setTextViewText(R.id.cell_day, "")
             rv.setViewVisibility(R.id.cell_rot, View.GONE)
+            rv.setViewVisibility(R.id.cell_icon, View.GONE)
             for (id in dotIds) rv.setViewVisibility(id, View.GONE)
             rv.setInt(R.id.cell_root, "setBackgroundColor", Color.TRANSPARENT)
         } else {
@@ -87,9 +86,30 @@ class MonthRemoteViewsFactory(
                 rv.setTextColor(R.id.cell_day, Color.parseColor(cell.fg))
             } catch (_: Exception) {
             }
-            // Rotation label under the day number. Coloured with the cell's
-            // dark foreground (not the pale rotation colour) so it always reads
-            // on the light shift fill.
+
+            // Rounded tile background + sun/moon icon, by shift kind.
+            when (cell.kind) {
+                "day" -> {
+                    rv.setInt(R.id.cell_root, "setBackgroundResource", R.drawable.uplan_cell_day)
+                    rv.setViewVisibility(R.id.cell_icon, View.VISIBLE)
+                    rv.setImageViewResource(R.id.cell_icon, R.drawable.ic_widget_sun)
+                }
+                "night" -> {
+                    rv.setInt(R.id.cell_root, "setBackgroundResource", R.drawable.uplan_cell_night)
+                    rv.setViewVisibility(R.id.cell_icon, View.VISIBLE)
+                    rv.setImageViewResource(R.id.cell_icon, R.drawable.ic_widget_moon)
+                }
+                "today" -> {
+                    rv.setInt(R.id.cell_root, "setBackgroundResource", R.drawable.uplan_cell_today)
+                    rv.setViewVisibility(R.id.cell_icon, View.GONE)
+                }
+                else -> {
+                    rv.setInt(R.id.cell_root, "setBackgroundColor", Color.TRANSPARENT)
+                    rv.setViewVisibility(R.id.cell_icon, View.GONE)
+                }
+            }
+
+            // Rotation label under the day number, in the cell's dark foreground.
             if (cell.rot.isNotEmpty()) {
                 rv.setViewVisibility(R.id.cell_rot, View.VISIBLE)
                 rv.setTextViewText(R.id.cell_rot, cell.rot)
@@ -100,14 +120,7 @@ class MonthRemoteViewsFactory(
             } else {
                 rv.setViewVisibility(R.id.cell_rot, View.GONE)
             }
-            if (cell.bg.isNotEmpty()) {
-                try {
-                    rv.setInt(R.id.cell_root, "setBackgroundColor", Color.parseColor(cell.bg))
-                } catch (_: Exception) {
-                }
-            } else {
-                rv.setInt(R.id.cell_root, "setBackgroundColor", Color.TRANSPARENT)
-            }
+
             // Up to 3 priority-coloured dots.
             for (i in dotIds.indices) {
                 if (i < cell.dots.size) {
