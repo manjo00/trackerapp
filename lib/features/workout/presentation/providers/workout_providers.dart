@@ -2,10 +2,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import '../../../../core/database/app_database.dart';
 import '../../../../core/database/database_provider.dart';
 import '../../../../core/notifications/notification_service.dart';
 import '../../data/dao/workout_dao.dart';
 import '../../data/models/exercise_model.dart';
+import '../../data/models/group_score.dart';
+import '../../data/models/muscle_groups.dart';
 import '../../data/models/program_exercise_model.dart';
 import '../../data/models/workout_session_model.dart';
 import '../../data/models/workout_set_model.dart';
@@ -28,6 +31,63 @@ WorkoutRepository workoutRepository(WorkoutRepositoryRef ref) {
 Stream<List<WorkoutSessionModel>> allWorkoutSessions(
     AllWorkoutSessionsRef ref) {
   return ref.watch(workoutRepositoryProvider).watchAllSessions();
+}
+
+// ── Weekly scoreboard ───────────────────────────────────────────────────────
+
+/// Weekly muscle-group targets (push, pull, …).
+@riverpod
+Stream<List<MuscleTarget>> weeklyTargets(WeeklyTargetsRef ref) {
+  return ref.watch(workoutRepositoryProvider).watchMuscleTargets();
+}
+
+/// Sets logged in the current week, with each set's muscle tags.
+@riverpod
+Stream<List<SetMuscleRow>> weekSets(WeekSetsRef ref) {
+  return ref.watch(workoutRepositoryProvider).watchWeekSets();
+}
+
+/// Combines targets + this week's logged sets into a per-group scoreboard.
+/// A set is credited to every group its muscles touch (counted once per group);
+/// a group's frequency is the number of distinct sessions that hit it.
+@riverpod
+List<GroupScore> weeklyScoreboard(WeeklyScoreboardRef ref) {
+  final List<MuscleTarget> targets =
+      ref.watch(weeklyTargetsProvider).valueOrNull ?? const [];
+  final List<SetMuscleRow> sets =
+      ref.watch(weekSetsProvider).valueOrNull ?? const [];
+
+  final Map<String, Set<int>> sessionsByGroup = {
+    for (final String g in MuscleGroup.all) g: <int>{},
+  };
+  final Map<String, int> setsByGroup = {
+    for (final String g in MuscleGroup.all) g: 0,
+  };
+
+  for (final SetMuscleRow row in sets) {
+    final Set<String> groups =
+        MuscleGroup.forExercise(row.primaryMuscle, row.secondaryMuscles);
+    for (final String g in groups) {
+      (sessionsByGroup[g] ??= <int>{}).add(row.sessionId);
+      setsByGroup[g] = (setsByGroup[g] ?? 0) + 1;
+    }
+  }
+
+  final Map<String, MuscleTarget> targetByKey = {
+    for (final MuscleTarget t in targets) t.groupKey: t,
+  };
+
+  return [
+    for (final String key in MuscleGroup.all)
+      GroupScore(
+        groupKey: key,
+        sessionsDone: sessionsByGroup[key]?.length ?? 0,
+        setsDone: setsByGroup[key] ?? 0,
+        frequencyTarget: targetByKey[key]?.frequency ?? 0,
+        setsTarget: (targetByKey[key]?.frequency ?? 0) *
+            (targetByKey[key]?.setsPerSession ?? 0),
+      ),
+  ];
 }
 
 // ── Active workout state ──────────────────────────────────────────────────

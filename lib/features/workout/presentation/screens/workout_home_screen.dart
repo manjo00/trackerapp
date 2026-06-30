@@ -7,6 +7,7 @@ import '../../data/models/program_session_model.dart';
 import '../../data/models/workout_session_model.dart';
 import '../providers/program_providers.dart';
 import '../providers/workout_providers.dart';
+import '../widgets/weekly_scoreboard_card.dart';
 
 /// The main Workout tab.
 ///
@@ -39,6 +40,9 @@ class WorkoutHomeScreen extends ConsumerWidget {
                   onResume: () => context.push('/workout/active'),
                 ),
               ),
+
+            // ── Weekly target scoreboard ──────────────────────────────────
+            const SliverToBoxAdapter(child: WeeklyScoreboardCard()),
 
             // ── Program card / empty state ────────────────────────────────
             SliverToBoxAdapter(

@@ -36,6 +36,30 @@ class WorkoutRepository {
     });
   }
 
+  // ── Weekly scoreboard ───────────────────────────────────────────────────────
+
+  /// Sets logged this week (Mon..Sun of [around], default now), with muscle tags.
+  Stream<List<SetMuscleRow>> watchWeekSets({DateTime? around}) {
+    final (DateTime start, DateTime end) = weekRange(around ?? DateTime.now());
+    return _dao.watchSetsInRange(_dateFmt.format(start), _dateFmt.format(end));
+  }
+
+  /// Streams the weekly muscle-group targets.
+  Stream<List<MuscleTarget>> watchMuscleTargets() => _dao.watchMuscleTargets();
+
+  Future<List<MuscleTarget>> getMuscleTargets() => _dao.getMuscleTargets();
+
+  Future<void> updateMuscleTarget(MuscleTargetsCompanion companion) =>
+      _dao.updateMuscleTarget(companion);
+
+  /// Monday 00:00 → Sunday of the week containing [d] (date-only bounds).
+  static (DateTime, DateTime) weekRange(DateTime d) {
+    final DateTime day = DateTime(d.year, d.month, d.day);
+    final DateTime monday = day.subtract(Duration(days: day.weekday - 1));
+    final DateTime sunday = monday.add(const Duration(days: 6));
+    return (monday, sunday);
+  }
+
   /// Creates a new workout session and returns its id.
   Future<int> createSession({String? name, int? programSessionId}) =>
       _dao.insertSession(WorkoutSessionsCompanion(

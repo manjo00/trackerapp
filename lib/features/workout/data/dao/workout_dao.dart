@@ -1,12 +1,22 @@
 import 'package:drift/drift.dart';
 import '../../../../core/database/app_database.dart';
 import '../tables/exercise_library_table.dart';
+import '../tables/muscle_targets_table.dart';
 import '../tables/workout_sessions_table.dart';
 import '../tables/workout_sets_table.dart';
 
 part 'workout_dao.g.dart';
 
-@DriftAccessor(tables: [WorkoutSessions, WorkoutSets, ExerciseLibrary])
+/// One logged set with the muscle tags of its exercise (looked up by name),
+/// used to credit the set to a muscle group on the weekly scoreboard.
+typedef SetMuscleRow = ({
+  int sessionId,
+  String? primaryMuscle,
+  String? secondaryMuscles,
+});
+
+@DriftAccessor(
+    tables: [WorkoutSessions, WorkoutSets, ExerciseLibrary, MuscleTargets])
 class WorkoutDao extends DatabaseAccessor<AppDatabase>
     with _$WorkoutDaoMixin {
   WorkoutDao(super.db);
@@ -201,4 +211,49 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase>
   /// Inserts a user-created exercise and returns its id.
   Future<int> insertExercise(ExerciseLibraryCompanion companion) =>
       into(exerciseLibrary).insert(companion);
+
+  // ── Weekly scoreboard ───────────────────────────────────────────────────────
+
+  /// Streams every set logged in sessions dated [startDate]..[endDate]
+  /// (inclusive, "yyyy-MM-dd"), each carrying its exercise's muscle tags
+  /// (left-joined by name, so cached/custom names still resolve when possible).
+  Stream<List<SetMuscleRow>> watchSetsInRange(String startDate, String endDate) {
+    final query = select(workoutSets).join([
+      innerJoin(workoutSessions,
+          workoutSessions.id.equalsExp(workoutSets.sessionId)),
+      leftOuterJoin(exerciseLibrary,
+          exerciseLibrary.name.equalsExp(workoutSets.exerciseName)),
+    ])
+      ..where(workoutSessions.date.isBiggerOrEqualValue(startDate) &
+          workoutSessions.date.isSmallerOrEqualValue(endDate));
+
+    return query.watch().map((rows) {
+      return rows.map((r) {
+        final set = r.readTable(workoutSets);
+        final ex = r.readTableOrNull(exerciseLibrary);
+        return (
+          sessionId: set.sessionId,
+          primaryMuscle: ex?.primaryMuscle,
+          secondaryMuscles: ex?.secondaryMuscles,
+        );
+      }).toList();
+    });
+  }
+
+  /// Streams the weekly muscle-group targets, in display order.
+  Stream<List<MuscleTarget>> watchMuscleTargets() =>
+      (select(muscleTargets)
+            ..orderBy([(t) => OrderingTerm.asc(t.orderIndex)]))
+          .watch();
+
+  /// One-shot read of the targets (for editing).
+  Future<List<MuscleTarget>> getMuscleTargets() =>
+      (select(muscleTargets)
+            ..orderBy([(t) => OrderingTerm.asc(t.orderIndex)]))
+          .get();
+
+  /// Updates a single target row.
+  Future<void> updateMuscleTarget(MuscleTargetsCompanion companion) =>
+      (update(muscleTargets)..where((t) => t.id.equals(companion.id.value)))
+          .write(companion);
 }
