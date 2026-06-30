@@ -35,15 +35,12 @@ android {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
-            // R8 runs in release and was obfuscating flutter_local_notifications'
-            // Gson models, breaking scheduled notifications. Apply our keep rules
-            // so R8 preserves the generic signatures Gson needs.
-            isMinifyEnabled = true
+            // R8 obfuscation was mangling flutter_local_notifications' Gson
+            // (de)serialisation, so scheduled notifications never posted at fire
+            // time. This is a sideloaded personal app (size isn't a concern), so
+            // disable code shrinking/obfuscation entirely — nothing to break.
+            isMinifyEnabled = false
             isShrinkResources = false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro",
-            )
         }
     }
 }

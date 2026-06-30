@@ -148,8 +148,6 @@ class NotificationService {
         ),
       ),
       androidScheduleMode: _scheduleMode,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.wallClockTime,
     );
   }
 
@@ -198,8 +196,6 @@ class NotificationService {
           ),
         ),
         androidScheduleMode: _scheduleMode,
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.wallClockTime,
         matchDateTimeComponents: DateTimeComponents.time,
       );
       return true;
@@ -342,8 +338,6 @@ class NotificationService {
             ),
           ),
           androidScheduleMode: _scheduleMode,
-          uiLocalNotificationDateInterpretation:
-              UILocalNotificationDateInterpretation.wallClockTime,
           // One-shot — no matchDateTimeComponents.
         );
         anyScheduled = true;
@@ -411,8 +405,6 @@ class NotificationService {
           ),
         ),
         androidScheduleMode: _scheduleMode,
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.wallClockTime,
         matchDateTimeComponents: DateTimeComponents.time,
       );
       return true;
