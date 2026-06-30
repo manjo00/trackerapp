@@ -47,30 +47,29 @@ Stream<List<SetMuscleRow>> weekSets(WeekSetsRef ref) {
   return ref.watch(workoutRepositoryProvider).watchWeekSets();
 }
 
-/// Combines targets + this week's logged sets into a per-group scoreboard.
-/// A set is credited to every group its muscles touch (counted once per group);
-/// a group's frequency is the number of distinct sessions that hit it.
+/// Combines targets + this week's logged sets into a per-muscle scoreboard.
+/// Each set is credited to its exercise's PRIMARY muscle only (direct work),
+/// so assistance involvement never inflates a muscle. A muscle's frequency is
+/// the number of distinct sessions that trained it directly.
 @riverpod
-List<GroupScore> weeklyScoreboard(WeeklyScoreboardRef ref) {
+List<MuscleScore> weeklyScoreboard(WeeklyScoreboardRef ref) {
   final List<MuscleTarget> targets =
       ref.watch(weeklyTargetsProvider).valueOrNull ?? const [];
   final List<SetMuscleRow> sets =
       ref.watch(weekSetsProvider).valueOrNull ?? const [];
 
-  final Map<String, Set<int>> sessionsByGroup = {
-    for (final String g in MuscleGroup.all) g: <int>{},
+  final Map<String, Set<int>> sessionsByMuscle = {
+    for (final String m in MuscleGroup.trackedMuscles) m: <int>{},
   };
-  final Map<String, int> setsByGroup = {
-    for (final String g in MuscleGroup.all) g: 0,
+  final Map<String, int> setsByMuscle = {
+    for (final String m in MuscleGroup.trackedMuscles) m: 0,
   };
 
   for (final SetMuscleRow row in sets) {
-    final Set<String> groups =
-        MuscleGroup.forExercise(row.primaryMuscle, row.secondaryMuscles);
-    for (final String g in groups) {
-      (sessionsByGroup[g] ??= <int>{}).add(row.sessionId);
-      setsByGroup[g] = (setsByGroup[g] ?? 0) + 1;
-    }
+    final String? muscle = row.primaryMuscle;
+    if (muscle == null || !sessionsByMuscle.containsKey(muscle)) continue;
+    (sessionsByMuscle[muscle] ??= <int>{}).add(row.sessionId);
+    setsByMuscle[muscle] = (setsByMuscle[muscle] ?? 0) + 1;
   }
 
   final Map<String, MuscleTarget> targetByKey = {
@@ -78,14 +77,14 @@ List<GroupScore> weeklyScoreboard(WeeklyScoreboardRef ref) {
   };
 
   return [
-    for (final String key in MuscleGroup.all)
-      GroupScore(
-        groupKey: key,
-        sessionsDone: sessionsByGroup[key]?.length ?? 0,
-        setsDone: setsByGroup[key] ?? 0,
-        frequencyTarget: targetByKey[key]?.frequency ?? 0,
-        setsTarget: (targetByKey[key]?.frequency ?? 0) *
-            (targetByKey[key]?.setsPerSession ?? 0),
+    for (final String muscle in MuscleGroup.trackedMuscles)
+      MuscleScore(
+        muscleKey: muscle,
+        sessionsDone: sessionsByMuscle[muscle]?.length ?? 0,
+        setsDone: setsByMuscle[muscle] ?? 0,
+        frequencyTarget: targetByKey[muscle]?.frequency ?? 0,
+        setsTarget: (targetByKey[muscle]?.frequency ?? 0) *
+            (targetByKey[muscle]?.setsPerSession ?? 0),
       ),
   ];
 }

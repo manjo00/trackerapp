@@ -1,25 +1,38 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/group_score.dart';
+import '../../data/models/muscle_groups.dart';
 import '../providers/workout_providers.dart';
 
-/// "This week" scoreboard: each muscle group's sessions + sets vs target,
-/// auto-computed from logged workouts. The heart of the weekly-target system.
+/// "This week" scoreboard: each muscle's sessions + sets vs target, auto-computed
+/// from logged workouts and grouped under push/pull/… headers. Per-muscle so one
+/// muscle can never be masked by another in the same group.
 class WeeklyScoreboardCard extends ConsumerWidget {
   const WeeklyScoreboardCard({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ColorScheme cs = Theme.of(context).colorScheme;
-    final List<GroupScore> scores = ref.watch(weeklyScoreboardProvider);
+    final List<MuscleScore> scores = ref.watch(weeklyScoreboardProvider);
 
     final int metCount = scores.where((s) => s.fullyMet).length;
     final int total = scores.where((s) => s.frequencyTarget > 0).length;
 
+    // Build rows: a group header whenever the group changes, then its muscles.
+    final List<Widget> rows = [];
+    String? lastGroup;
+    for (final MuscleScore s in scores) {
+      if (s.group != lastGroup) {
+        rows.add(_GroupHeader(label: MuscleGroup.label(s.group)));
+        lastGroup = s.group;
+      }
+      rows.add(_MuscleRow(score: s));
+    }
+
     return Card(
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -35,7 +48,7 @@ class WeeklyScoreboardCard extends ConsumerWidget {
                 ),
                 const Spacer(),
                 Text(
-                  '$metCount / $total goals',
+                  '$metCount / $total muscles',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -46,8 +59,8 @@ class WeeklyScoreboardCard extends ConsumerWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            for (final GroupScore s in scores) _GroupRow(score: s),
+            const SizedBox(height: 4),
+            ...rows,
           ],
         ),
       ),
@@ -55,15 +68,36 @@ class WeeklyScoreboardCard extends ConsumerWidget {
   }
 }
 
-class _GroupRow extends StatelessWidget {
-  const _GroupRow({required this.score});
-  final GroupScore score;
+class _GroupHeader extends StatelessWidget {
+  const _GroupHeader({required this.label});
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(top: 10, bottom: 2),
+      child: Text(
+        label.toUpperCase(),
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 1,
+          color: cs.onSurface.withAlpha(110),
+        ),
+      ),
+    );
+  }
+}
+
+class _MuscleRow extends StatelessWidget {
+  const _MuscleRow({required this.score});
+  final MuscleScore score;
 
   @override
   Widget build(BuildContext context) {
     final ColorScheme cs = Theme.of(context).colorScheme;
 
-    // Status colour: green = met, amber = in progress, grey = nothing yet.
     final Color accent = score.fullyMet
         ? Colors.green
         : (score.sessionsDone > 0 || score.setsDone > 0)
@@ -71,18 +105,18 @@ class _GroupRow extends StatelessWidget {
             : cs.onSurface.withAlpha(70);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
         children: [
-          // Label + status dot
           SizedBox(
-            width: 78,
+            width: 84,
             child: Row(
               children: [
                 Container(
                   width: 8,
                   height: 8,
-                  decoration: BoxDecoration(shape: BoxShape.circle, color: accent),
+                  decoration:
+                      BoxDecoration(shape: BoxShape.circle, color: accent),
                 ),
                 const SizedBox(width: 6),
                 Flexible(
@@ -90,34 +124,27 @@ class _GroupRow extends StatelessWidget {
                     score.label,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                        fontSize: 13, fontWeight: FontWeight.w600),
+                        fontSize: 13, fontWeight: FontWeight.w500),
                   ),
                 ),
               ],
             ),
           ),
-          // Frequency dots
           _FrequencyDots(
             done: score.sessionsDone,
             target: score.frequencyTarget,
             color: accent,
           ),
           const SizedBox(width: 10),
-          // Sets progress bar + count
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: score.setsProgress,
-                    minHeight: 6,
-                    backgroundColor: cs.onSurface.withAlpha(20),
-                    valueColor: AlwaysStoppedAnimation<Color>(accent),
-                  ),
-                ),
-              ],
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: score.setsProgress,
+                minHeight: 6,
+                backgroundColor: cs.onSurface.withAlpha(20),
+                valueColor: AlwaysStoppedAnimation<Color>(accent),
+              ),
             ),
           ),
           const SizedBox(width: 8),
@@ -126,10 +153,7 @@ class _GroupRow extends StatelessWidget {
             child: Text(
               '${score.setsDone}/${score.setsTarget} sets',
               textAlign: TextAlign.end,
-              style: TextStyle(
-                fontSize: 11,
-                color: cs.onSurface.withAlpha(170),
-              ),
+              style: TextStyle(fontSize: 11, color: cs.onSurface.withAlpha(170)),
             ),
           ),
         ],

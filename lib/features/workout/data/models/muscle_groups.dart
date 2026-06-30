@@ -17,6 +17,17 @@ class MuscleGroup {
   /// All groups, in display order.
   static const List<String> all = [push, pull, legs, forearms, core];
 
+  /// The individual muscles we track (each gets its own weekly target), in
+  /// display order — clustered push → pull → forearms → legs → core. These are
+  /// the exact tags used by the exercise library's primaryMuscle.
+  static const List<String> trackedMuscles = [
+    'Chest', 'Shoulders', 'Triceps', // push
+    'Back', 'Biceps', // pull
+    'Forearms', // forearms
+    'Legs', // legs
+    'Core', // core
+  ];
+
   /// Human-readable labels.
   static const Map<String, String> labels = {
     push: 'Push',

@@ -89,8 +89,10 @@ class AppDatabase extends _$AppDatabase {
   ///       a deeper, higher-contrast orange) on existing data
   /// v9 → added muscle_targets (weekly targets per muscle group); re-tagged the
   ///       "Arms" exercises into Biceps / Triceps / Forearms
+  /// v10 → weekly targets are now per individual muscle (not per push/pull
+  ///        group) so one muscle can't be masked by another; reseed targets
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   /// The old vs. new default rotation-label colour (see v8 migration).
   static const int _oldRotationColor = 0xFFFFB347;
@@ -164,8 +166,12 @@ class AppDatabase extends _$AppDatabase {
             // Weekly muscle targets + split the broad "Arms" tag into
             // Biceps / Triceps / Forearms so push vs pull can be tracked.
             await m.createTable(muscleTargets);
-            await _seedMuscleTargets();
             await _retagArmExercises();
+          }
+          if (from < 10) {
+            // Targets are now per individual muscle, not per group. Reseed.
+            await delete(muscleTargets).go();
+            await _seedMuscleTargets();
           }
         },
         beforeOpen: (details) async {
@@ -192,16 +198,19 @@ class AppDatabase extends _$AppDatabase {
     }
   }
 
-  /// Seeds the five trackable muscle groups with your default weekly targets
-  /// (frequency, sets/session). Editable later in the targets editor.
+  /// Seeds the per-muscle default weekly targets (frequency, sets/session).
+  /// Editable later in the targets editor. groupKey holds the muscle tag.
   Future<void> _seedMuscleTargets() async {
-    // (groupKey, frequency, setsPerSession)
+    // (muscle, frequency, setsPerSession)
     const List<(String, int, int)> defaults = [
-      ('push', 2, 3),
-      ('pull', 2, 3),
-      ('legs', 2, 3),
-      ('forearms', 1, 3),
-      ('core', 2, 3),
+      ('Chest', 2, 3),
+      ('Shoulders', 2, 3),
+      ('Triceps', 2, 3),
+      ('Back', 2, 3),
+      ('Biceps', 2, 3),
+      ('Forearms', 1, 3),
+      ('Legs', 2, 3),
+      ('Core', 2, 3),
     ];
     for (int i = 0; i < defaults.length; i++) {
       final (String key, int freq, int sets) = defaults[i];
