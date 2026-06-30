@@ -62,6 +62,10 @@ class HomeWidgetService {
   static String _dateKey(DateTime d) =>
       '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
+  /// ARGB int → "#AARRGGBB" hex string (parsed natively, avoids int overflow).
+  static String _argbHex(int argb) =>
+      '#${argb.toRadixString(16).padLeft(8, '0').toUpperCase()}';
+
   /// Task priority (0 low / 1 med / 2 high) → dot colour hex.
   static String _priorityHex(int p) => switch (p) {
         2 => '#FFE07070', // high — soft red
@@ -109,6 +113,15 @@ class HomeWidgetService {
       final Map<String, String> shiftTypeByDate = {
         for (final s in allShifts) s.date: s.shiftType,
       };
+      // Rotation label + colour per date (for the month widget tiles).
+      final Map<String, ({String label, String colorHex})> rotationByDate = {
+        for (final s in allShifts)
+          if (s.rotationLabel != null && (s.rotationLabel as String).isNotEmpty)
+            s.date: (
+              label: s.rotationLabel as String,
+              colorHex: _argbHex(s.rotationColor ?? 0xFFFFB347),
+            ),
+      };
       // Per-day priority dot colours (most urgent first, up to 3).
       final Map<String, List<({int p, String hex})>> dotsTmp = {};
       for (final t in tasks) {
@@ -124,7 +137,7 @@ class HomeWidgetService {
               .toList(),
       };
       final List<Map<String, dynamic>> monthCells =
-          _buildMonthCells(now, shiftTypeByDate, dotsByDate);
+          _buildMonthCells(now, shiftTypeByDate, dotsByDate, rotationByDate);
 
       // ── All dated tasks for the combined widget's side list ────────────
       final List<Map<String, dynamic>> combinedTasks =
@@ -260,6 +273,7 @@ class HomeWidgetService {
     DateTime now,
     Map<String, String> shiftTypeByDate,
     Map<String, List<String>> dotsByDate,
+    Map<String, ({String label, String colorHex})> rotationByDate,
   ) {
     final DateTime first = DateTime(now.year, now.month, 1);
     final int daysInMonth = DateTime(now.year, now.month + 1, 0).day;
@@ -284,11 +298,14 @@ class HomeWidgetService {
       } else if (ds == todayStr) {
         bg = _monthTodayBg;
       }
+      final rot = rotationByDate[ds];
       cells.add({
         'day': d,
         'date': ds,
         'bg': bg,
         'fg': fg,
+        'rot': rot?.label ?? '',
+        'rotColor': rot?.colorHex ?? '',
         'dots': dotsByDate[ds] ?? const <String>[],
       });
     }

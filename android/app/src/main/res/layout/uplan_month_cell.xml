@@ -17,6 +17,17 @@
         android:textColor="#FFFFFFFF"
         android:textSize="13sp" />
 
+    <!-- Rotation label (ICU1, ER, …) — small, under the day number. -->
+    <TextView
+        android:id="@+id/cell_rot"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="8sp"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:textColor="#FFFFB347"
+        android:visibility="gone" />
+
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

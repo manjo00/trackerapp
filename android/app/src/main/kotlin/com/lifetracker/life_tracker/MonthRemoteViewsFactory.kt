@@ -22,6 +22,8 @@ class MonthRemoteViewsFactory(
         val date: String,
         val bg: String,
         val fg: String,
+        val rot: String,
+        val rotColor: String,
         val dots: List<String>,
     )
 
@@ -51,6 +53,8 @@ class MonthRemoteViewsFactory(
                         date = o.optString("date", ""),
                         bg = o.optString("bg", ""),
                         fg = o.optString("fg", "#FFFFFFFF"),
+                        rot = o.optString("rot", ""),
+                        rotColor = o.optString("rotColor", ""),
                         dots = dotColors,
                     )
                 )
@@ -74,6 +78,7 @@ class MonthRemoteViewsFactory(
         if (cell.day == 0) {
             // Leading blank.
             rv.setTextViewText(R.id.cell_day, "")
+            rv.setViewVisibility(R.id.cell_rot, View.GONE)
             for (id in dotIds) rv.setViewVisibility(id, View.GONE)
             rv.setInt(R.id.cell_root, "setBackgroundColor", Color.TRANSPARENT)
         } else {
@@ -81,6 +86,19 @@ class MonthRemoteViewsFactory(
             try {
                 rv.setTextColor(R.id.cell_day, Color.parseColor(cell.fg))
             } catch (_: Exception) {
+            }
+            // Rotation label under the day number.
+            if (cell.rot.isNotEmpty()) {
+                rv.setViewVisibility(R.id.cell_rot, View.VISIBLE)
+                rv.setTextViewText(R.id.cell_rot, cell.rot)
+                if (cell.rotColor.isNotEmpty()) {
+                    try {
+                        rv.setTextColor(R.id.cell_rot, Color.parseColor(cell.rotColor))
+                    } catch (_: Exception) {
+                    }
+                }
+            } else {
+                rv.setViewVisibility(R.id.cell_rot, View.GONE)
             }
             if (cell.bg.isNotEmpty()) {
                 try {

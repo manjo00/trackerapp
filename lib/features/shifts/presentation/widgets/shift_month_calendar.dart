@@ -325,25 +325,23 @@ class _DayCell extends ConsumerWidget {
                   color: ShiftStyle.iconColor(shift!.type),
                 ),
               ),
-            // Rotation label (centred)
+            // Rotation label — small, tucked under the day number (top-left).
             if (rotLabel != null)
               Positioned(
-                left: 0,
-                right: 0,
-                top: 19,
-                child: Center(
-                  child: Text(
-                    rotLabel,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 9,
-                      fontWeight: FontWeight.w600,
-                      color: rotColor != null
-                          ? Color(rotColor)
-                          : const Color(0xFFFFB347),
-                    ),
+                top: 16,
+                left: 5,
+                right: 3,
+                child: Text(
+                  rotLabel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 8,
+                    height: 1.0,
+                    fontWeight: FontWeight.w700,
+                    color: rotColor != null
+                        ? Color(rotColor)
+                        : const Color(0xFFFFB347),
                   ),
                 ),
               ),
