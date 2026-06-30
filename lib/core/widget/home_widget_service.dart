@@ -136,8 +136,23 @@ class HomeWidgetService {
               .map((x) => x.hex)
               .toList(),
       };
+      // Build a range of months (last month → +3) so the widget arrows can
+      // navigate without re-querying. Keyed by "yyyy-MM".
+      final String todayKey = _dateKey(DateTime(now.year, now.month, now.day));
+      final Map<String, List<Map<String, dynamic>>> monthCellsMap = {};
+      final Map<String, String> monthTitlesMap = {};
+      for (int off = -1; off <= 3; off++) {
+        final DateTime m = DateTime(now.year, now.month + off, 1);
+        final String key =
+            '${m.year}-${m.month.toString().padLeft(2, '0')}';
+        monthCellsMap[key] = _buildMonthCells(
+            m, todayKey, shiftTypeByDate, dotsByDate, rotationByDate);
+        monthTitlesMap[key] = '${_fullMonths[m.month]} ${m.year}';
+      }
+      final String currentKey =
+          '${now.year}-${now.month.toString().padLeft(2, '0')}';
       final List<Map<String, dynamic>> monthCells =
-          _buildMonthCells(now, shiftTypeByDate, dotsByDate, rotationByDate);
+          monthCellsMap[currentKey] ?? const [];
 
       // ── All dated tasks for the combined widget's side list ────────────
       final List<Map<String, dynamic>> combinedTasks =
@@ -165,6 +180,10 @@ class HomeWidgetService {
           'month_title', '${_fullMonths[now.month]} ${now.year}');
       await HomeWidget.saveWidgetData<String>(
           'month_cells', jsonEncode(monthCells));
+      await HomeWidget.saveWidgetData<String>(
+          'month_cells_map', jsonEncode(monthCellsMap));
+      await HomeWidget.saveWidgetData<String>(
+          'month_titles_map', jsonEncode(monthTitlesMap));
       await HomeWidget.saveWidgetData<String>('widget_today', today);
       await HomeWidget.saveWidgetData<String>(
           'combined_tasks', jsonEncode(combinedTasks));
@@ -270,22 +289,22 @@ class HomeWidgetService {
   /// one cell per day with shift colours + a task dot. Colours are hex strings
   /// (parsed natively) to avoid 32-bit int overflow over the platform channel.
   static List<Map<String, dynamic>> _buildMonthCells(
-    DateTime now,
+    DateTime month,
+    String todayStr,
     Map<String, String> shiftTypeByDate,
     Map<String, List<String>> dotsByDate,
     Map<String, ({String label, String colorHex})> rotationByDate,
   ) {
-    final DateTime first = DateTime(now.year, now.month, 1);
-    final int daysInMonth = DateTime(now.year, now.month + 1, 0).day;
+    final DateTime first = DateTime(month.year, month.month, 1);
+    final int daysInMonth = DateTime(month.year, month.month + 1, 0).day;
     final int leading = first.weekday - 1; // Monday = 1 → 0 blanks
-    final String todayStr = _dateKey(DateTime(now.year, now.month, now.day));
 
     final List<Map<String, dynamic>> cells = [];
     for (int i = 0; i < leading; i++) {
       cells.add({'day': 0});
     }
     for (int d = 1; d <= daysInMonth; d++) {
-      final String ds = _dateKey(DateTime(now.year, now.month, d));
+      final String ds = _dateKey(DateTime(month.year, month.month, d));
       final String? type = shiftTypeByDate[ds];
       String bg = '';
       String fg = _monthWhiteFg;
