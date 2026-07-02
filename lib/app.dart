@@ -82,8 +82,9 @@ class _LifeTrackerAppState extends ConsumerState<LifeTrackerApp>
   /// Pushes the current Today snapshot to the native home-screen widget,
   /// then re-renders the live dashboard notification from the same data.
   Future<void> _syncWidget() async {
-    await HomeWidgetService.sync(ref.read(appDatabaseProvider));
-    await LiveDashboardService.startIfEnabled();
+    final db = ref.read(appDatabaseProvider);
+    await HomeWidgetService.sync(db);
+    await LiveDashboardService.syncCards(db);
   }
 
   /// Invalidates providers whose results are anchored to the current date, so
@@ -116,8 +117,9 @@ class _LifeTrackerAppState extends ConsumerState<LifeTrackerApp>
 
     // Seed the home-screen widget with today's snapshot on launch, and
     // bring up the live dashboard notification if the user enabled it.
-    await HomeWidgetService.sync(ref.read(appDatabaseProvider));
-    await LiveDashboardService.startIfEnabled();
+    final db = ref.read(appDatabaseProvider);
+    await HomeWidgetService.sync(db);
+    await LiveDashboardService.syncCards(db);
   }
 
   @override

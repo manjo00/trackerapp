@@ -1,13 +1,19 @@
+import 'dart:convert';
+
 import 'package:flutter/services.dart';
 import 'package:home_widget/home_widget.dart';
+
+import '../../features/habits/data/dao/habits_dao.dart';
+import '../../features/tasks/data/dao/tasks_dao.dart';
+import '../database/app_database.dart';
 
 /// Flutter-side remote control for the persistent "Live dashboard"
 /// notification (native LiveDashboardService.kt).
 ///
 /// The native side owns the notification; this class only (a) commands it
-/// over the `uplan/live` MethodChannel and (b) stores the user's on/off
-/// preference in the same store the native side reads
-/// (HomeWidgetPreferences, via the home_widget plugin).
+/// over the `uplan/live` MethodChannel, (b) stores the user's on/off
+/// preference, and (c) pre-renders the slideshow cards as JSON into the
+/// store the native side reads (HomeWidgetPreferences, via home_widget).
 class LiveDashboardService {
   const LiveDashboardService._();
 
@@ -15,6 +21,13 @@ class LiveDashboardService {
 
   /// Prefs key — read by the settings screen and the launch/resume hooks.
   static const String _enabledKey = 'live_enabled';
+
+  /// Slideshow payload the native service pages through.
+  static const String _cardsKey = 'live_cards';
+
+  /// Snoozed card ids ("task:12" → hide-until epoch ms). Written by the
+  /// notification's snooze action (phase 3); filtered here on every sync.
+  static const String _snoozesKey = 'live_snoozes';
 
   /// Whether the user has turned the live notification on.
   static Future<bool> isEnabled() async =>
@@ -42,6 +55,126 @@ class LiveDashboardService {
   /// Convenience for launch/resume hooks: start only if the user opted in.
   static Future<void> startIfEnabled() async {
     if (await isEnabled()) await start();
+  }
+
+  // ── Slideshow cards ──────────────────────────────────────────────────────
+
+  /// Task priority (0 low / 1 med / 2 high) → accent hex (matches the
+  /// home-screen widget's priority dots).
+  static String _priorityHex(int p) => switch (p) {
+        2 => '#FFE07070', // high — soft red
+        0 => '#FF8E9AAF', // low — muted slate
+        _ => '#FFFFB347', // medium — warm amber
+      };
+
+  static const String _habitHex = '#FFA6ABEC'; // periwinkle
+  static const String _inboxHex = '#FF8E9AAF'; // slate
+
+  static String _dateKey(DateTime d) =>
+      '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+  /// Rebuilds the slideshow payload from the database and hands it to the
+  /// native service. Cheap one-shot queries — called from the same
+  /// launch/resume/background hooks as the home-screen widget sync.
+  static Future<void> syncCards(AppDatabase db) async {
+    try {
+      final DateTime now = DateTime.now();
+      final String today = _dateKey(DateTime(now.year, now.month, now.day));
+
+      // Live snoozes: drop expired entries, keep active ones for filtering.
+      final Map<String, dynamic> snoozes = _decodeMap(
+          await HomeWidget.getWidgetData<String>(_snoozesKey));
+      snoozes.removeWhere((_, until) =>
+          until is! num || until <= now.millisecondsSinceEpoch);
+
+      final List<Map<String, dynamic>> cards = [];
+
+      // ── Tasks: overdue first, then due today, then inbox (undated) ──────
+      final tasks = await TasksDao(db).getAllTasks();
+      final pending = tasks.where((t) => !t.isCompleted).toList();
+
+      final overdue = pending
+          .where((t) => t.dueDate != null && (t.dueDate as String) != today)
+          .where((t) => (t.dueDate as String).compareTo(today) < 0)
+          .toList()
+        ..sort((a, b) =>
+            (a.dueDate as String).compareTo(b.dueDate as String));
+      for (final t in overdue) {
+        final int days = DateTime.parse(today)
+            .difference(DateTime.parse(t.dueDate as String))
+            .inDays;
+        cards.add({
+          'type': 'task',
+          'id': t.id,
+          'title': t.title,
+          'sub': '${days}d overdue',
+          'color': '#FFE57373', // overdue red beats priority colour
+        });
+      }
+
+      final dueToday = pending.where((t) => t.dueDate == today).toList()
+        ..sort((a, b) => b.priority.compareTo(a.priority));
+      for (final t in dueToday) {
+        final String time =
+            t.dueTime == null ? '' : ' · ${t.dueTime as String}';
+        cards.add({
+          'type': 'task',
+          'id': t.id,
+          'title': t.title,
+          'sub': 'Due today$time',
+          'color': _priorityHex(t.priority),
+        });
+      }
+
+      // ── Habits not yet checked off today ────────────────────────────────
+      final HabitsDao habitsDao = HabitsDao(db);
+      for (final h in await habitsDao.getAllHabits()) {
+        if (await habitsDao.isCompletedOn(h.id, today)) continue;
+        cards.add({
+          'type': 'habit',
+          'id': h.id,
+          'title': h.name,
+          'sub': 'Habit',
+          'color': _habitHex,
+        });
+      }
+
+      // ── Inbox: undated captures ──────────────────────────────────────────
+      final inbox = pending.where((t) => t.dueDate == null).toList()
+        ..sort((a, b) => b.priority.compareTo(a.priority));
+      for (final t in inbox) {
+        cards.add({
+          'type': 'inbox',
+          'id': t.id,
+          'title': t.title,
+          'sub': 'Inbox',
+          'color': _inboxHex,
+        });
+      }
+
+      // Hide snoozed cards.
+      cards.removeWhere((c) => snoozes.containsKey('${c['type']}:${c['id']}'));
+
+      await HomeWidget.saveWidgetData<String>(
+          _snoozesKey, jsonEncode(snoozes));
+      await HomeWidget.saveWidgetData<String>(_cardsKey, jsonEncode(cards));
+
+      // Re-render only if the dashboard is on — refresh() would otherwise
+      // start the service for a user who turned it off.
+      await startIfEnabled();
+    } catch (_) {
+      // The dashboard must never break app flows (saves, navigation, ...).
+    }
+  }
+
+  static Map<String, dynamic> _decodeMap(String? json) {
+    if (json == null || json.isEmpty) return {};
+    try {
+      final decoded = jsonDecode(json);
+      return decoded is Map<String, dynamic> ? decoded : {};
+    } on FormatException {
+      return {};
+    }
   }
 
   static Future<void> _invoke(String method) async {
