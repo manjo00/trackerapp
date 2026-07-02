@@ -10,6 +10,13 @@ class MainActivity : FlutterActivity() {
     private val channelName = "uplan/widget"
     private var methodChannel: MethodChannel? = null
 
+    companion object {
+        /// Live-dashboard channel handle. Static so native components that
+        /// outlive this activity (e.g. notification action receivers) can
+        /// invoke Dart while the app process is running.
+        var liveChannel: MethodChannel? = null
+    }
+
     /// Transparent surface so the quick-add sheet's scrim reveals the home
     /// screen. Opaque app screens paint over it, so they're unaffected.
     override fun getBackgroundMode(): BackgroundMode = BackgroundMode.transparent
@@ -20,6 +27,26 @@ class MainActivity : FlutterActivity() {
             flutterEngine.dartExecutor.binaryMessenger,
             channelName,
         )
+
+        // Live dashboard: Flutter drives the foreground service through here.
+        liveChannel = MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            "uplan/live",
+        ).apply {
+            setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "startDashboard", "refreshDashboard" -> {
+                        LiveDashboardService.start(this@MainActivity)
+                        result.success(true)
+                    }
+                    "stopDashboard" -> {
+                        LiveDashboardService.stop(this@MainActivity)
+                        result.success(true)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+        }
     }
 
     /// Cold start: if the widget "+" launched us (uplan://add_task), tell

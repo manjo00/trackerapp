@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/database/database_provider.dart';
+import 'core/notifications/live_dashboard_service.dart';
 import 'core/notifications/notification_service.dart';
 import 'core/router/app_router.dart';
 import 'core/settings/settings_provider.dart';
@@ -78,9 +79,11 @@ class _LifeTrackerAppState extends ConsumerState<LifeTrackerApp>
     }
   }
 
-  /// Pushes the current Today snapshot to the native home-screen widget.
-  void _syncWidget() {
-    HomeWidgetService.sync(ref.read(appDatabaseProvider));
+  /// Pushes the current Today snapshot to the native home-screen widget,
+  /// then re-renders the live dashboard notification from the same data.
+  Future<void> _syncWidget() async {
+    await HomeWidgetService.sync(ref.read(appDatabaseProvider));
+    await LiveDashboardService.startIfEnabled();
   }
 
   /// Invalidates providers whose results are anchored to the current date, so
@@ -111,8 +114,10 @@ class _LifeTrackerAppState extends ConsumerState<LifeTrackerApp>
       trackers: trackers,
     );
 
-    // Seed the home-screen widget with today's snapshot on launch.
+    // Seed the home-screen widget with today's snapshot on launch, and
+    // bring up the live dashboard notification if the user enabled it.
     await HomeWidgetService.sync(ref.read(appDatabaseProvider));
+    await LiveDashboardService.startIfEnabled();
   }
 
   @override

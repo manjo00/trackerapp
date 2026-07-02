@@ -12,6 +12,10 @@
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <!-- android_alarm_manager_plus: wake the device to run alarm callbacks. -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Live dashboard: persistent notification is hosted by a foreground
+         service (the only way a notification survives a swipe). -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 
     <application
         android:label="Uplan"
@@ -85,6 +89,18 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
+
+        <!-- Live dashboard: foreground service owning the persistent
+             notification. specialUse because none of the typed categories
+             (media, location, ...) fit a glanceable dashboard. -->
+        <service
+            android:name=".LiveDashboardService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Glanceable personal dashboard notification" />
+        </service>
 
         <!-- Uplan "Today" home-screen widget. Exported so the launcher (a
              separate process) can host it. -->

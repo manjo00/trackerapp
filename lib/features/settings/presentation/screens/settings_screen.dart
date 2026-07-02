@@ -12,6 +12,7 @@ import '../../../../../core/settings/settings_provider.dart';
 import '../../../habits/presentation/providers/habits_providers.dart';
 import '../../../tasks/presentation/providers/tasks_providers.dart';
 import '../../../trackers/presentation/providers/trackers_providers.dart';
+import 'live_notification_settings_screen.dart';
 import 'widget_settings_screen.dart';
 
 /// App settings screen.
@@ -199,6 +200,25 @@ class SettingsScreen extends ConsumerWidget {
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute<void>(
                 builder: (_) => const WidgetSettingsScreen(),
+              ),
+            ),
+          ),
+
+          const Divider(indent: 16, endIndent: 16),
+
+          // ── Live notification ──────────────────────────────────────────
+          const _SectionHeader(label: 'Live notification'),
+
+          ListTile(
+            leading: Icon(Icons.notifications_paused_rounded,
+                color: cs.primary),
+            title: const Text('Live notification'),
+            subtitle: const Text(
+                'Persistent dashboard in the notification shade'),
+            trailing: const Icon(Icons.chevron_right_rounded),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const LiveNotificationSettingsScreen(),
               ),
             ),
           ),
