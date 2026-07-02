@@ -127,6 +127,15 @@
             android:name=".LiveActionReceiver"
             android:exported="false" />
 
+        <!-- Bring the Live dashboard back after a reboot (when enabled). -->
+        <receiver
+            android:name=".LiveBootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
         <!-- Uplan "Today" home-screen widget. Exported so the launcher (a
              separate process) can host it. -->
         <receiver

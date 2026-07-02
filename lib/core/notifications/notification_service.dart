@@ -71,6 +71,8 @@ Future<void> alarmNotificationCallback(int id) async {
 /// ## Notification / alarm ID ranges (never overlap)
 /// | 0 | daily reminder · 1–9999 habits · 10000+id×3+slot tasks
 /// | 30000+id trackers · 997 scheduled test · 998 rest · 999 immediate test
+/// | 50001 live dashboard (FGS — LiveDashboardService.kt)
+/// | 50002 rest-timer Live Update / Now Bar (RestLiveUpdate.kt)
 class NotificationService {
   NotificationService._();
   static final NotificationService instance = NotificationService._();
