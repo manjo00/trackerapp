@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data' show Int64List;
 import 'dart:ui' show DartPluginRegistrant;
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:flutter/material.dart';
@@ -100,6 +101,19 @@ class NotificationService {
     importance: Importance.high,
   );
 
+  /// Rest-timer-finished gets its own channel because it must VIBRATE
+  /// (gym: phone on the bench, screen off) and channel settings are
+  /// immutable after creation — can't retrofit a pattern onto _itemChannel.
+  static final AndroidNotificationChannel _restDoneChannel =
+      AndroidNotificationChannel(
+    'life_tracker_rest_done',
+    'Rest finished',
+    description: 'Buzz when the workout rest timer hits zero',
+    importance: Importance.high,
+    enableVibration: true,
+    vibrationPattern: Int64List.fromList([0, 400, 250, 400, 250, 600]),
+  );
+
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
 
@@ -122,6 +136,7 @@ class NotificationService {
             AndroidFlutterLocalNotificationsPlugin>();
     await android?.createNotificationChannel(_globalChannel);
     await android?.createNotificationChannel(_itemChannel);
+    await android?.createNotificationChannel(_restDoneChannel);
 
     final bool? granted = await android?.requestNotificationsPermission();
     _canUseExact = await android?.canScheduleExactNotifications() ?? false;
@@ -136,12 +151,27 @@ class NotificationService {
         'Notifications are working! 🎉',
       );
 
-  Future<void> showRestComplete() => _showNow(
-        _restCompleteId,
-        'Rest over 💪',
-        'Time for your next set',
-        timeoutMs: 10000,
-      );
+  /// Rest hit zero: notification + a strong buzz (its own channel — the
+  /// in-app HapticFeedback only fires when the app is foregrounded).
+  Future<void> showRestComplete() async {
+    await _plugin.show(
+      _restCompleteId,
+      'Rest over 💪',
+      'Time for your next set',
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          _restDoneChannel.id,
+          _restDoneChannel.name,
+          channelDescription: _restDoneChannel.description,
+          importance: Importance.high,
+          priority: Priority.high,
+          enableVibration: true,
+          vibrationPattern: _restDoneChannel.vibrationPattern,
+          timeoutAfter: 10000,
+        ),
+      ),
+    );
+  }
 
   Future<void> _showNow(int id, String title, String body,
       {int? timeoutMs}) async {

@@ -25,6 +25,9 @@ class _LiveNotificationSettingsScreenState
   /// action callback (live_background_callback.dart).
   String _snoozeMode = 'hide1h';
 
+  /// Whether the OS lets the rest timer promote to the Now Bar.
+  bool _canPromote = false;
+
   @override
   void initState() {
     super.initState();
@@ -35,10 +38,12 @@ class _LiveNotificationSettingsScreenState
     final bool enabled = await LiveDashboardService.isEnabled();
     final String mode =
         await HomeWidget.getWidgetData<String>('live_snooze_mode') ?? 'hide1h';
+    final bool canPromote = await LiveDashboardService.canPromote();
     if (!mounted) return;
     setState(() {
       _enabled = enabled;
       _snoozeMode = mode;
+      _canPromote = canPromote;
       _loaded = true;
     });
   }
@@ -131,6 +136,29 @@ class _LiveNotificationSettingsScreenState
                       ),
                     ],
                   ),
+                ),
+
+                const Divider(indent: 16, endIndent: 16, height: 32),
+
+                // Rest-timer Now Bar status — diagnosable without a cable.
+                ListTile(
+                  leading: Icon(
+                    _canPromote
+                        ? Icons.check_circle_rounded
+                        : Icons.error_outline_rounded,
+                    color: _canPromote ? Colors.green : cs.error,
+                  ),
+                  title: const Text('Rest timer on the Now Bar'),
+                  subtitle: Text(
+                    _canPromote
+                        ? 'Live updates allowed — the rest countdown can '
+                            'appear on the Now Bar and lock screen'
+                        : 'Live updates permission is off. Enable it in '
+                            'Samsung settings: Notifications → Advanced '
+                            'settings → Live updates → Uplan (and check '
+                            'Lock screen → Now bar is on)',
+                  ),
+                  isThreeLine: !_canPromote,
                 ),
               ],
             ),

@@ -57,30 +57,6 @@ class LiveDashboardService {
     if (await isEnabled()) await start();
   }
 
-  // ── Workout context ──────────────────────────────────────────────────────
-
-  /// Switches the dashboard to the workout card (session name + live
-  /// elapsed timer) for the duration of the active workout.
-  static Future<void> enterWorkoutMode({
-    required String name,
-    required DateTime startedAt,
-  }) async {
-    await HomeWidget.saveWidgetData<String>(
-        'live_workout',
-        jsonEncode({
-          'name': name,
-          'startedAtMillis': startedAt.millisecondsSinceEpoch,
-        }));
-    await HomeWidget.saveWidgetData<String>('live_mode', 'workout');
-    await startIfEnabled();
-  }
-
-  /// Back to the regular card slideshow (workout finished/discarded).
-  static Future<void> exitWorkoutMode() async {
-    await HomeWidget.saveWidgetData<String>('live_mode', 'cards');
-    await startIfEnabled();
-  }
-
   // ── Rest-timer Live Update (Now Bar) ─────────────────────────────────────
   //
   // A second, transient notification (id 50002) that Android 16 promotes to
@@ -109,6 +85,19 @@ class LiveDashboardService {
 
   /// Removes the rest countdown (skipped, finished, or workout over).
   static Future<void> cancelRest() => _invoke('cancelRest');
+
+  /// Whether the OS lets us promote the rest timer to a Live Update
+  /// (Samsung Now Bar / status chip). False when the "Live updates"
+  /// permission hasn't been granted to the app (or below Android 16).
+  static Future<bool> canPromote() async {
+    try {
+      return await _channel.invokeMethod<bool>('canPromote') ?? false;
+    } on MissingPluginException {
+      return false;
+    } on PlatformException {
+      return false;
+    }
+  }
 
   // ── Slideshow cards ──────────────────────────────────────────────────────
 

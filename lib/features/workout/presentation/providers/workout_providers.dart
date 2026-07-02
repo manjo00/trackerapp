@@ -305,20 +305,13 @@ class ActiveWorkout extends _$ActiveWorkout {
     final int sessionId = await repo.createSession(
       programSessionId: programSessionId,
     );
-    final DateTime startedAt = DateTime.now();
     state = AsyncData(ActiveWorkoutState(
       sessionId: sessionId,
-      startedAt: startedAt,
+      startedAt: DateTime.now(),
       programSessionId: programSessionId,
       programSessionName: programSessionName,
       programExercises: programExercises,
     ));
-    // Live notification: swap the dashboard to the workout card.
-    // Fire-and-forget — must never block starting a workout.
-    LiveDashboardService.enterWorkoutMode(
-      name: programSessionName ?? 'Workout',
-      startedAt: startedAt,
-    );
   }
 
   /// Adds a set for [exerciseName], auto-detects PR, and updates state.
@@ -432,8 +425,7 @@ class ActiveWorkout extends _$ActiveWorkout {
     await repo.finishSession(current.sessionId, name: name, notes: notes);
     state = const AsyncData(null);
     ref.invalidate(allWorkoutSessionsProvider);
-    // Live notification: back to the card slideshow, drop the rest chip.
-    LiveDashboardService.exitWorkoutMode();
+    // Drop the rest-timer notification if one is still counting.
     LiveDashboardService.cancelRest();
   }
 
@@ -446,8 +438,7 @@ class ActiveWorkout extends _$ActiveWorkout {
     }
     state = const AsyncData(null);
     ref.invalidate(allWorkoutSessionsProvider);
-    // Live notification: back to the card slideshow, drop the rest chip.
-    LiveDashboardService.exitWorkoutMode();
+    // Drop the rest-timer notification if one is still counting.
     LiveDashboardService.cancelRest();
   }
 

@@ -57,6 +57,16 @@ class MainActivity : FlutterActivity() {
                         RestLiveUpdate.cancel(this@MainActivity)
                         result.success(true)
                     }
+                    // Has the OS granted Live Updates promotion (Now Bar)?
+                    "canPromote" -> {
+                        val can = if (android.os.Build.VERSION.SDK_INT >= 36) {
+                            getSystemService(android.app.NotificationManager::class.java)
+                                .canPostPromotedNotifications()
+                        } else {
+                            false
+                        }
+                        result.success(can)
+                    }
                     else -> result.notImplemented()
                 }
             }
