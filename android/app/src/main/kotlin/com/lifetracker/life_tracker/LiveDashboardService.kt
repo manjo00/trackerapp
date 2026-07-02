@@ -13,8 +13,10 @@ import android.net.Uri
 import android.os.IBinder
 import android.view.View
 import android.widget.RemoteViews
+import android.os.SystemClock
 import es.antonborri.home_widget.HomeWidgetBackgroundIntent
 import org.json.JSONArray
+import org.json.JSONObject
 
 /**
  * Foreground service that owns the persistent "Live dashboard" notification.
@@ -169,6 +171,35 @@ class LiveDashboardService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
+    /**
+     * The workout takeover card: session name + a Chronometer ticking up
+     * from the workout's start. Used for both collapsed and expanded views
+     * while live_mode == "workout" (no paging mid-workout).
+     */
+    private fun buildWorkoutViews(workoutJson: String): RemoteViews {
+        val obj = try {
+            JSONObject(workoutJson)
+        } catch (_: Exception) {
+            JSONObject()
+        }
+        val name = obj.optString("name", "Workout")
+        val startedAtMillis =
+            obj.optLong("startedAtMillis", System.currentTimeMillis())
+
+        return RemoteViews(packageName, R.layout.live_workout_card).apply {
+            setTextViewText(R.id.live_workout_name, name)
+            // Chronometer bases on elapsedRealtime, our timestamp is
+            // wall-clock — convert: base = now(elapsed) - elapsedSoFar.
+            setChronometer(
+                R.id.live_workout_elapsed,
+                SystemClock.elapsedRealtime() -
+                    (System.currentTimeMillis() - startedAtMillis),
+                null,
+                true,
+            )
+        }
+    }
+
     private fun buildNotification(): Notification {
         val prefs = getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val date = prefs.getString("today_date", "") ?: ""
@@ -176,6 +207,34 @@ class LiveDashboardService : Service() {
         val counts = prefs.getString("today_counts", "Open Uplan to sync") ?: ""
         val header = if (shift.isEmpty()) "$counts  ·  $date"
         else "$counts  ·  $shift  ·  $date"
+
+        // Tapping the card body opens the app (shared by both modes).
+        val openApp = PendingIntent.getActivity(
+            this,
+            RC_OPEN_APP,
+            Intent(this, MainActivity::class.java),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+
+        // Android 14+ lets users swipe away FGS notifications (the service
+        // keeps running, only the card hides). "Always on" is this feature's
+        // whole point, so on dismissal we immediately re-post.
+        val repost = servicePendingIntent(ACTION_REFRESH, RC_REPOST)
+
+        // ── Workout mode: the elapsed-timer card takes over ────────────────
+        if (prefs.getString("live_mode", "cards") == "workout") {
+            val views =
+                buildWorkoutViews(prefs.getString("live_workout", "{}") ?: "{}")
+            return Notification.Builder(this, CHANNEL_ID)
+                .setSmallIcon(R.mipmap.ic_launcher)
+                .setOngoing(true)
+                .setOnlyAlertOnce(true)
+                .setCustomContentView(views)
+                .setStyle(Notification.DecoratedCustomViewStyle())
+                .setContentIntent(openApp)
+                .setDeleteIntent(repost)
+                .build()
+        }
 
         val cards = loadCards()
         // Wrap the index in both directions (‹ from the first card lands on
@@ -241,19 +300,6 @@ class LiveDashboardService : Service() {
             setOnClickPendingIntent(
                 R.id.live_next, servicePendingIntent(ACTION_NEXT, RC_NEXT))
         }
-
-        // Tapping the card body opens the app.
-        val openApp = PendingIntent.getActivity(
-            this,
-            RC_OPEN_APP,
-            Intent(this, MainActivity::class.java),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-        )
-
-        // Android 14+ lets users swipe away FGS notifications (the service
-        // keeps running, only the card hides). "Always on" is this feature's
-        // whole point, so on dismissal we immediately re-post.
-        val repost = servicePendingIntent(ACTION_REFRESH, RC_REPOST)
 
         return Notification.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)

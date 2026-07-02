@@ -57,6 +57,59 @@ class LiveDashboardService {
     if (await isEnabled()) await start();
   }
 
+  // ── Workout context ──────────────────────────────────────────────────────
+
+  /// Switches the dashboard to the workout card (session name + live
+  /// elapsed timer) for the duration of the active workout.
+  static Future<void> enterWorkoutMode({
+    required String name,
+    required DateTime startedAt,
+  }) async {
+    await HomeWidget.saveWidgetData<String>(
+        'live_workout',
+        jsonEncode({
+          'name': name,
+          'startedAtMillis': startedAt.millisecondsSinceEpoch,
+        }));
+    await HomeWidget.saveWidgetData<String>('live_mode', 'workout');
+    await startIfEnabled();
+  }
+
+  /// Back to the regular card slideshow (workout finished/discarded).
+  static Future<void> exitWorkoutMode() async {
+    await HomeWidget.saveWidgetData<String>('live_mode', 'cards');
+    await startIfEnabled();
+  }
+
+  // ── Rest-timer Live Update (Now Bar) ─────────────────────────────────────
+  //
+  // A second, transient notification (id 50002) that Android 16 promotes to
+  // the status-bar chip / Samsung Now Bar / Flip cover screen. Posted
+  // regardless of the dashboard toggle — it belongs to the workout, not the
+  // dashboard.
+
+  /// Posts (or re-posts after ±15s) the rest countdown.
+  static Future<void> startRest({
+    required int remainingSeconds,
+    required int totalSeconds,
+  }) async {
+    try {
+      await _channel.invokeMethod<void>('startRest', {
+        'endAtMillis': DateTime.now()
+                .add(Duration(seconds: remainingSeconds))
+                .millisecondsSinceEpoch,
+        'totalSeconds': totalSeconds,
+      });
+    } on MissingPluginException {
+      // Non-Android platform / tests.
+    } on PlatformException {
+      // Never let a notification failure break the timer.
+    }
+  }
+
+  /// Removes the rest countdown (skipped, finished, or workout over).
+  static Future<void> cancelRest() => _invoke('cancelRest');
+
   // ── Slideshow cards ──────────────────────────────────────────────────────
 
   /// Task priority (0 low / 1 med / 2 high) → accent hex (matches the

@@ -16,6 +16,9 @@
          service (the only way a notification survives a swipe). -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <!-- Android 16 Live Updates: lets the rest-timer notification promote to
+         the status-bar chip / Samsung Now Bar / Flip cover screen. -->
+    <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
 
     <application
         android:label="Uplan"
@@ -118,6 +121,11 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Glanceable personal dashboard notification" />
         </service>
+
+        <!-- Rest-timer notification buttons (+15s / Skip) → Dart RestTimer. -->
+        <receiver
+            android:name=".LiveActionReceiver"
+            android:exported="false" />
 
         <!-- Uplan "Today" home-screen widget. Exported so the launcher (a
              separate process) can host it. -->

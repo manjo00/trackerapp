@@ -43,6 +43,20 @@ class MainActivity : FlutterActivity() {
                         LiveDashboardService.stop(this@MainActivity)
                         result.success(true)
                     }
+                    // Rest-timer Live Update (Now Bar) — id 50002.
+                    "startRest" -> {
+                        val endAt = call.argument<Number>("endAtMillis")
+                        val total = call.argument<Number>("totalSeconds")
+                        if (endAt != null && total != null) {
+                            RestLiveUpdate.post(
+                                this@MainActivity, endAt.toLong(), total.toInt())
+                        }
+                        result.success(true)
+                    }
+                    "cancelRest" -> {
+                        RestLiveUpdate.cancel(this@MainActivity)
+                        result.success(true)
+                    }
                     else -> result.notImplemented()
                 }
             }

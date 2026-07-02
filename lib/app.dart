@@ -12,6 +12,7 @@ import 'features/habits/presentation/providers/habits_providers.dart';
 import 'features/tasks/presentation/providers/tasks_providers.dart';
 import 'features/trackers/presentation/providers/trackers_providers.dart';
 import 'features/workout/presentation/providers/program_providers.dart';
+import 'features/workout/presentation/providers/workout_providers.dart';
 
 /// Root widget of the app.
 ///
@@ -32,6 +33,11 @@ class _LifeTrackerAppState extends ConsumerState<LifeTrackerApp>
   /// app was already running (cold starts are handled by getInitialRoute).
   static const MethodChannel _widgetChannel = MethodChannel('uplan/widget');
 
+  /// Same channel LiveDashboardService commands the native side on — here we
+  /// handle the reverse direction: rest-timer buttons tapped on the Live
+  /// Update notification (Now Bar) calling back into the Dart RestTimer.
+  static const MethodChannel _liveChannel = MethodChannel('uplan/live');
+
   @override
   void initState() {
     super.initState();
@@ -39,11 +45,13 @@ class _LifeTrackerAppState extends ConsumerState<LifeTrackerApp>
     // Run rescheduleAll after the first frame so providers are ready.
     WidgetsBinding.instance.addPostFrameCallback((_) => _reschedule());
     _widgetChannel.setMethodCallHandler(_onWidgetMethod);
+    _liveChannel.setMethodCallHandler(_onLiveMethod);
   }
 
   @override
   void dispose() {
     _widgetChannel.setMethodCallHandler(null);
+    _liveChannel.setMethodCallHandler(null);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -53,6 +61,15 @@ class _LifeTrackerAppState extends ConsumerState<LifeTrackerApp>
       // Replace (not push) so no opaque app screen sits behind the sheet —
       // the translucent window then shows the home screen through the scrim.
       appRouter.go('/quick-add');
+    }
+  }
+
+  Future<void> _onLiveMethod(MethodCall call) async {
+    switch (call.method) {
+      case 'restAdd15':
+        ref.read(restTimerProvider.notifier).addSeconds(15);
+      case 'restSkip':
+        ref.read(restTimerProvider.notifier).cancel();
     }
   }
 

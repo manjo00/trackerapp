@@ -6,6 +6,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/database/database_provider.dart';
+import '../../../../core/notifications/live_dashboard_service.dart';
 import '../../../../core/notifications/notification_service.dart';
 import '../../../shifts/data/models/work_shift_model.dart';
 import '../../../shifts/presentation/providers/shifts_providers.dart';
@@ -304,13 +305,20 @@ class ActiveWorkout extends _$ActiveWorkout {
     final int sessionId = await repo.createSession(
       programSessionId: programSessionId,
     );
+    final DateTime startedAt = DateTime.now();
     state = AsyncData(ActiveWorkoutState(
       sessionId: sessionId,
-      startedAt: DateTime.now(),
+      startedAt: startedAt,
       programSessionId: programSessionId,
       programSessionName: programSessionName,
       programExercises: programExercises,
     ));
+    // Live notification: swap the dashboard to the workout card.
+    // Fire-and-forget — must never block starting a workout.
+    LiveDashboardService.enterWorkoutMode(
+      name: programSessionName ?? 'Workout',
+      startedAt: startedAt,
+    );
   }
 
   /// Adds a set for [exerciseName], auto-detects PR, and updates state.
@@ -424,6 +432,9 @@ class ActiveWorkout extends _$ActiveWorkout {
     await repo.finishSession(current.sessionId, name: name, notes: notes);
     state = const AsyncData(null);
     ref.invalidate(allWorkoutSessionsProvider);
+    // Live notification: back to the card slideshow, drop the rest chip.
+    LiveDashboardService.exitWorkoutMode();
+    LiveDashboardService.cancelRest();
   }
 
   /// Discards the active state. Prunes empty sets but keeps the session in
@@ -435,6 +446,9 @@ class ActiveWorkout extends _$ActiveWorkout {
     }
     state = const AsyncData(null);
     ref.invalidate(allWorkoutSessionsProvider);
+    // Live notification: back to the card slideshow, drop the rest chip.
+    LiveDashboardService.exitWorkoutMode();
+    LiveDashboardService.cancelRest();
   }
 
   /// Deletes auto-created sets the user never filled in (no weight and no reps).
@@ -486,6 +500,10 @@ class RestTimer extends _$RestTimer {
     _lastDuration = seconds;
     state = seconds;
     _run();
+    // Mirror the countdown outside the app: Android 16 Live Update →
+    // status chip / Samsung Now Bar / Flip cover screen. Fire-and-forget.
+    LiveDashboardService.startRest(
+        remainingSeconds: seconds, totalSeconds: seconds);
   }
 
   /// Adjusts the remaining time by [delta] seconds (e.g. +15 / −15).
@@ -499,6 +517,9 @@ class RestTimer extends _$RestTimer {
     state = next;
     if (next > _lastDuration) _lastDuration = next;
     if (_timer == null || !_timer!.isActive) _run();
+    // Re-post the Live Update with the shifted end time.
+    LiveDashboardService.startRest(
+        remainingSeconds: next, totalSeconds: _lastDuration);
   }
 
   /// Re-runs the last duration (for "skipped by mistake" / "need more rest").
@@ -514,6 +535,7 @@ class RestTimer extends _$RestTimer {
   void cancel() {
     _timer?.cancel();
     state = 0;
+    LiveDashboardService.cancelRest();
   }
 
   void _run() {
@@ -533,6 +555,7 @@ class RestTimer extends _$RestTimer {
     HapticFeedback.heavyImpact();
     // Fire-and-forget; a failed notification must not crash the timer.
     NotificationService.instance.showRestComplete();
+    LiveDashboardService.cancelRest();
   }
 }
 
