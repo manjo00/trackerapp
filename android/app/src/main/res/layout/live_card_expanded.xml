@@ -95,5 +95,37 @@
             android:textSize="22sp"
             android:textStyle="bold"
             android:textAppearance="@style/TextAppearance.Compat.Notification.Title" />
+
+        <!-- Pushes the card actions to the right edge. RemoteViews only
+             inflates whitelisted widgets — a plain <View> spacer crashes
+             (BadForegroundServiceNotificationException), so use an empty
+             TextView instead. -->
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <TextView
+            android:id="@+id/live_snooze"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:gravity="center"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:text="Snooze"
+            android:textSize="13sp"
+            android:textAppearance="@style/TextAppearance.Compat.Notification.Info" />
+
+        <TextView
+            android:id="@+id/live_done"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:gravity="center"
+            android:paddingStart="10dp"
+            android:paddingEnd="12dp"
+            android:text="✓ Done"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:textAppearance="@style/TextAppearance.Compat.Notification.Title" />
     </LinearLayout>
 </LinearLayout>

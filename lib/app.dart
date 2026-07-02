@@ -28,13 +28,6 @@ class LifeTrackerApp extends ConsumerStatefulWidget {
 
 class _LifeTrackerAppState extends ConsumerState<LifeTrackerApp>
     with WidgetsBindingObserver {
-  /// The calendar day the date-sensitive data was last built for. Used to
-  /// detect "the app was resumed on a new day" so Today/streaks don't get
-  /// stuck showing yesterday.
-  DateTime _lastActiveDay = _dayOf(DateTime.now());
-
-  static DateTime _dayOf(DateTime d) => DateTime(d.year, d.month, d.day);
-
   /// Channel MainActivity uses to tell us a widget "+" was tapped while the
   /// app was already running (cold starts are handled by getInitialRoute).
   static const MethodChannel _widgetChannel = MethodChannel('uplan/widget');
@@ -66,12 +59,12 @@ class _LifeTrackerAppState extends ConsumerState<LifeTrackerApp>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      final DateTime today = _dayOf(DateTime.now());
-      if (today != _lastActiveDay) {
-        // Resumed on a new day — rebuild everything that depends on "today".
-        _lastActiveDay = today;
-        _refreshDateSensitiveProviders();
-      }
+      // Always refresh on resume (this also covers resuming on a new day):
+      // the live
+      // notification's ✓/snooze buttons write through a separate background
+      // DB connection, so this app's stream queries never hear about those
+      // writes — re-subscribing picks them up. Cheap one-shot rebuilds.
+      _refreshDateSensitiveProviders();
       _syncWidget();
     } else if (state == AppLifecycleState.paused) {
       // Backgrounded — refresh the home-screen widget with the latest state.
@@ -87,12 +80,15 @@ class _LifeTrackerAppState extends ConsumerState<LifeTrackerApp>
     await LiveDashboardService.syncCards(db);
   }
 
-  /// Invalidates providers whose results are anchored to the current date, so
-  /// they recompute against the new day. Cheap — only fires on a day change.
+  /// Invalidates providers whose results are anchored to the current date or
+  /// can change behind our back (live-notification background writes), so
+  /// they re-subscribe with fresh queries.
   void _refreshDateSensitiveProviders() {
     ref.invalidate(habitsWithStatusProvider);
+    ref.invalidate(allTasksProvider);
     ref.invalidate(tasksDueTodayProvider);
     ref.invalidate(overdueTasksProvider);
+    ref.invalidate(inboxTasksProvider);
     ref.invalidate(checklistTrackersForTodayProvider);
     ref.invalidate(trackersWithProgressProvider);
     ref.invalidate(todaysSuggestedSessionProvider);

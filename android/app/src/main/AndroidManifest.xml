@@ -90,6 +90,23 @@
             </intent-filter>
         </receiver>
 
+        <!-- home_widget: runs the registered Dart callback in a headless
+             engine when a live-notification action button is tapped. The
+             plugin ships the classes but not the manifest entries — the
+             receiver catches the broadcast, then enqueues the work into the
+             JobIntentService (which needs BIND_JOB_SERVICE like AlarmService). -->
+        <receiver
+            android:name="es.antonborri.home_widget.HomeWidgetBackgroundReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="es.antonborri.home_widget.action.BACKGROUND" />
+            </intent-filter>
+        </receiver>
+        <service
+            android:name="es.antonborri.home_widget.HomeWidgetBackgroundService"
+            android:permission="android.permission.BIND_JOB_SERVICE"
+            android:exported="false" />
+
         <!-- Live dashboard: foreground service owning the persistent
              notification. specialUse because none of the typed categories
              (media, location, ...) fit a glanceable dashboard. -->

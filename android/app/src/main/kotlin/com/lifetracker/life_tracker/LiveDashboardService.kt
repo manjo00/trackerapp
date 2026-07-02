@@ -7,9 +7,13 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.graphics.Color
+import android.net.Uri
 import android.os.IBinder
+import android.view.View
 import android.widget.RemoteViews
+import es.antonborri.home_widget.HomeWidgetBackgroundIntent
 import org.json.JSONArray
 
 /**
@@ -64,6 +68,31 @@ class LiveDashboardService : Service() {
 
     /** Which slideshow card is showing. Lives as long as the service does. */
     private var currentIndex = 0
+
+    /**
+     * Re-renders whenever the Dart side (foreground app OR the headless
+     * ✓/snooze callback) rewrites the card data. Must be a field — Android
+     * holds prefs listeners weakly, a local would be GC'd within minutes.
+     */
+    private val prefsListener =
+        SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == "live_cards" || key == "live_mode") {
+                getSystemService(NotificationManager::class.java)
+                    .notify(NOTIFICATION_ID, buildNotification())
+            }
+        }
+
+    override fun onCreate() {
+        super.onCreate()
+        getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .registerOnSharedPreferenceChangeListener(prefsListener)
+    }
+
+    override fun onDestroy() {
+        getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .unregisterOnSharedPreferenceChangeListener(prefsListener)
+        super.onDestroy()
+    }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -178,11 +207,34 @@ class LiveDashboardService : Service() {
                 setTextViewText(R.id.live_exp_sub, card.sub)
                 setTextColor(R.id.live_exp_dot, card.color)
                 setTextViewText(R.id.live_pos, "${index + 1}/${cards.size}")
+
+                // ✓/snooze run the registered Dart callback in a headless
+                // engine (home_widget background intent) — no app needed.
+                setViewVisibility(R.id.live_done, View.VISIBLE)
+                setViewVisibility(R.id.live_snooze, View.VISIBLE)
+                setOnClickPendingIntent(
+                    R.id.live_done,
+                    HomeWidgetBackgroundIntent.getBroadcast(
+                        this@LiveDashboardService,
+                        Uri.parse(
+                            "uplan://live?action=complete&type=${card.type}&id=${card.id}"),
+                    ),
+                )
+                setOnClickPendingIntent(
+                    R.id.live_snooze,
+                    HomeWidgetBackgroundIntent.getBroadcast(
+                        this@LiveDashboardService,
+                        Uri.parse(
+                            "uplan://live?action=snooze&type=${card.type}&id=${card.id}"),
+                    ),
+                )
             } else {
                 setTextViewText(R.id.live_exp_title, "All clear 🎉")
                 setTextViewText(R.id.live_exp_sub, "Nothing pending right now")
                 setTextColor(R.id.live_exp_dot, 0xFF7BC67E.toInt())
                 setTextViewText(R.id.live_pos, "0/0")
+                setViewVisibility(R.id.live_done, View.GONE)
+                setViewVisibility(R.id.live_snooze, View.GONE)
             }
             setOnClickPendingIntent(
                 R.id.live_prev, servicePendingIntent(ACTION_PREV, RC_PREV))
