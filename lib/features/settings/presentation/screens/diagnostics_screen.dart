@@ -1,6 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
+import '../../../../core/diagnostics/crash_log.dart';
 import '../../../../core/diagnostics/diagnostics_service.dart';
 import '../../../../core/notifications/notification_service.dart';
 import '../../../habits/presentation/providers/habits_providers.dart';
@@ -62,6 +67,32 @@ class _DiagnosticsScreenState extends ConsumerState<DiagnosticsScreen>
   Future<void> _fixBattery() async {
     await DiagnosticsService.requestBatteryExemption();
     // Reload happens on resume (the request opens a system dialog).
+  }
+
+  /// Bundles the health report + captured error log into a text file and
+  /// opens the share sheet — how a tester sends us what went wrong
+  /// without a cable. Same temp-file + shareXFiles pattern as the backup
+  /// export.
+  Future<void> _shareDiagnostics() async {
+    final DiagnosticsReport report =
+        _report ?? await DiagnosticsService.collect();
+    final String log = await CrashLog.read();
+
+    final StringBuffer buffer = StringBuffer()
+      ..writeln(report.toReportText())
+      ..writeln('== Captured errors (newest last) ==')
+      ..writeln(log.isEmpty ? '(none recorded)' : log);
+
+    final Directory dir = await getTemporaryDirectory();
+    final String stamp =
+        DateTime.now().toIso8601String().replaceAll(':', '-');
+    final File file = File('${dir.path}/uplan_diagnostics_$stamp.txt');
+    await file.writeAsString(buffer.toString());
+
+    await Share.shareXFiles(
+      [XFile(file.path)],
+      subject: 'Uplan diagnostics',
+    );
   }
 
   /// Re-requests exact alarms AND re-schedules every reminder — the big
@@ -190,6 +221,19 @@ class _DiagnosticsScreenState extends ConsumerState<DiagnosticsScreen>
                   subtitle: const Text(
                       'Allow exact alarms and re-schedule everything'),
                   onTap: _fixReminders,
+                ),
+
+                const Divider(indent: 16, endIndent: 16, height: 32),
+
+                // ── Share with the developer ─────────────────────────────
+                const _Header(label: 'Report a problem'),
+                ListTile(
+                  leading: Icon(Icons.ios_share_rounded, color: cs.primary),
+                  title: const Text('Share diagnostics'),
+                  subtitle: const Text(
+                      'Sends this health report + any captured errors as a '
+                      'file — WhatsApp it to the developer'),
+                  onTap: _shareDiagnostics,
                 ),
 
                 const Divider(indent: 16, endIndent: 16, height: 32),
