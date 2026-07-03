@@ -8,6 +8,7 @@ import '../../data/models/program_model.dart';
 import '../../data/models/program_session_model.dart';
 import '../../data/models/quick_start_templates.dart';
 import '../../data/models/workout_session_model.dart';
+import '../../../../core/settings/settings_provider.dart';
 import '../providers/program_providers.dart';
 import '../providers/workout_providers.dart';
 import '../widgets/weekly_scoreboard_card.dart';
@@ -29,7 +30,12 @@ class WorkoutHomeScreen extends ConsumerWidget {
     final suggestedAsync = ref.watch(todaysSuggestedSessionProvider);
     final sessionsAsync = ref.watch(allWorkoutSessionsProvider);
     final activeWorkout = ref.watch(activeWorkoutProvider).valueOrNull;
-    final bool targetsMode = ref.watch(workoutTargetsModeProvider);
+    // Weekly targets is an opt-in experiment (Settings → Labs). When off,
+    // the Workout tab is always the classic Program view — no mode switch.
+    final bool experimentOn =
+        ref.watch(settingsProvider.select((s) => s.experimentalTargets));
+    final bool targetsMode =
+        experimentOn && ref.watch(workoutTargetsModeProvider);
 
     return Scaffold(
       body: programAsync.when(
@@ -45,14 +51,15 @@ class WorkoutHomeScreen extends ConsumerWidget {
                 ),
               ),
 
-            // ── Mode switch: Targets ⇄ Program ────────────────────────────
-            SliverToBoxAdapter(
-              child: _ModeToggle(
-                targetsMode: targetsMode,
-                onChanged: (v) =>
-                    ref.read(workoutTargetsModeProvider.notifier).set(v),
+            // ── Mode switch: Targets ⇄ Program (experiment only) ──────────
+            if (experimentOn)
+              SliverToBoxAdapter(
+                child: _ModeToggle(
+                  targetsMode: targetsMode,
+                  onChanged: (v) =>
+                      ref.read(workoutTargetsModeProvider.notifier).set(v),
+                ),
               ),
-            ),
 
             // ── Targets mode: scoreboard + quick start ────────────────────
             if (targetsMode) ...[

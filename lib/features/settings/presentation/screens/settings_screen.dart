@@ -198,6 +198,22 @@ class SettingsScreen extends ConsumerWidget {
 
           const Divider(indent: 16, endIndent: 16),
 
+          // ── Labs / experimental ────────────────────────────────────────
+          const _SectionHeader(label: 'Labs (experimental)'),
+
+          SwitchListTile(
+            secondary: Icon(Icons.science_rounded, color: cs.primary),
+            title: const Text('Weekly muscle targets'),
+            subtitle: const Text(
+                'Adds a Targets mode to Workout: a per-muscle weekly '
+                'scoreboard instead of fixed programs'),
+            value: settings.experimentalTargets,
+            onChanged: (v) =>
+                notifier.setExperimentalTargets(v),
+          ),
+
+          const Divider(indent: 16, endIndent: 16),
+
           // ── Navigation tabs ────────────────────────────────────────────
           const _SectionHeader(label: 'Navigation tabs'),
 

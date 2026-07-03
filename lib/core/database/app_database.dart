@@ -183,19 +183,12 @@ class AppDatabase extends _$AppDatabase {
       );
 
   /// Seeds the default rotation labels (from the hospital rota). Editable later.
+  /// Rotation labels are optional per-day tags on the shift calendar.
+  /// Shipped empty — users add their own (any names/colours) in the
+  /// rotations editor. (The original build seeded hospital-specific codes;
+  /// removed so the shared app isn't tied to one person's job.)
   Future<void> _seedRotations() async {
-    const List<String> names = [
-      'ICU1', 'ICU2', 'ICU3CB', 'ICU4B', 'Cardiac', 'ER', 'ERW', 'NICU',
-      'TICU', 'Ward', 'Sleep', 'Float', 'E', 'Home', 'PFT', 'OR', 'Pedia',
-    ];
-    for (int i = 0; i < names.length; i++) {
-      await into(shiftRotations).insert(
-        ShiftRotationsCompanion.insert(
-          name: names[i],
-          orderIndex: Value(i),
-        ),
-      );
-    }
+    // Intentionally seeds nothing.
   }
 
   /// Seeds the per-muscle default weekly targets (frequency, sets/session).

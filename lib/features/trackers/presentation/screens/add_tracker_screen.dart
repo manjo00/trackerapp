@@ -178,7 +178,9 @@ class _AddTrackerScreenState extends ConsumerState<AddTrackerScreen> {
         crossAxisCount: 2,
         mainAxisSpacing: 12,
         crossAxisSpacing: 12,
-        childAspectRatio: 1.1,
+        // Slightly taller than wide so icon + title + 2-line description
+        // fit without overflowing (also survives larger system font sizes).
+        childAspectRatio: 0.9,
       ),
       itemCount: kBuiltInTemplates.length,
       itemBuilder: (_, i) => _TemplateCard(
@@ -441,13 +443,17 @@ class _TemplateCard extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 4),
-              Text(
-                template.description,
-                style: tt.bodySmall
-                    ?.copyWith(color: cs.onSurfaceVariant),
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+              // Flexible so the description shrinks/ellipsizes instead of
+              // overflowing the fixed-height grid cell on small screens.
+              Flexible(
+                child: Text(
+                  template.description,
+                  style: tt.bodySmall
+                      ?.copyWith(color: cs.onSurfaceVariant),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),

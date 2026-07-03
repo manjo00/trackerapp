@@ -38,6 +38,7 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
   static const String _kNotifications = 'notifications_enabled';
   static const String _kReminderHour = 'reminder_hour';
   static const String _kReminderMinute = 'reminder_minute';
+  static const String _kExperimentalTargets = 'experimental_targets';
 
   // Settings schema version — increment when defaults need to be reset.
   static const int _currentSettingsVersion = 2;
@@ -64,6 +65,8 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
           _prefs.getInt(_kReminderHour) ?? AppSettings.defaults.reminderHour,
       reminderMinute:
           _prefs.getInt(_kReminderMinute) ?? AppSettings.defaults.reminderMinute,
+      experimentalTargets: _prefs.getBool(_kExperimentalTargets) ??
+          AppSettings.defaults.experimentalTargets,
     );
   }
 
@@ -126,6 +129,12 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
     } else {
       await NotificationService.instance.cancelDailyReminder();
     }
+  }
+
+  /// Toggles the experimental weekly muscle-target workout mode.
+  void setExperimentalTargets(bool enabled) {
+    state = state.copyWith(experimentalTargets: enabled);
+    _prefs.setBool(_kExperimentalTargets, enabled);
   }
 
   /// Updates the reminder time and re-schedules if notifications are on.

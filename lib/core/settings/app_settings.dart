@@ -55,6 +55,7 @@ class AppSettings {
     required this.notificationsEnabled,
     required this.reminderHour,
     required this.reminderMinute,
+    required this.experimentalTargets,
   });
 
   final ThemeMode themeMode;
@@ -72,6 +73,11 @@ class AppSettings {
   /// Minute component of the daily reminder time (0–59).
   final int reminderMinute;
 
+  /// Labs: reveals the experimental weekly muscle-target workout mode
+  /// (the Targets ⇄ Program switch). Off by default — the Workout tab
+  /// shows the classic program view until the user opts in.
+  final bool experimentalTargets;
+
   /// Convenience getter — the reminder as a Flutter [TimeOfDay].
   TimeOfDay get reminderTime => TimeOfDay(hour: reminderHour, minute: reminderMinute);
 
@@ -87,6 +93,7 @@ class AppSettings {
     notificationsEnabled: false,
     reminderHour: 9,
     reminderMinute: 0,
+    experimentalTargets: false,
   );
 
   AppSettings copyWith({
@@ -95,6 +102,7 @@ class AppSettings {
     bool? notificationsEnabled,
     int? reminderHour,
     int? reminderMinute,
+    bool? experimentalTargets,
   }) =>
       AppSettings(
         themeMode: themeMode ?? this.themeMode,
@@ -102,5 +110,6 @@ class AppSettings {
         notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
         reminderHour: reminderHour ?? this.reminderHour,
         reminderMinute: reminderMinute ?? this.reminderMinute,
+        experimentalTargets: experimentalTargets ?? this.experimentalTargets,
       );
 }
