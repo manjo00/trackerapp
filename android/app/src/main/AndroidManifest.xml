@@ -19,6 +19,10 @@
     <!-- Android 16 Live Updates: lets the rest-timer notification promote to
          the status-bar chip / Samsung Now Bar / Flip cover screen. -->
     <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
+    <!-- Lets the Diagnostics screen show the system "run in background" dialog
+         (battery-optimization exemption). This is the REQUEST_* variant that
+         opens a user prompt — not an auto-grant. -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <application
         android:label="Uplan"

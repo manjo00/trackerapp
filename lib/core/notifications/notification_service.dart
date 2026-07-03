@@ -208,6 +208,36 @@ class NotificationService {
     return can;
   }
 
+  // ── Diagnostics helpers ─────────────────────────────────────────────────────
+
+  /// Read-only exact-alarms check (no permission dialog — unlike
+  /// [requestExactAlarms]). Refreshes [canUseExactAlarms] as a side effect.
+  Future<bool> checkExactAlarms() async {
+    final AndroidFlutterLocalNotificationsPlugin? android =
+        _plugin.resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+    _canUseExact = await android?.canScheduleExactNotifications() ?? false;
+    return _canUseExact;
+  }
+
+  /// Whether the user currently allows this app to post notifications at all
+  /// (the master toggle in Android Settings, or the first-launch prompt).
+  Future<bool> areNotificationsEnabled() async {
+    final AndroidFlutterLocalNotificationsPlugin? android =
+        _plugin.resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+    return await android?.areNotificationsEnabled() ?? false;
+  }
+
+  /// Re-shows the system notification-permission prompt (no-op if the user
+  /// permanently denied it — then only Android Settings can re-enable).
+  Future<bool> requestNotifications() async {
+    final AndroidFlutterLocalNotificationsPlugin? android =
+        _plugin.resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+    return await android?.requestNotificationsPermission() ?? false;
+  }
+
   // ── Scheduled self-test ─────────────────────────────────────────────────────
 
   Future<void> scheduleTestIn(Duration delay) => _scheduleOneShot(

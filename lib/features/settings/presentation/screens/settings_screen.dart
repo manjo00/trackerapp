@@ -6,12 +6,9 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../../../../core/backup/backup_service.dart';
 import '../../../../../core/database/database_provider.dart';
-import '../../../../../core/notifications/notification_service.dart';
 import '../../../../../core/settings/app_settings.dart';
 import '../../../../../core/settings/settings_provider.dart';
-import '../../../habits/presentation/providers/habits_providers.dart';
-import '../../../tasks/presentation/providers/tasks_providers.dart';
-import '../../../trackers/presentation/providers/trackers_providers.dart';
+import 'diagnostics_screen.dart';
 import 'live_notification_settings_screen.dart';
 import 'widget_settings_screen.dart';
 
@@ -115,58 +112,8 @@ class SettingsScreen extends ConsumerWidget {
               },
             ),
 
-          // Test button — fires a notification immediately so the user can
-          // verify that permission is granted and the channel is working.
-          ListTile(
-            leading: Icon(
-              Icons.send_rounded,
-              color: cs.primary,
-            ),
-            title: const Text('Send test notification'),
-            subtitle: const Text(
-                'Fires right now — use this to confirm notifications work'),
-            onTap: () async {
-              await NotificationService.instance.showTestNotification();
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Test notification sent — check your status bar!'),
-                    duration: Duration(seconds: 3),
-                  ),
-                );
-              }
-            },
-          ),
-
-          // Scheduled-notification self-test (uses the same path as task
-          // reminders) so the user can confirm timed reminders fire.
-          ListTile(
-            leading: Icon(Icons.timer_outlined, color: cs.primary),
-            title: const Text('Test scheduled reminder (1 min)'),
-            subtitle: const Text(
-                'Fires in 1 minute — lock your phone and wait to confirm'),
-            onTap: () async {
-              final ScaffoldMessengerState m = ScaffoldMessenger.of(context);
-              await NotificationService.instance
-                  .scheduleTestIn(const Duration(minutes: 1));
-              m.showSnackBar(const SnackBar(
-                content: Text('Scheduled — you can lock the phone now ⏰'),
-              ));
-            },
-          ),
-
-          // Exact-alarm fix — task/time reminders need exact alarms on
-          // Android 13+; without them they fall back to inexact alarms that
-          // Samsung/aggressive battery managers drop.
-          ListTile(
-            leading: Icon(Icons.alarm_on_rounded, color: cs.primary),
-            title: const Text('Fix task reminders'),
-            subtitle: const Text(
-                'If timed task reminders don\'t arrive, tap to allow exact '
-                'alarms and re-schedule'),
-            onTap: () => _fixReminders(context, ref),
-          ),
-
+          // (Notification test tools + reminder fixes moved to the
+          // Diagnostics screen under "Testing & support".)
           const Divider(indent: 16, endIndent: 16),
 
           // ── Data / backup ──────────────────────────────────────────────
@@ -225,6 +172,24 @@ class SettingsScreen extends ConsumerWidget {
 
           const Divider(indent: 16, endIndent: 16),
 
+          // ── Testing & support ──────────────────────────────────────────
+          const _SectionHeader(label: 'Testing & support'),
+
+          ListTile(
+            leading: Icon(Icons.health_and_safety_rounded, color: cs.primary),
+            title: const Text('Diagnostics'),
+            subtitle: const Text(
+                'Check permissions, fix reminders, test notifications'),
+            trailing: const Icon(Icons.chevron_right_rounded),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const DiagnosticsScreen(),
+              ),
+            ),
+          ),
+
+          const Divider(indent: 16, endIndent: 16),
+
           // ── Navigation tabs ────────────────────────────────────────────
           const _SectionHeader(label: 'Navigation tabs'),
 
@@ -261,31 +226,6 @@ class SettingsScreen extends ConsumerWidget {
 
   /// Requests the exact-alarm permission, then re-schedules every reminder so
   /// existing ones switch from inexact to exact alarms.
-  Future<void> _fixReminders(BuildContext context, WidgetRef ref) async {
-    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
-    final bool ok = await NotificationService.instance.requestExactAlarms();
-
-    final habits = await ref.read(habitsRepositoryProvider).getAllHabits();
-    final tasks = await ref.read(tasksRepositoryProvider).getAllTasks();
-    final trackers =
-        await ref.read(trackersRepositoryProvider).getAllTrackers();
-    await NotificationService.instance.rescheduleAll(
-      habits: habits,
-      tasks: tasks,
-      trackers: trackers,
-    );
-
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(ok
-            ? 'Exact alarms enabled — reminders re-scheduled ✅'
-            : 'Still blocked. Enable "Alarms & reminders" for Uplan in '
-                'Android Settings → Apps → Special access.'),
-        duration: const Duration(seconds: 5),
-      ),
-    );
-  }
-
   // ── Backup handlers ───────────────────────────────────────────────────────
 
   /// Serialises the database to JSON, writes a temp file, and opens the share

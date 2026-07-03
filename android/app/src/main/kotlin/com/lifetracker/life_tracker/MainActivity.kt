@@ -67,6 +67,22 @@ class MainActivity : FlutterActivity() {
                         }
                         result.success(can)
                     }
+                    // Diagnostics: is the app exempt from battery optimization?
+                    // (Aggressive OEMs — OnePlus/One UI — kill background work
+                    // for non-exempt apps, breaking reminders + the dashboard.)
+                    "isIgnoringBatteryOptimizations" -> {
+                        val pm = getSystemService(android.os.PowerManager::class.java)
+                        result.success(pm.isIgnoringBatteryOptimizations(packageName))
+                    }
+                    // Shows the system "let this app run in background" dialog.
+                    "requestIgnoreBatteryOptimizations" -> {
+                        val intent = Intent(
+                            android.provider.Settings
+                                .ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                        ).setData(android.net.Uri.parse("package:$packageName"))
+                        startActivity(intent)
+                        result.success(true)
+                    }
                     else -> result.notImplemented()
                 }
             }

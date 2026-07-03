@@ -72,6 +72,17 @@ dependencies:
   # Flutter saves small values; the native AppWidgetProvider displays them.
   home_widget: ^0.7.0
 
+  # --- Field-test readiness (diagnostics + updates) ---
+  # http: calls the GitHub Releases API to check for a newer APK.
+  http: ^1.2.2
+  # package_info_plus: reads the app's version at runtime (drawer, diagnostics,
+  # update comparison) instead of hardcoding it.
+  package_info_plus: ^8.1.2
+  # device_info_plus: device model + Android version for the diagnostics report.
+  device_info_plus: ^11.2.0
+  # url_launcher: opens the release APK download link in the browser.
+  url_launcher: ^6.3.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
