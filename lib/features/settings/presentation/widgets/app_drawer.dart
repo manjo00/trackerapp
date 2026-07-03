@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../../../../core/settings/app_settings.dart';
 import '../../../../core/settings/settings_provider.dart';
 
@@ -203,12 +204,7 @@ class AppDrawer extends ConsumerWidget {
               enabled: false,
             ),
 
-            const _DrawerTile(
-              icon: Icons.info_outline_rounded,
-              label: 'About',
-              subtitle: 'Version 1.0.0',
-              enabled: false,
-            ),
+            const _VersionTile(),
                 ],
               ),
             ),
@@ -216,12 +212,15 @@ class AppDrawer extends ConsumerWidget {
             // ── Footer ──────────────────────────────────────────────────
             Padding(
               padding: const EdgeInsets.all(20),
-              child: Text(
-                'Life Tracker  ·  v1.0.0',
-                style: tt.bodySmall?.copyWith(
-                  color: cs.onSurface.withAlpha(80),
+              child: FutureBuilder<PackageInfo>(
+                future: PackageInfo.fromPlatform(),
+                builder: (context, snapshot) => Text(
+                  'Uplan  ·  v${snapshot.data?.version ?? '…'}',
+                  style: tt.bodySmall?.copyWith(
+                    color: cs.onSurface.withAlpha(80),
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-                textAlign: TextAlign.center,
               ),
             ),
           ],
@@ -274,6 +273,25 @@ class _DrawerTile extends StatelessWidget {
           : null,
       onTap: enabled ? onTap : null,
       dense: true,
+    );
+  }
+}
+
+/// About row showing the real installed version (package_info) instead of a
+/// hardcoded string that drifts from pubspec.yaml.
+class _VersionTile extends StatelessWidget {
+  const _VersionTile();
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<PackageInfo>(
+      future: PackageInfo.fromPlatform(),
+      builder: (context, snapshot) => _DrawerTile(
+        icon: Icons.info_outline_rounded,
+        label: 'About',
+        subtitle: 'Version ${snapshot.data?.version ?? '…'}',
+        enabled: false,
+      ),
     );
   }
 }

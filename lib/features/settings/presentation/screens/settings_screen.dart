@@ -8,6 +8,7 @@ import '../../../../../core/backup/backup_service.dart';
 import '../../../../../core/database/database_provider.dart';
 import '../../../../../core/settings/app_settings.dart';
 import '../../../../../core/settings/settings_provider.dart';
+import '../../../../../core/update/update_service.dart';
 import 'diagnostics_screen.dart';
 import 'live_notification_settings_screen.dart';
 import 'widget_settings_screen.dart';
@@ -188,6 +189,13 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
 
+          ListTile(
+            leading: Icon(Icons.system_update_rounded, color: cs.primary),
+            title: const Text('Check for updates'),
+            subtitle: const Text('Fetch the latest version from GitHub'),
+            onTap: () => _checkForUpdates(context),
+          ),
+
           const Divider(indent: 16, endIndent: 16),
 
           // ── Navigation tabs ────────────────────────────────────────────
@@ -227,6 +235,46 @@ class SettingsScreen extends ConsumerWidget {
   /// Requests the exact-alarm permission, then re-schedules every reminder so
   /// existing ones switch from inexact to exact alarms.
   // ── Backup handlers ───────────────────────────────────────────────────────
+
+  /// Manual update check — immediate feedback either way (the launch-time
+  /// auto-check is silent unless something is found).
+  Future<void> _checkForUpdates(BuildContext context) async {
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Checking…'), duration: Duration(seconds: 1)),
+    );
+    final UpdateInfo? update = await UpdateService.check();
+    if (!context.mounted) return;
+
+    if (update == null) {
+      messenger.showSnackBar(const SnackBar(
+        content: Text('You\'re on the latest version ✅'),
+      ));
+      return;
+    }
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Update available — v${update.version}'),
+        content: const Text(
+            'Downloads in your browser — open the file when done and '
+            'Android will offer to install it.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Later'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              UpdateService.download(update);
+            },
+            child: const Text('Download'),
+          ),
+        ],
+      ),
+    );
+  }
 
   /// Serialises the database to JSON, writes a temp file, and opens the share
   /// sheet so the user can save it anywhere (Google Drive, email, etc.).

@@ -6,6 +6,7 @@ import 'core/notifications/live_dashboard_service.dart';
 import 'core/notifications/notification_service.dart';
 import 'core/router/app_router.dart';
 import 'core/settings/settings_provider.dart';
+import 'core/update/update_service.dart';
 import 'core/theme/app_theme.dart';
 import 'core/widget/home_widget_service.dart';
 import 'features/habits/presentation/providers/habits_providers.dart';
@@ -133,6 +134,47 @@ class _LifeTrackerAppState extends ConsumerState<LifeTrackerApp>
     final db = ref.read(appDatabaseProvider);
     await HomeWidgetService.sync(db);
     await LiveDashboardService.syncCards(db);
+
+    // Quiet daily check for a newer APK on the releases repo.
+    await _maybeOfferUpdate();
+  }
+
+  /// Auto update check (throttled to once/day inside the service). Shows a
+  /// dialog only when a newer release exists; silent otherwise.
+  Future<void> _maybeOfferUpdate() async {
+    final UpdateInfo? update =
+        await UpdateService.autoCheck(ref.read(sharedPreferencesProvider));
+    if (update == null) return;
+
+    // The dialog needs a context below the Navigator — use the router's.
+    final BuildContext? context =
+        appRouter.routerDelegate.navigatorKey.currentContext;
+    if (context == null || !context.mounted) return;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Update available — v${update.version}'),
+        content: Text(
+          '${(update.notes?.trim().isNotEmpty ?? false) ? '${update.notes!.trim()}\n\n' : ''}'
+          'Downloads in your browser — open the file when done and Android '
+          'will offer to install it.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Later'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              UpdateService.download(update);
+            },
+            child: const Text('Download'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override

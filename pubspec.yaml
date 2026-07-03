@@ -1,7 +1,7 @@
-name: life_tracker
+﻿name: life_tracker
 description: "Personal habit tracker, task manager, and life planner."
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.1.0+2
 
 environment:
   sdk: ^3.12.0
@@ -34,7 +34,7 @@ dependencies:
 
   # --- Data classes ---
   # The @freezed annotation we write on our model classes (runtime half).
-  # freezed generates copyWith(), ==, hashCode — making models immutable.
+  # freezed generates copyWith(), ==, hashCode â€” making models immutable.
   freezed_annotation: ^2.4.4
 
   # --- Preferences ---
@@ -44,19 +44,19 @@ dependencies:
 
   # --- Notifications ---
   # Schedules and displays local (device-only) notifications.
-  # No server needed — everything runs on-device.
+  # No server needed â€” everything runs on-device.
   flutter_local_notifications: ^19.0.0
   # Required by flutter_local_notifications for timezone-aware scheduling
   # (so "9 AM" means 9 AM in the user's local timezone, not UTC).
   timezone: ^0.10.0
   # Runs a Dart callback at an exact time, even in the background. Used to fire
   # scheduled reminders reliably on Samsung (where flutter_local_notifications'
-  # own scheduling silently fails) — the callback shows an immediate
+  # own scheduling silently fails) â€” the callback shows an immediate
   # notification, which works.
   android_alarm_manager_plus: ^4.0.0
 
   # --- Utilities ---
-  # Date formatting — turns DateTime into readable strings like "2026-05-26".
+  # Date formatting â€” turns DateTime into readable strings like "2026-05-26".
   intl: ^0.19.0
 
   # --- Backup (export / import) ---
@@ -64,7 +64,7 @@ dependencies:
   # user can save it to Google Drive, email it, etc.
   share_plus: ^10.1.2
   # file_selector: lets the user choose a backup .json file when importing.
-  # (Flutter-team plugin — avoids file_picker's transitive Android SDK clashes.)
+  # (Flutter-team plugin â€” avoids file_picker's transitive Android SDK clashes.)
   file_selector: ^1.0.3
 
   # --- Home-screen widget ---
@@ -93,7 +93,7 @@ dev_dependencies:
   riverpod_generator: ^2.6.3
   # Generates the immutable data class body from our @freezed-annotated code.
   freezed: ^2.5.7
-  # drift's generator plugin — must match the drift runtime version above.
+  # drift's generator plugin â€” must match the drift runtime version above.
   drift_dev: ^2.22.1
 
   flutter_lints: ^4.0.0
