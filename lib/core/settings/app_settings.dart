@@ -58,6 +58,7 @@ class AppSettings {
     required this.reminderHour,
     required this.reminderMinute,
     required this.experimentalTargets,
+    this.devMode = false,
   });
 
   final ThemeMode themeMode;
@@ -79,6 +80,11 @@ class AppSettings {
   /// (the Targets ⇄ Program switch). Off by default — the Workout tab
   /// shows the classic program view until the user opts in.
   final bool experimentalTargets;
+
+  /// Developer mode — unlocked by tapping the drawer's About tile 7×.
+  /// Reveals dev-only tooling (GitHub feedback sync) that shouldn't be
+  /// visible in the build friends install; off by default.
+  final bool devMode;
 
   /// Convenience getter — the reminder as a Flutter [TimeOfDay].
   TimeOfDay get reminderTime => TimeOfDay(hour: reminderHour, minute: reminderMinute);
@@ -105,6 +111,7 @@ class AppSettings {
     int? reminderHour,
     int? reminderMinute,
     bool? experimentalTargets,
+    bool? devMode,
   }) =>
       AppSettings(
         themeMode: themeMode ?? this.themeMode,
@@ -113,5 +120,6 @@ class AppSettings {
         reminderHour: reminderHour ?? this.reminderHour,
         reminderMinute: reminderMinute ?? this.reminderMinute,
         experimentalTargets: experimentalTargets ?? this.experimentalTargets,
+        devMode: devMode ?? this.devMode,
       );
 }

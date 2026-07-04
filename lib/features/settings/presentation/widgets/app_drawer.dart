@@ -289,18 +289,50 @@ class _DrawerTile extends StatelessWidget {
 
 /// About row showing the real installed version (package_info) instead of a
 /// hardcoded string that drifts from pubspec.yaml.
-class _VersionTile extends StatelessWidget {
+///
+/// Hidden extra: 7 quick taps toggles developer mode (Android build-number
+/// style) — reveals dev-only tooling like the GitHub feedback sync that
+/// shouldn't be visible in the build friends install.
+class _VersionTile extends ConsumerStatefulWidget {
   const _VersionTile();
 
   @override
+  ConsumerState<_VersionTile> createState() => _VersionTileState();
+}
+
+class _VersionTileState extends ConsumerState<_VersionTile> {
+  int _taps = 0;
+  DateTime _lastTap = DateTime.fromMillisecondsSinceEpoch(0);
+
+  void _onTap() {
+    final DateTime now = DateTime.now();
+    // Slow taps reset the streak — this must never trigger by accident.
+    _taps = now.difference(_lastTap).inSeconds < 2 ? _taps + 1 : 1;
+    _lastTap = now;
+    if (_taps < 7) return;
+    _taps = 0;
+
+    final bool enable = !ref.read(settingsProvider).devMode;
+    ref.read(settingsProvider.notifier).setDevMode(enable);
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content:
+          Text(enable ? 'Developer mode enabled' : 'Developer mode disabled'),
+    ));
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return FutureBuilder<PackageInfo>(
-      future: PackageInfo.fromPlatform(),
-      builder: (context, snapshot) => _DrawerTile(
-        icon: Icons.info_outline_rounded,
-        label: 'About',
-        subtitle: 'Version ${snapshot.data?.version ?? '…'}',
-        enabled: false,
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: _onTap,
+      child: FutureBuilder<PackageInfo>(
+        future: PackageInfo.fromPlatform(),
+        builder: (context, snapshot) => _DrawerTile(
+          icon: Icons.info_outline_rounded,
+          label: 'About',
+          subtitle: 'Version ${snapshot.data?.version ?? '…'}',
+          enabled: false,
+        ),
       ),
     );
   }

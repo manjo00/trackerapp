@@ -39,6 +39,7 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
   static const String _kReminderHour = 'reminder_hour';
   static const String _kReminderMinute = 'reminder_minute';
   static const String _kExperimentalTargets = 'experimental_targets';
+  static const String _kDevMode = 'dev_mode';
 
   // Settings schema version — increment when defaults need to be reset.
   static const int _currentSettingsVersion = 3;
@@ -87,6 +88,7 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
           _prefs.getInt(_kReminderMinute) ?? AppSettings.defaults.reminderMinute,
       experimentalTargets: _prefs.getBool(_kExperimentalTargets) ??
           AppSettings.defaults.experimentalTargets,
+      devMode: _prefs.getBool(_kDevMode) ?? false,
     );
   }
 
@@ -155,6 +157,12 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
   void setExperimentalTargets(bool enabled) {
     state = state.copyWith(experimentalTargets: enabled);
     _prefs.setBool(_kExperimentalTargets, enabled);
+  }
+
+  /// Toggles developer mode (7 taps on the drawer's About tile).
+  void setDevMode(bool enabled) {
+    state = state.copyWith(devMode: enabled);
+    _prefs.setBool(_kDevMode, enabled);
   }
 
   /// Updates the reminder time and re-schedules if notifications are on.

@@ -7,6 +7,7 @@ import '../../../../core/database/app_database.dart';
 import '../../../../core/github/github_feedback_providers.dart';
 import '../../../../core/github/github_feedback_service.dart';
 import '../../../../core/github/markdown_feedback_builder.dart';
+import '../../../../core/settings/settings_provider.dart';
 import '../../data/models/task_model.dart';
 import '../providers/lists_providers.dart';
 import '../widgets/list_form_dialog.dart';
@@ -58,11 +59,16 @@ class ListDetailScreen extends ConsumerWidget {
             onSelected: (String action) => action == 'push_github'
                 ? _pushToGithub(context, ref, list, sections, tasks)
                 : _onListAction(context, ref, action, list),
-            itemBuilder: (context) => const [
-              PopupMenuItem(value: 'rename', child: Text('Rename / recolor')),
-              PopupMenuItem(
-                  value: 'push_github', child: Text('Push feedback to GitHub')),
-              PopupMenuItem(value: 'delete', child: Text('Delete')),
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                  value: 'rename', child: Text('Rename / recolor')),
+              // Dev-only (7× the drawer About tile): publish this list as
+              // feedback for the development workflow.
+              if (ref.read(settingsProvider).devMode)
+                const PopupMenuItem(
+                    value: 'push_github',
+                    child: Text('Push feedback to GitHub')),
+              const PopupMenuItem(value: 'delete', child: Text('Delete')),
             ],
           ),
         ],

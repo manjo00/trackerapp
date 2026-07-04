@@ -138,23 +138,23 @@ class SettingsScreen extends ConsumerWidget {
 
           const Divider(indent: 16, endIndent: 16),
 
-          // ── GitHub feedback sync ───────────────────────────────────────
-          const _SectionHeader(label: 'GitHub feedback sync'),
-
-          Builder(builder: (context) {
-            final GithubFeedbackConfig? config =
-                ref.watch(githubFeedbackConfigProvider).valueOrNull;
-            return ListTile(
-              leading: Icon(Icons.cloud_upload_rounded, color: cs.primary),
-              title: const Text('GitHub connection'),
-              subtitle: Text(config == null
-                  ? 'Tap to set up — pushes a list as a Markdown file'
-                  : 'Connected to ${config.repo}'),
-              onTap: () => _configureGithub(context, ref, config),
-            );
-          }),
-
-          const Divider(indent: 16, endIndent: 16),
+          // ── GitHub feedback sync (dev mode only — 7× About tile) ───────
+          if (settings.devMode) ...[
+            const _SectionHeader(label: 'GitHub feedback sync (dev)'),
+            Builder(builder: (context) {
+              final GithubFeedbackConfig? config =
+                  ref.watch(githubFeedbackConfigProvider).valueOrNull;
+              return ListTile(
+                leading: Icon(Icons.cloud_upload_rounded, color: cs.primary),
+                title: const Text('GitHub connection'),
+                subtitle: Text(config == null
+                    ? 'Tap to set up — pushes a list as a Markdown file'
+                    : 'Connected to ${config.repo}'),
+                onTap: () => _configureGithub(context, ref, config),
+              );
+            }),
+            const Divider(indent: 16, endIndent: 16),
+          ],
 
           // ── Home-screen widget ─────────────────────────────────────────
           const _SectionHeader(label: 'Home-screen widget'),
