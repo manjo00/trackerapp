@@ -1,23 +1,25 @@
 import 'package:flutter/material.dart';
 
+import '../constants/app_strings.dart';
+
 /// Every tab in the bottom navigation bar.
 ///
 /// The [index] of each value matches the branch index in [StatefulShellRoute],
-/// so [AppTab.today.index] == 0, [AppTab.habits.index] == 1, etc.
+/// so [AppTab.today.index] == 0, [AppTab.home.index] == 1, etc.
 enum AppTab {
   today,
-  inbox,    // undated tasks / capture
+  home,     // dashboard landing view (replaced Inbox in settings v3)
   habits,
-  tasks,
+  lists,    // task lists overview (replaced flat Tasks in settings v3)
   planner,
   trackers,
   workout;
 
   String get label => switch (this) {
         today => 'Today',
-        inbox => 'Inbox',
+        home => 'Home',
         habits => 'Habits',
-        tasks => 'Tasks',
+        lists => kListNounPlural,
         planner => 'Planner',
         trackers => 'Trackers',
         workout => 'Workout',
@@ -25,9 +27,9 @@ enum AppTab {
 
   IconData get icon => switch (this) {
         today => Icons.wb_sunny_outlined,
-        inbox => Icons.inbox_outlined,
+        home => Icons.home_outlined,
         habits => Icons.radio_button_unchecked_rounded,
-        tasks => Icons.check_box_outline_blank_rounded,
+        lists => Icons.folder_copy_outlined,
         planner => Icons.calendar_today_rounded,
         trackers => Icons.bar_chart_outlined,
         workout => Icons.fitness_center_outlined,
@@ -35,9 +37,9 @@ enum AppTab {
 
   IconData get selectedIcon => switch (this) {
         today => Icons.wb_sunny_rounded,
-        inbox => Icons.inbox_rounded,
+        home => Icons.home_rounded,
         habits => Icons.task_alt_rounded,
-        tasks => Icons.check_box_rounded,
+        lists => Icons.folder_copy_rounded,
         planner => Icons.calendar_month_rounded,
         trackers => Icons.bar_chart_rounded,
         workout => Icons.fitness_center_rounded,
@@ -81,13 +83,13 @@ class AppSettings {
   /// Convenience getter — the reminder as a Flutter [TimeOfDay].
   TimeOfDay get reminderTime => TimeOfDay(hour: reminderHour, minute: reminderMinute);
 
-  /// Shipped defaults — Today + Inbox + Planner in the bottom nav;
-  /// Habits / Tasks / Trackers / Workout accessible from the drawer.
+  /// Shipped defaults — Home + Lists + Planner in the bottom nav;
+  /// Today / Habits / Trackers / Workout accessible from the drawer.
   static const AppSettings defaults = AppSettings(
     themeMode: ThemeMode.system,
     visibleTabs: {
-      AppTab.today,
-      AppTab.inbox,
+      AppTab.home,
+      AppTab.lists,
       AppTab.planner,
     },
     notificationsEnabled: false,

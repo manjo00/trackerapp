@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import '../../../../core/constants/app_strings.dart';
 import '../../../../core/settings/app_settings.dart';
 import '../../../../core/settings/settings_provider.dart';
 
@@ -132,6 +133,15 @@ class AppDrawer extends ConsumerWidget {
               ),
             ),
             _DrawerTile(
+              icon: Icons.wb_sunny_rounded,
+              label: 'Today',
+              subtitle: 'Unified daily view',
+              onTap: () {
+                Navigator.of(context).pop();
+                context.go('/today');
+              },
+            ),
+            _DrawerTile(
               icon: Icons.task_alt_rounded,
               label: 'Habits',
               subtitle: 'Daily streaks & recurring goals',
@@ -141,12 +151,12 @@ class AppDrawer extends ConsumerWidget {
               },
             ),
             _DrawerTile(
-              icon: Icons.check_box_rounded,
-              label: 'Tasks',
-              subtitle: 'All your tasks',
+              icon: Icons.folder_copy_rounded,
+              label: kListNounPlural,
+              subtitle: 'Task lists & sections',
               onTap: () {
                 Navigator.of(context).pop();
-                context.go('/tasks');
+                context.go('/lists');
               },
             ),
             _DrawerTile(

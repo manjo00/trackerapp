@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../constants/app_strings.dart';
 import '../settings/app_settings.dart';
 import '../settings/settings_provider.dart';
 import '../../features/settings/presentation/widgets/app_drawer.dart';
@@ -64,9 +65,9 @@ class _HomeShellState extends ConsumerState<HomeShell> {
 
   String _labelForBranch(int branchIndex) => switch (branchIndex) {
         0 => 'Today',
-        1 => 'Inbox',
+        1 => 'Home',
         2 => 'Habits',
-        3 => 'Tasks',
+        3 => kListNounPlural,
         4 => 'Planner',
         5 => 'Trackers',
         6 => 'Workout',

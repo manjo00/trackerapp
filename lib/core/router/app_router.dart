@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/habits/data/models/habit_model.dart';
 import '../../features/habits/presentation/screens/habit_list_screen.dart';
 import '../../features/habits/presentation/screens/add_habit_screen.dart';
-import '../../features/inbox/presentation/screens/inbox_screen.dart';
+import '../../features/home/presentation/screens/home_screen.dart';
 import '../../features/tasks/data/models/task_model.dart';
 import '../../features/tasks/presentation/screens/task_list_screen.dart';
 import '../../features/tasks/presentation/screens/add_task_screen.dart';
@@ -31,12 +31,13 @@ import 'shell_scaffold.dart';
 /// Route tree:
 /// ```
 ///  StatefulShellRoute   ← HomeShell (bottom nav persists across tabs)
-///    /today             ← TodayScreen        (index 0, default tab)
-///    /habits            ← HabitListScreen    (index 1)
-///    /tasks             ← TaskListScreen     (index 2)
-///    /planner           ← PlannerScreen      (index 3)
-///    /trackers          ← TrackersScreen     (index 4)
-///    /workout           ← WorkoutHomeScreen  (index 5)
+///    /today             ← TodayScreen        (branch 0, drawer)
+///    /home              ← HomeScreen         (branch 1, default tab)
+///    /habits            ← HabitListScreen    (branch 2)
+///    /lists             ← TaskListScreen     (branch 3 — ListsOverview soon)
+///    /planner           ← PlannerScreen      (branch 4)
+///    /trackers          ← TrackersScreen     (branch 5)
+///    /workout           ← WorkoutHomeScreen  (branch 6)
 ///
 ///  /habits/add                          ← AddHabitScreen              (outside shell)
 ///  /tasks/add                           ← AddTaskScreen               (outside shell)
@@ -50,7 +51,7 @@ import 'shell_scaffold.dart';
 ///  /workout/programs/:id/session/:sid   ← ProgramSessionEditorScreen  (outside shell)
 /// ```
 final GoRouter appRouter = GoRouter(
-  initialLocation: '/today',
+  initialLocation: '/home',
   // Home-screen widget deep links arrive as custom-scheme URIs
   // (e.g. uplan://add_task). Translate them to real in-app routes here,
   // before go_router tries — and fails — to match them as paths.
@@ -59,9 +60,9 @@ final GoRouter appRouter = GoRouter(
     if (uri.host == 'add_task' || uri.toString().contains('add_task')) {
       return '/quick-add';
     }
-    // Some launch paths report a bare "/" which has no route — send to Today.
+    // Some launch paths report a bare "/" which has no route — send Home.
     if (uri.path.isEmpty || uri.path == '/') {
-      return '/today';
+      return '/home';
     }
     return null;
   },
@@ -86,13 +87,13 @@ final GoRouter appRouter = GoRouter(
           ],
         ),
 
-        // Branch 1 — Inbox
+        // Branch 1 — Home (dashboard landing view)
         StatefulShellBranch(
           routes: [
             GoRoute(
-              path: '/inbox',
+              path: '/home',
               pageBuilder: (context, state) => const NoTransitionPage(
-                child: InboxScreen(),
+                child: HomeScreen(),
               ),
             ),
           ],
@@ -110,11 +111,12 @@ final GoRouter appRouter = GoRouter(
           ],
         ),
 
-        // Branch 2 — Tasks
+        // Branch 3 — Lists (temporarily the flat task list; the Lists
+        // overview screen replaces it in the screens commit)
         StatefulShellBranch(
           routes: [
             GoRoute(
-              path: '/tasks',
+              path: '/lists',
               pageBuilder: (context, state) => const NoTransitionPage(
                 child: TaskListScreen(),
               ),

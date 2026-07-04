@@ -41,18 +41,38 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
   static const String _kExperimentalTargets = 'experimental_targets';
 
   // Settings schema version — increment when defaults need to be reset.
-  static const int _currentSettingsVersion = 2;
+  static const int _currentSettingsVersion = 3;
   static const String _kSettingsVersion = 'settings_version';
 
   // ── Load ───────────────────────────────────────────────────────────────
 
   void _load() {
     // Migrate settings when upgrading to a new schema version.
+    // Each block handles one version bump so users can skip versions.
     final int savedVersion = _prefs.getInt(_kSettingsVersion) ?? 1;
-    if (savedVersion < _currentSettingsVersion) {
-      // v2: Reset tabs to the new 3-tab default (Today + Inbox + Planner).
+    if (savedVersion < 2) {
+      // v2: Reset tabs to the then-new 3-tab default (Today + Inbox + Planner).
       // Old stored tabs used the 6-tab layout; clear to pick up new defaults.
       _prefs.remove(_kTabs);
+    }
+    if (savedVersion < 3) {
+      // v3: the inbox tab became Home; the tasks tab became Lists.
+      final List<String>? raw = _prefs.getStringList(_kTabs);
+      if (raw != null) {
+        final List<String> mapped = raw
+            .map((s) => switch (s) { 'inbox' => 'home', 'tasks' => 'lists', _ => s })
+            .toList();
+        // The old default trio would map to {today,home,planner}: upgrade it
+        // to the new default so the Lists tab is discoverable.
+        final Set<String> set = mapped.toSet();
+        if (set.length == 3 && set.containsAll({'today', 'home', 'planner'})) {
+          _prefs.setStringList(_kTabs, ['home', 'lists', 'planner']);
+        } else {
+          _prefs.setStringList(_kTabs, mapped);
+        }
+      }
+    }
+    if (savedVersion < _currentSettingsVersion) {
       _prefs.setInt(_kSettingsVersion, _currentSettingsVersion);
     }
 
