@@ -1,5 +1,7 @@
 import 'package:drift/drift.dart';
 
+import 'task_lists_table.dart';
+
 /// Defines the [tasks] table in SQLite.
 ///
 /// Unlike habits (which track daily completions in a second table),
@@ -47,4 +49,15 @@ class Tasks extends Table {
   /// means 1 day before, 3 hours before, and 5 minutes before the due time.
   /// NULL means no lead times selected.
   TextColumn get reminderLeadTimes => text().nullable()();
+
+  /// Owning list; NULL = "Captured" (no Inbox row exists by design).
+  IntColumn get listId => integer()
+      .nullable()
+      .references(TaskLists, #id, onDelete: KeyAction.setNull)();
+
+  /// Section within [listId]'s list; NULL = list body. Repository guards
+  /// that a section always belongs to the task's own list.
+  IntColumn get sectionId => integer()
+      .nullable()
+      .references(ListSections, #id, onDelete: KeyAction.setNull)();
 }

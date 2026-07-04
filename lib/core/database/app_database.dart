@@ -10,6 +10,8 @@ import '../../features/shifts/data/dao/shifts_dao.dart';
 import '../../features/shifts/data/tables/shift_rotations_table.dart';
 import '../../features/shifts/data/tables/work_shifts_table.dart';
 import '../../features/tasks/data/dao/tasks_dao.dart';
+import '../../features/tasks/data/tables/labels_table.dart';
+import '../../features/tasks/data/tables/task_lists_table.dart';
 import '../../features/tasks/data/tables/tasks_table.dart';
 import '../../features/trackers/data/dao/trackers_dao.dart';
 import '../../features/trackers/data/tables/custom_trackers_table.dart';
@@ -44,6 +46,11 @@ part 'app_database.g.dart';
     HabitCompletions,
     // ── Tasks ────────────────────────────────────────────────────────────────
     Tasks,
+    // ── Task organization (v11): lists, sections, labels ────────────────────
+    TaskLists,
+    ListSections,
+    Labels,
+    TaskLabels,
     // ── Trackers ─────────────────────────────────────────────────────────────
     CustomTrackers,
     TrackerItems,
@@ -91,8 +98,10 @@ class AppDatabase extends _$AppDatabase {
   ///       "Arms" exercises into Biceps / Triceps / Forearms
   /// v10 → weekly targets are now per individual muscle (not per push/pull
   ///        group) so one muscle can't be masked by another; reseed targets
+  /// v11 → task organization: task_lists, list_sections, labels, task_labels
+  ///        tables + nullable listId/sectionId on tasks (NULL list = Captured)
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 11;
 
   /// The old vs. new default rotation-label colour (see v8 migration).
   static const int _oldRotationColor = 0xFFFFB347;
@@ -172,6 +181,16 @@ class AppDatabase extends _$AppDatabase {
             // Targets are now per individual muscle, not per group. Reseed.
             await delete(muscleTargets).go();
             await _seedMuscleTargets();
+          }
+          if (from < 11) {
+            // Task organization: lists, sections, labels. Existing tasks get
+            // NULL listId ⇒ they all land in "Captured" — nothing to backfill.
+            await m.createTable(taskLists);
+            await m.createTable(listSections);
+            await m.createTable(labels);
+            await m.createTable(taskLabels);
+            await m.addColumn(tasks, tasks.listId);
+            await m.addColumn(tasks, tasks.sectionId);
           }
         },
         beforeOpen: (details) async {
