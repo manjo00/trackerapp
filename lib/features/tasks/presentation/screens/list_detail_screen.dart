@@ -4,6 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/app_strings.dart';
 import '../../../../core/database/app_database.dart';
+import '../../../../core/github/github_feedback_providers.dart';
+import '../../../../core/github/github_feedback_service.dart';
+import '../../../../core/github/markdown_feedback_builder.dart';
 import '../../data/models/task_model.dart';
 import '../providers/lists_providers.dart';
 import '../widgets/list_form_dialog.dart';
@@ -52,9 +55,13 @@ class ListDetailScreen extends ConsumerWidget {
         ),
         actions: [
           PopupMenuButton<String>(
-            onSelected: (String action) => _onListAction(context, ref, action, list),
+            onSelected: (String action) => action == 'push_github'
+                ? _pushToGithub(context, ref, list, sections, tasks)
+                : _onListAction(context, ref, action, list),
             itemBuilder: (context) => const [
               PopupMenuItem(value: 'rename', child: Text('Rename / recolor')),
+              PopupMenuItem(
+                  value: 'push_github', child: Text('Push feedback to GitHub')),
               PopupMenuItem(value: 'delete', child: Text('Delete')),
             ],
           ),
@@ -155,6 +162,49 @@ class ListDetailScreen extends ConsumerWidget {
           if (context.mounted) context.pop();
         }
     }
+  }
+
+  // ── GitHub push ───────────────────────────────────────────────────────────
+
+  /// Publishes this list as feedback/<slug>.md in the configured repo.
+  /// Uses the sections/tasks already loaded by build() — no extra fetch.
+  Future<void> _pushToGithub(BuildContext context, WidgetRef ref,
+      TaskList list, List<ListSection> sections, List<TaskModel> tasks) async {
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    final GoRouter router = GoRouter.of(context);
+
+    final GithubFeedbackService service =
+        ref.read(githubFeedbackServiceProvider);
+    final GithubFeedbackConfig? config = await service.loadConfig();
+    if (config == null) {
+      messenger.showSnackBar(SnackBar(
+        content: const Text('Set up the GitHub connection first'),
+        action: SnackBarAction(
+          label: 'Settings',
+          onPressed: () => router.push('/settings'),
+        ),
+      ));
+      return;
+    }
+
+    messenger.showSnackBar(
+        const SnackBar(content: Text('Pushing to GitHub…')));
+
+    final String markdown = buildFeedbackMarkdown(
+      listName: list.name,
+      sections: [for (final s in sections) (id: s.id, name: s.name)],
+      tasks: tasks,
+      now: DateTime.now(),
+    );
+    final GithubPushResult result = await service.pushMarkdown(
+      config: config,
+      path: 'feedback/${slugify(list.name)}.md',
+      content: markdown,
+      commitMessage: 'feedback: update "${list.name}" from Uplan',
+    );
+
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(SnackBar(content: Text(result.message)));
   }
 
   // ── Section actions ───────────────────────────────────────────────────────

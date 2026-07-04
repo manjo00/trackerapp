@@ -6,6 +6,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../../../../core/backup/backup_service.dart';
 import '../../../../../core/database/database_provider.dart';
+import '../../../../../core/github/github_feedback_providers.dart';
+import '../../../../../core/github/github_feedback_service.dart';
 import '../../../../../core/settings/app_settings.dart';
 import '../../../../../core/settings/settings_provider.dart';
 import '../../../../../core/update/update_service.dart';
@@ -133,6 +135,24 @@ class SettingsScreen extends ConsumerWidget {
             subtitle: const Text('Restore from a backup file — replaces all data'),
             onTap: () => _importData(context, ref),
           ),
+
+          const Divider(indent: 16, endIndent: 16),
+
+          // ── GitHub feedback sync ───────────────────────────────────────
+          const _SectionHeader(label: 'GitHub feedback sync'),
+
+          Builder(builder: (context) {
+            final GithubFeedbackConfig? config =
+                ref.watch(githubFeedbackConfigProvider).valueOrNull;
+            return ListTile(
+              leading: Icon(Icons.cloud_upload_rounded, color: cs.primary),
+              title: const Text('GitHub connection'),
+              subtitle: Text(config == null
+                  ? 'Tap to set up — pushes a list as a Markdown file'
+                  : 'Connected to ${config.repo}'),
+              onTap: () => _configureGithub(context, ref, config),
+            );
+          }),
 
           const Divider(indent: 16, endIndent: 16),
 
@@ -293,6 +313,91 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   /// Serialises the database to JSON, writes a temp file, and opens the share
+  /// Token + repo entry for the feedback push. The token is stored in the
+  /// Android Keystore (flutter_secure_storage) — it can write to the repo,
+  /// so it never touches shared_preferences.
+  Future<void> _configureGithub(BuildContext context, WidgetRef ref,
+      GithubFeedbackConfig? existing) async {
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    final TextEditingController tokenCtrl = TextEditingController();
+    final TextEditingController repoCtrl = TextEditingController(
+        text: existing?.repo ?? 'manjo00/trackerapp');
+
+    final bool? save = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext ctx) => AlertDialog(
+        title: const Text('GitHub connection'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Create a fine-grained Personal Access Token at\n'
+              'github.com → Settings → Developer settings,\n'
+              'scoped to just this repo with "Contents: Read and write".',
+              style: TextStyle(fontSize: 12),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: tokenCtrl,
+              obscureText: true,
+              autocorrect: false,
+              enableSuggestions: false,
+              decoration: InputDecoration(
+                labelText: 'Personal Access Token',
+                hintText: existing == null
+                    ? 'github_pat_… or ghp_…'
+                    : 'Leave empty to keep the saved token',
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: repoCtrl,
+              autocorrect: false,
+              enableSuggestions: false,
+              decoration: const InputDecoration(
+                labelText: 'Repository (owner/name)',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    if (save != true) return;
+
+    final String token = tokenCtrl.text.trim().isEmpty
+        ? (existing?.token ?? '')
+        : tokenCtrl.text.trim();
+    final String repo = repoCtrl.text.trim();
+    if (token.isEmpty) {
+      messenger.showSnackBar(
+          const SnackBar(content: Text('A token is required')));
+      return;
+    }
+    if (!GithubFeedbackConfig.isValidRepo(repo)) {
+      messenger.showSnackBar(
+          const SnackBar(content: Text('Repository must be owner/name')));
+      return;
+    }
+
+    await ref
+        .read(githubFeedbackServiceProvider)
+        .saveConfig(GithubFeedbackConfig(token: token, repo: repo));
+    ref.invalidate(githubFeedbackConfigProvider);
+    messenger.showSnackBar(
+        SnackBar(content: Text('GitHub connection saved ($repo)')));
+  }
+
   /// sheet so the user can save it anywhere (Google Drive, email, etc.).
   Future<void> _exportData(BuildContext context, WidgetRef ref) async {
     final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
