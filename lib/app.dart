@@ -10,6 +10,7 @@ import 'core/update/update_service.dart';
 import 'core/theme/app_theme.dart';
 import 'core/widget/home_widget_service.dart';
 import 'features/habits/presentation/providers/habits_providers.dart';
+import 'features/tasks/presentation/providers/lists_providers.dart';
 import 'features/tasks/presentation/providers/tasks_providers.dart';
 import 'features/trackers/presentation/providers/trackers_providers.dart';
 import 'features/workout/presentation/providers/program_providers.dart';
@@ -107,6 +108,8 @@ class _LifeTrackerAppState extends ConsumerState<LifeTrackerApp>
     ref.invalidate(tasksDueTodayProvider);
     ref.invalidate(overdueTasksProvider);
     ref.invalidate(capturedTasksProvider);
+    ref.invalidate(urgentWindowTasksProvider);
+    ref.invalidate(thisWeekTasksProvider);
     ref.invalidate(checklistTrackersForTodayProvider);
     ref.invalidate(trackersWithProgressProvider);
     ref.invalidate(todaysSuggestedSessionProvider);
