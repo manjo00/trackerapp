@@ -5,8 +5,9 @@ import '../../features/habits/presentation/screens/habit_list_screen.dart';
 import '../../features/habits/presentation/screens/add_habit_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
 import '../../features/tasks/data/models/task_model.dart';
-import '../../features/tasks/presentation/screens/task_list_screen.dart';
 import '../../features/tasks/presentation/screens/add_task_screen.dart';
+import '../../features/tasks/presentation/screens/list_detail_screen.dart';
+import '../../features/tasks/presentation/screens/lists_overview_screen.dart';
 import '../../features/tasks/presentation/screens/quick_add_task_screen.dart';
 import '../../features/planner/presentation/screens/planner_screen.dart';
 import '../../features/settings/presentation/screens/settings_screen.dart';
@@ -111,14 +112,13 @@ final GoRouter appRouter = GoRouter(
           ],
         ),
 
-        // Branch 3 — Lists (temporarily the flat task list; the Lists
-        // overview screen replaces it in the screens commit)
+        // Branch 3 — Lists overview ("All tasks" + user lists)
         StatefulShellBranch(
           routes: [
             GoRoute(
               path: '/lists',
               pageBuilder: (context, state) => const NoTransitionPage(
-                child: TaskListScreen(),
+                child: ListsOverviewScreen(),
               ),
             ),
           ],
@@ -187,11 +187,19 @@ final GoRouter appRouter = GoRouter(
 
     GoRoute(
       path: '/tasks/add',
-      // state.extra carries the pre-filled date string ("yyyy-MM-dd") when
-      // opened via long-press from the planner. Null when opened from the FAB.
-      builder: (context, state) => AddTaskScreen(
-        initialDate: state.extra as String?,
-      ),
+      // state.extra is either an [AddTaskArgs] (list/section/date pre-fills)
+      // or — back-compat with older call sites — a bare "yyyy-MM-dd" string.
+      builder: (context, state) {
+        final Object? extra = state.extra;
+        if (extra is AddTaskArgs) {
+          return AddTaskScreen(
+            initialDate: extra.initialDate,
+            initialListId: extra.listId,
+            initialSectionId: extra.sectionId,
+          );
+        }
+        return AddTaskScreen(initialDate: extra as String?);
+      },
     ),
 
     GoRoute(
@@ -208,6 +216,16 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) => AddHabitScreen(
         habit: state.extra as HabitModel?,
       ),
+    ),
+
+    // ── List detail (full-screen, no bottom nav) ──────────────────────────
+
+    GoRoute(
+      path: '/lists/:id',
+      builder: (context, state) {
+        final int listId = int.parse(state.pathParameters['id'] ?? '0');
+        return ListDetailScreen(listId: listId);
+      },
     ),
 
     // ── Tracker routes (full-screen, no bottom nav) ───────────────────────

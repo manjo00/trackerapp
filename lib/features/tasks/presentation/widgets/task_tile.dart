@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../data/models/task_model.dart';
+import '../providers/lists_providers.dart';
 import '../providers/tasks_providers.dart';
 import 'priority_badge.dart';
 
@@ -12,9 +13,14 @@ import 'priority_badge.dart';
 ///   • Long-press     → open edit screen (pre-filled)
 ///   • Swipe left     → delete with undo snackbar
 class TaskTile extends ConsumerWidget {
-  const TaskTile({required this.task, super.key});
+  const TaskTile({required this.task, this.showListName = false, super.key});
 
   final TaskModel task;
+
+  /// Show the owning list's name in the subtitle — used when the tile is
+  /// rendered outside its own list (Home blocks), where the context would
+  /// otherwise be invisible.
+  final bool showListName;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -106,6 +112,10 @@ class TaskTile extends ConsumerWidget {
                         ),
                       ],
 
+                      // Owning-list hint (Home blocks only)
+                      if (showListName && task.listId != null)
+                        _ListNameHint(listId: task.listId ?? -1),
+
                       // Due date chip (only shown when set)
                       if (task.dueDate != null) ...[
                         const SizedBox(height: 4),
@@ -144,6 +154,40 @@ class TaskTile extends ConsumerWidget {
         ),
       );
     }
+  }
+}
+
+// ── Owning-list hint ──────────────────────────────────────────────────────────
+
+class _ListNameHint extends ConsumerWidget {
+  const _ListNameHint({required this.listId});
+
+  final int listId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ColorScheme cs = Theme.of(context).colorScheme;
+    final lists = ref.watch(taskListsProvider).valueOrNull ?? const [];
+    final list = lists.where((l) => l.id == listId).firstOrNull;
+    if (list == null) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 3),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.circle, size: 8, color: Color(list.colorValue)),
+          const SizedBox(width: 5),
+          Text(
+            list.name,
+            style: TextStyle(
+              fontSize: 11,
+              color: cs.onSurface.withAlpha(110),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

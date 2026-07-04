@@ -69,6 +69,8 @@ class AddTask extends _$AddTask {
     TaskPriority priority = TaskPriority.medium,
     bool reminderEnabled = false,
     String? reminderLeadTimes,
+    int? listId,
+    int? sectionId,
   }) async {
     state = const AsyncLoading();
     int? newId;
@@ -81,6 +83,8 @@ class AddTask extends _$AddTask {
             priority: priority,
             reminderEnabled: reminderEnabled,
             reminderLeadTimes: reminderLeadTimes,
+            listId: listId,
+            sectionId: sectionId,
           );
     });
     return newId;

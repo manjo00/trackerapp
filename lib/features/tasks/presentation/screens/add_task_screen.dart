@@ -7,6 +7,17 @@ import '../../data/models/task_model.dart';
 import '../../data/models/task_priority.dart';
 import '../providers/tasks_providers.dart';
 
+/// Typed extra for the `/tasks/add` route — carries optional pre-fills
+/// (planner date, or the list/section the "+" was tapped in). The router
+/// stays back-compatible with the old plain-String date extra.
+class AddTaskArgs {
+  const AddTaskArgs({this.initialDate, this.listId, this.sectionId});
+
+  final String? initialDate;
+  final int? listId;
+  final int? sectionId;
+}
+
 /// Full-screen form for creating OR editing a task.
 ///
 /// **Create mode** — reached via `context.push('/tasks/add')`.
@@ -16,11 +27,14 @@ import '../providers/tasks_providers.dart';
 ///   Fields are pre-filled from [task]. Saves via [updateTaskProvider].
 ///
 /// Also accepts [initialDate] so the planner's long-press pre-fills the
-/// due-date field without putting the screen in edit mode.
+/// due-date field, and [initialListId]/[initialSectionId] so a list's "+"
+/// files the new task where it was created.
 class AddTaskScreen extends ConsumerStatefulWidget {
   const AddTaskScreen({
     this.task,
     this.initialDate,
+    this.initialListId,
+    this.initialSectionId,
     super.key,
   });
 
@@ -29,6 +43,10 @@ class AddTaskScreen extends ConsumerStatefulWidget {
 
   /// Optional pre-filled due date ("yyyy-MM-dd") for new tasks from planner.
   final String? initialDate;
+
+  /// Optional pre-assigned list/section for new tasks from a list screen.
+  final int? initialListId;
+  final int? initialSectionId;
 
   @override
   ConsumerState<AddTaskScreen> createState() => _AddTaskScreenState();
@@ -42,6 +60,8 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
   DateTime? _dueDate;
   TimeOfDay? _dueTime;
   late TaskPriority _priority;
+  int? _listId;
+  int? _sectionId;
   bool _reminderEnabled = false;
   bool _lead1d = false;
   bool _lead3h = false;
@@ -62,15 +82,20 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
       _dueTime = _parseTimeOfDay(t.dueTime);
       _priority = t.priority;
       _reminderEnabled = t.reminderEnabled;
+      _listId = t.listId;
+      _sectionId = t.sectionId;
       final List<int> leads = t.leadTimeMinutes;
       _lead1d = leads.contains(1440);
       _lead3h = leads.contains(180);
       _lead5m = leads.contains(5);
     } else {
-      // Create mode — blank form, optional pre-filled date from planner.
+      // Create mode — blank form, optional pre-fills (planner date or the
+      // list/section whose "+" opened this screen).
       _titleCtrl = TextEditingController();
       _noteCtrl = TextEditingController();
       _priority = TaskPriority.medium;
+      _listId = widget.initialListId;
+      _sectionId = widget.initialSectionId;
       if (widget.initialDate != null) {
         _dueDate = DateTime.parse(widget.initialDate!);
       }
@@ -179,6 +204,8 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
           priority: _priority,
           reminderEnabled: _reminderEnabled,
           reminderLeadTimes: leadTimesStr,
+          listId: _listId,
+          sectionId: _sectionId,
         );
         await ref.read(updateTaskProvider.notifier).save(updated);
         await _syncReminders(updated, dueDateStr);
@@ -192,6 +219,8 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
               priority: _priority,
               reminderEnabled: _reminderEnabled,
               reminderLeadTimes: leadTimesStr,
+              listId: _listId,
+              sectionId: _sectionId,
             );
         if (_reminderEnabled && dueDateStr != null && newId != null) {
           // Schedule just the new task (bounded, like the edit path).

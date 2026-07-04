@@ -92,21 +92,22 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   Widget build(BuildContext context) {
     final AppSettings settings = ref.watch(settingsProvider);
 
-    final List<AppTab> visibleTabs = AppTab.values
-        .where((t) => settings.visibleTabs.contains(t))
-        .toList();
+    // The tab whose branch is currently displayed. When it isn't in the
+    // user's visible set (drawer navigation to Habits/Lists/… that aren't
+    // in the bottom bar), append it temporarily instead of bouncing away —
+    // otherwise drawer destinations would be unreachable.
+    final AppTab currentTab =
+        AppTab.values[widget.navigationShell.currentIndex];
+
+    final List<AppTab> visibleTabs = [
+      ...AppTab.values.where((t) => settings.visibleTabs.contains(t)),
+      if (!settings.visibleTabs.contains(currentTab)) currentTab,
+    ];
 
     final List<int> branchIndices = visibleTabs.map((t) => t.index).toList();
 
-    int currentDestIndex =
+    final int currentDestIndex =
         branchIndices.indexOf(widget.navigationShell.currentIndex);
-
-    if (currentDestIndex == -1 && branchIndices.isNotEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        widget.navigationShell.goBranch(branchIndices.first);
-      });
-      currentDestIndex = 0;
-    }
 
     return Scaffold(
       key: _scaffoldKey,
