@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/database/app_database.dart';
 import '../../../../core/database/database_provider.dart';
 import '../../../../core/widget/home_widget_service.dart';
 import '../../../shifts/data/models/work_shift_model.dart';
@@ -8,6 +9,7 @@ import '../../../shifts/presentation/providers/shifts_providers.dart';
 import '../../../shifts/presentation/shift_style.dart';
 import '../../../shifts/presentation/widgets/shift_date_picker_sheet.dart';
 import '../../data/models/task_priority.dart';
+import '../providers/lists_providers.dart';
 import '../providers/tasks_providers.dart';
 
 /// A lightweight quick-add half-sheet, opened by the home-screen widget "+".
@@ -28,6 +30,7 @@ class _QuickAddTaskScreenState extends ConsumerState<QuickAddTaskScreen> {
   DateTime? _dueDate;
   TimeOfDay? _dueTime;
   TaskPriority _priority = TaskPriority.medium;
+  int? _listId; // null = Captured
   bool _saving = false;
 
   static const List<String> _months = [
@@ -100,6 +103,7 @@ class _QuickAddTaskScreenState extends ConsumerState<QuickAddTaskScreen> {
               ? '${_dueTime!.hour.toString().padLeft(2, '0')}:${_dueTime!.minute.toString().padLeft(2, '0')}'
               : null,
           priority: _priority,
+          listId: _listId,
         );
     // Push the new task to the home-screen widgets *before* closing — once the
     // activity finishes, the lifecycle sync may not complete in time.
@@ -158,6 +162,43 @@ class _QuickAddTaskScreenState extends ConsumerState<QuickAddTaskScreen> {
                       ),
                     ),
                   ),
+
+                  // File-into-list chips — shown only once lists exist.
+                  // One tap files the task at capture time (default Captured).
+                  Builder(builder: (context) {
+                    final List<TaskList> lists =
+                        ref.watch(taskListsProvider).valueOrNull ?? const [];
+                    if (lists.isEmpty) return const SizedBox.shrink();
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            ChoiceChip(
+                              label: const Text('Captured'),
+                              selected: _listId == null,
+                              visualDensity: VisualDensity.compact,
+                              onSelected: (_) =>
+                                  setState(() => _listId = null),
+                            ),
+                            for (final TaskList list in lists) ...[
+                              const SizedBox(width: 8),
+                              ChoiceChip(
+                                avatar: Icon(Icons.circle,
+                                    size: 12, color: Color(list.colorValue)),
+                                label: Text(list.name),
+                                selected: _listId == list.id,
+                                visualDensity: VisualDensity.compact,
+                                onSelected: (_) =>
+                                    setState(() => _listId = list.id),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    );
+                  }),
 
                   TextField(
                     controller: _titleCtrl,

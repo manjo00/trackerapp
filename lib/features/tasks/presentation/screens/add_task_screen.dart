@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/constants/app_strings.dart';
+import '../../../../core/database/app_database.dart';
 import '../../../../core/notifications/notification_service.dart';
 import '../../../shifts/presentation/widgets/shift_date_picker_sheet.dart';
 import '../../data/models/task_model.dart';
 import '../../data/models/task_priority.dart';
+import '../providers/lists_providers.dart';
 import '../providers/tasks_providers.dart';
+import '../widgets/label_picker_row.dart';
 
 /// Typed extra for the `/tasks/add` route — carries optional pre-fills
 /// (planner date, or the list/section the "+" was tapped in). The router
@@ -62,6 +66,7 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
   late TaskPriority _priority;
   int? _listId;
   int? _sectionId;
+  Set<int> _labelIds = {};
   bool _reminderEnabled = false;
   bool _lead1d = false;
   bool _lead3h = false;
@@ -99,6 +104,19 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
       if (widget.initialDate != null) {
         _dueDate = DateTime.parse(widget.initialDate!);
       }
+    }
+
+    // Edit mode: load the task's current labels once (the user's edits own
+    // the state from then on — no live re-sync while the form is open).
+    final int? editId = t?.id;
+    if (editId != null) {
+      Future.microtask(() async {
+        final List<int> ids = await ref
+            .read(listsRepositoryProvider)
+            .watchLabelIdsForTask(editId)
+            .first;
+        if (mounted) setState(() => _labelIds = ids.toSet());
+      });
     }
   }
 
@@ -208,6 +226,9 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
           sectionId: _sectionId,
         );
         await ref.read(updateTaskProvider.notifier).save(updated);
+        await ref
+            .read(listsRepositoryProvider)
+            .setTaskLabels(updated.id, _labelIds);
         await _syncReminders(updated, dueDateStr);
       } else {
         final int? newId = await ref.read(addTaskProvider.notifier).add(
@@ -222,6 +243,11 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
               listId: _listId,
               sectionId: _sectionId,
             );
+        if (newId != null && _labelIds.isNotEmpty) {
+          await ref
+              .read(listsRepositoryProvider)
+              .setTaskLabels(newId, _labelIds);
+        }
         if (_reminderEnabled && dueDateStr != null && newId != null) {
           // Schedule just the new task (bounded, like the edit path).
           final TaskModel created = TaskModel(
@@ -268,6 +294,90 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
     }
   }
 
+
+  // ── List / section pickers ────────────────────────────────────────────────
+
+  /// -1 stands in for "no list / no section" — a real null value would make
+  /// [DropdownButton] show its hint instead of the selected item.
+  static const int _noneValue = -1;
+
+  Widget _buildListPicker() {
+    final List<TaskList> lists =
+        ref.watch(taskListsProvider).valueOrNull ?? const [];
+
+    return InputDecorator(
+      decoration: const InputDecoration(
+        border: OutlineInputBorder(),
+        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      ),
+      child: DropdownButton<int>(
+        value: _listId ?? _noneValue,
+        isExpanded: true,
+        underline: const SizedBox.shrink(),
+        items: [
+          const DropdownMenuItem(
+            value: _noneValue,
+            child: Text('Captured (no $kListNoun)'),
+          ),
+          for (final TaskList list in lists)
+            DropdownMenuItem(
+              value: list.id,
+              child: Row(
+                children: [
+                  Icon(Icons.circle, size: 12, color: Color(list.colorValue)),
+                  const SizedBox(width: 10),
+                  Flexible(
+                      child: Text(list.name, overflow: TextOverflow.ellipsis)),
+                ],
+              ),
+            ),
+        ],
+        onChanged: (int? v) => setState(() {
+          _listId = (v == null || v == _noneValue) ? null : v;
+          _sectionId = null; // a section never survives a list change
+        }),
+      ),
+    );
+  }
+
+  Widget _buildSectionPicker() {
+    final int? listId = _listId;
+    if (listId == null) return const SizedBox.shrink();
+    final List<ListSection> sections =
+        ref.watch(sectionsForListProvider(listId)).valueOrNull ?? const [];
+    if (sections.isEmpty) return const SizedBox.shrink();
+
+    // Guard against a stale section id (deleted while the form is open).
+    final int value = sections.any((s) => s.id == _sectionId)
+        ? (_sectionId ?? _noneValue)
+        : _noneValue;
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: InputDecorator(
+        decoration: const InputDecoration(
+          border: OutlineInputBorder(),
+          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        ),
+        child: DropdownButton<int>(
+          value: value,
+          isExpanded: true,
+          underline: const SizedBox.shrink(),
+          items: [
+            const DropdownMenuItem(
+              value: _noneValue,
+              child: Text('No section'),
+            ),
+            for (final ListSection s in sections)
+              DropdownMenuItem(value: s.id, child: Text(s.name)),
+          ],
+          onChanged: (int? v) => setState(() {
+            _sectionId = (v == null || v == _noneValue) ? null : v;
+          }),
+        ),
+      ),
+    );
+  }
 
   // ── Build ─────────────────────────────────────────────────────────────────
 
@@ -378,6 +488,34 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
             _PrioritySelector(
               value: _priority,
               onChanged: (TaskPriority p) => setState(() => _priority = p),
+            ),
+
+            const SizedBox(height: 28),
+
+            // ── List / section ────────────────────────────────────────────
+            Text(
+              '$kListNoun  (optional)',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+            const SizedBox(height: 12),
+            _buildListPicker(),
+            if (_listId != null) _buildSectionPicker(),
+
+            const SizedBox(height: 28),
+
+            // ── Labels ────────────────────────────────────────────────────
+            Text(
+              'Labels  (optional)',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+            const SizedBox(height: 12),
+            LabelPickerRow(
+              selected: _labelIds,
+              onChanged: (Set<int> ids) => setState(() => _labelIds = ids),
             ),
 
             const SizedBox(height: 28),
