@@ -46,9 +46,23 @@ class TasksRepository {
         );
   }
 
-  /// Incomplete tasks with no due date — shown in the Inbox tab.
-  Stream<List<TaskModel>> watchInboxTasks() {
-    return _dao.watchInboxTasks().map(
+  /// Incomplete tasks not filed under any list — Home's "Captured" block.
+  Stream<List<TaskModel>> watchCapturedTasks() {
+    return _dao.watchCapturedTasks().map(
+          (rows) => rows.map(_fromRow).toList(),
+        );
+  }
+
+  /// All tasks in one list (incomplete first, grouped by section).
+  Stream<List<TaskModel>> watchTasksForList(int listId) {
+    return _dao.watchTasksForList(listId).map(
+          (rows) => rows.map(_fromRow).toList(),
+        );
+  }
+
+  /// Incomplete tasks due between [from] and [to] inclusive ("yyyy-MM-dd").
+  Stream<List<TaskModel>> watchTasksInRange(String from, String to) {
+    return _dao.watchTasksInRange(from, to).map(
           (rows) => rows.map(_fromRow).toList(),
         );
   }
@@ -72,6 +86,8 @@ class TasksRepository {
     TaskPriority priority = TaskPriority.medium,
     bool reminderEnabled = false,
     String? reminderLeadTimes,
+    int? listId,
+    int? sectionId,
   }) {
     return _dao.insertTask(
       TasksCompanion(
@@ -83,6 +99,8 @@ class TasksRepository {
         createdAt: Value(DateTime.now()),
         reminderEnabled: Value(reminderEnabled),
         reminderLeadTimes: Value(reminderLeadTimes),
+        listId: Value(listId),
+        sectionId: Value(sectionId),
       ),
     );
   }
@@ -110,6 +128,8 @@ class TasksRepository {
         priority: Value(task.priority.toInt()),
         reminderEnabled: Value(task.reminderEnabled),
         reminderLeadTimes: Value(task.reminderLeadTimes),
+        listId: Value(task.listId),
+        sectionId: Value(task.sectionId),
       ),
     );
   }
@@ -175,5 +195,7 @@ class TasksRepository {
         createdAt: row.createdAt,
         reminderEnabled: row.reminderEnabled,
         reminderLeadTimes: row.reminderLeadTimes,
+        listId: row.listId,
+        sectionId: row.sectionId,
       );
 }

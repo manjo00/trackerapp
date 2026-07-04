@@ -68,13 +68,43 @@ class TasksDao extends DatabaseAccessor<AppDatabase> with _$TasksDaoMixin {
         .watch();
   }
 
-  /// Incomplete tasks with NO due date — the Inbox ("someday / unsorted").
-  Stream<List<Task>> watchInboxTasks() {
+  /// Incomplete tasks not filed under any list — "Captured".
+  /// (No Inbox row exists by design: listId NULL *is* the inbox.)
+  Stream<List<Task>> watchCapturedTasks() {
     return (select(tasks)
-          ..where((t) => t.dueDate.isNull() & t.isCompleted.equals(false))
+          ..where((t) => t.listId.isNull() & t.isCompleted.equals(false))
           ..orderBy([
             (t) => OrderingTerm.desc(t.priority),
             (t) => OrderingTerm.asc(t.createdAt),
+          ]))
+        .watch();
+  }
+
+  /// All tasks in one list: incomplete first, grouped by section
+  /// (unsectioned tasks first — SQLite sorts NULL first on ASC), then
+  /// priority descending within a section.
+  Stream<List<Task>> watchTasksForList(int listId) {
+    return (select(tasks)
+          ..where((t) => t.listId.equals(listId))
+          ..orderBy([
+            (t) => OrderingTerm.asc(t.isCompleted),
+            (t) => OrderingTerm.asc(t.sectionId),
+            (t) => OrderingTerm.desc(t.priority),
+            (t) => OrderingTerm.asc(t.createdAt),
+          ]))
+        .watch();
+  }
+
+  /// Incomplete tasks due between [from] and [to] inclusive
+  /// ("yyyy-MM-dd" strings) — feeds Home's "This week" strip.
+  Stream<List<Task>> watchTasksInRange(String from, String to) {
+    return (select(tasks)
+          ..where((t) =>
+              t.isCompleted.equals(false) &
+              t.dueDate.isBetweenValues(from, to))
+          ..orderBy([
+            (t) => OrderingTerm.asc(t.dueDate),
+            (t) => OrderingTerm.desc(t.priority),
           ]))
         .watch();
   }

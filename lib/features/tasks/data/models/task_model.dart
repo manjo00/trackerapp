@@ -26,6 +26,10 @@ abstract class TaskModel with _$TaskModel {
     /// Comma-separated lead-time intervals in minutes, e.g. "1440,180,5".
     /// Use [leadTimeMinutes] to access these as a typed list.
     String? reminderLeadTimes,
+    /// Owning list id; null = "Captured" (not filed under any list).
+    int? listId,
+    /// Section within [listId]'s list; null = list body.
+    int? sectionId,
   }) = _TaskModel;
 
   // Private constructor required for custom getters in freezed classes.

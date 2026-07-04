@@ -17,7 +17,9 @@ class InboxScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final inboxAsync = ref.watch(inboxTasksProvider);
+    // Temporary: this screen is replaced by Home in the nav restructure;
+    // until then it shows Captured (unfiled) tasks instead of undated ones.
+    final inboxAsync = ref.watch(capturedTasksProvider);
     final cs = Theme.of(context).colorScheme;
 
     return Scaffold(

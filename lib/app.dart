@@ -106,7 +106,7 @@ class _LifeTrackerAppState extends ConsumerState<LifeTrackerApp>
     ref.invalidate(allTasksProvider);
     ref.invalidate(tasksDueTodayProvider);
     ref.invalidate(overdueTasksProvider);
-    ref.invalidate(inboxTasksProvider);
+    ref.invalidate(capturedTasksProvider);
     ref.invalidate(checklistTrackersForTodayProvider);
     ref.invalidate(trackersWithProgressProvider);
     ref.invalidate(todaysSuggestedSessionProvider);
