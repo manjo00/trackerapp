@@ -1,5 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
+    <!-- Network access (update check, GitHub feedback push). NOT auto-added
+         to release builds — Flutter only merges it into debug manifests, so
+         omitting it here silently breaks all networking in release APKs. -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <!-- Show notifications (required on Android 13+; silently ignored below). -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Re-schedule notifications after a device reboot. -->

@@ -122,9 +122,11 @@ class GithubFeedbackService {
         _ => GithubPushResult.failure('GitHub error ${put.statusCode}'),
       };
     } catch (e) {
-      // Timeouts and no-network land here — keep it human.
-      return const GithubPushResult.failure(
-          'Could not reach GitHub — check your connection');
+      // Timeouts and no-network land here. Include the real cause —
+      // a bare "check your connection" already hid a bug once.
+      final String detail = e.toString();
+      return GithubPushResult.failure(
+          'GitHub push failed: ${detail.length > 120 ? detail.substring(0, 120) : detail}');
     }
   }
 }

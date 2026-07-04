@@ -181,36 +181,63 @@ class ListDetailScreen extends ConsumerWidget {
 
     final GithubFeedbackService service =
         ref.read(githubFeedbackServiceProvider);
-    final GithubFeedbackConfig? config = await service.loadConfig();
-    if (config == null) {
-      messenger.showSnackBar(SnackBar(
-        content: const Text('Set up the GitHub connection first'),
-        action: SnackBarAction(
-          label: 'Settings',
-          onPressed: () => router.push('/settings'),
-        ),
-      ));
-      return;
+
+    GithubFeedbackConfig? config;
+    GithubPushResult result;
+    try {
+      config = await service.loadConfig();
+      if (config == null) {
+        messenger.showSnackBar(SnackBar(
+          content: const Text('Set up the GitHub connection first'),
+          action: SnackBarAction(
+            label: 'Settings',
+            onPressed: () => router.push('/settings'),
+          ),
+        ));
+        return;
+      }
+
+      messenger.showSnackBar(
+          const SnackBar(content: Text('Pushing to GitHub…')));
+
+      final String markdown = buildFeedbackMarkdown(
+        listName: list.name,
+        sections: [for (final s in sections) (id: s.id, name: s.name)],
+        tasks: tasks,
+        now: DateTime.now(),
+      );
+      result = await service.pushMarkdown(
+        config: config,
+        path: 'feedback/${slugify(list.name)}.md',
+        content: markdown,
+        commitMessage: 'feedback: update "${list.name}" from Uplan',
+      );
+    } catch (e) {
+      // Secure-storage reads can throw on some devices; surface it.
+      result = GithubPushResult.failure('Setup error: $e');
     }
 
-    messenger.showSnackBar(
-        const SnackBar(content: Text('Pushing to GitHub…')));
-
-    final String markdown = buildFeedbackMarkdown(
-      listName: list.name,
-      sections: [for (final s in sections) (id: s.id, name: s.name)],
-      tasks: tasks,
-      now: DateTime.now(),
-    );
-    final GithubPushResult result = await service.pushMarkdown(
-      config: config,
-      path: 'feedback/${slugify(list.name)}.md',
-      content: markdown,
-      commitMessage: 'feedback: update "${list.name}" from Uplan',
-    );
-
     messenger.hideCurrentSnackBar();
-    messenger.showSnackBar(SnackBar(content: Text(result.message)));
+    if (result.success) {
+      messenger.showSnackBar(SnackBar(content: Text(result.message)));
+      return;
+    }
+    // Failures stay on screen until dismissed — a snackbar disappears
+    // before a slow push's error can be read (dev-only surface anyway).
+    if (!context.mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('GitHub push failed'),
+        content: SelectableText(result.message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
   }
 
   // ── Section actions ───────────────────────────────────────────────────────
