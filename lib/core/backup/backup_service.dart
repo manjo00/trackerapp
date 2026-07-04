@@ -88,9 +88,24 @@ class BackupService {
             _db.trackerLogs, rowsFor('tracker_logs').map(TrackerLog.fromJson));
         b.insertAll(_db.trackerLogValues,
             rowsFor('tracker_log_values').map(TrackerLogValue.fromJson));
+        // Task organization (v11): lists + sections before tasks (FKs),
+        // labels before the junction, junction after tasks.
+        b.insertAll(
+            _db.taskLists, rowsFor('task_lists').map(TaskList.fromJson));
+        b.insertAll(_db.listSections,
+            rowsFor('list_sections').map(ListSection.fromJson));
+        b.insertAll(_db.labels, rowsFor('labels').map(Label.fromJson));
         b.insertAll(_db.tasks, rowsFor('tasks').map(Task.fromJson));
         b.insertAll(
+            _db.taskLabels, rowsFor('task_labels').map(TaskLabel.fromJson));
+        b.insertAll(
             _db.workShifts, rowsFor('work_shifts').map(WorkShift.fromJson));
+        // Standalone tables that were missing from restore entirely
+        // (exported fine, silently dropped on import until now).
+        b.insertAll(_db.shiftRotations,
+            rowsFor('shift_rotations').map(ShiftRotation.fromJson));
+        b.insertAll(_db.muscleTargets,
+            rowsFor('muscle_targets').map(MuscleTarget.fromJson));
       });
     });
   }
@@ -110,7 +125,13 @@ class BackupService {
         _db.exerciseLibrary,
         _db.habitCompletions,
         _db.habits,
+        _db.taskLabels,
+        _db.labels,
         _db.tasks,
+        _db.listSections,
+        _db.taskLists,
         _db.workShifts,
+        _db.shiftRotations,
+        _db.muscleTargets,
       ];
 }

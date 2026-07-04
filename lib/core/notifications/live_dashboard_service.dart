@@ -181,15 +181,22 @@ class LiveDashboardService {
         });
       }
 
-      // ── Inbox: undated captures ──────────────────────────────────────────
-      final inbox = pending.where((t) => t.dueDate == null).toList()
+      // ── Captured: tasks not filed under any list ────────────────────────
+      // (card type stays 'inbox' — the background complete/snooze action
+      // works on the tasks table either way, and renaming the type would
+      // orphan snooze entries saved before the Lists update.)
+      final captured = pending
+          .where((t) => t.listId == null)
+          .where((t) =>
+              t.dueDate == null || (t.dueDate as String).compareTo(today) > 0)
+          .toList()
         ..sort((a, b) => b.priority.compareTo(a.priority));
-      for (final t in inbox) {
+      for (final t in captured) {
         cards.add({
           'type': 'inbox',
           'id': t.id,
           'title': t.title,
-          'sub': 'Inbox',
+          'sub': 'Captured',
           'color': _inboxHex,
         });
       }
