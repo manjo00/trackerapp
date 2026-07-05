@@ -61,6 +61,10 @@ final GoRouter appRouter = GoRouter(
     if (uri.host == 'add_task' || uri.toString().contains('add_task')) {
       return '/quick-add';
     }
+    // Rest-timer notification tap → continue the active workout.
+    if (uri.host == 'open_workout' || uri.toString().contains('open_workout')) {
+      return '/workout/active';
+    }
     // Some launch paths report a bare "/" which has no route — send Home.
     if (uri.path.isEmpty || uri.path == '/') {
       return '/home';

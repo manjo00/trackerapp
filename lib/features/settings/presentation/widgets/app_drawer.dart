@@ -120,7 +120,8 @@ class AppDrawer extends ConsumerWidget {
             const SizedBox(height: 8),
             Divider(color: cs.outlineVariant),
 
-            // ── Features (tabs not in the bottom nav) ───────────────────
+            // ── Features (only tabs NOT already in the bottom nav — a
+            //    visible tab needs no second entry point; user feedback) ──
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 14, 20, 4),
               child: Text(
@@ -132,51 +133,76 @@ class AppDrawer extends ConsumerWidget {
                 ),
               ),
             ),
-            _DrawerTile(
-              icon: Icons.wb_sunny_rounded,
-              label: 'Today',
-              subtitle: 'Unified daily view',
-              onTap: () {
-                Navigator.of(context).pop();
-                context.go('/today');
-              },
-            ),
-            _DrawerTile(
-              icon: Icons.task_alt_rounded,
-              label: 'Habits',
-              subtitle: 'Daily streaks & recurring goals',
-              onTap: () {
-                Navigator.of(context).pop();
-                context.go('/habits');
-              },
-            ),
-            _DrawerTile(
-              icon: Icons.folder_copy_rounded,
-              label: kListNounPlural,
-              subtitle: 'Task lists & sections',
-              onTap: () {
-                Navigator.of(context).pop();
-                context.go('/lists');
-              },
-            ),
-            _DrawerTile(
-              icon: Icons.bar_chart_rounded,
-              label: 'Trackers',
-              subtitle: 'Checklists & session logs',
-              onTap: () {
-                Navigator.of(context).pop();
-                context.go('/trackers');
-              },
-            ),
-            _DrawerTile(
-              icon: Icons.fitness_center_rounded,
-              label: 'Workout',
-              subtitle: 'Programs, sets & rest timer',
-              onTap: () {
-                Navigator.of(context).pop();
-                context.go('/workout');
-              },
-            ),
+            if (!settings.visibleTabs.contains(AppTab.home))
+              _DrawerTile(
+                icon: Icons.home_rounded,
+                label: 'Home',
+                subtitle: 'Urgent, today & captured at a glance',
+                onTap: () {
+                  Navigator.of(context).pop();
+                  context.go('/home');
+                },
+              ),
+            if (!settings.visibleTabs.contains(AppTab.today))
+              _DrawerTile(
+                icon: Icons.wb_sunny_rounded,
+                label: 'Today',
+                subtitle: 'Unified daily view',
+                onTap: () {
+                  Navigator.of(context).pop();
+                  context.go('/today');
+                },
+              ),
+            if (!settings.visibleTabs.contains(AppTab.habits))
+              _DrawerTile(
+                icon: Icons.task_alt_rounded,
+                label: 'Habits',
+                subtitle: 'Daily streaks & recurring goals',
+                onTap: () {
+                  Navigator.of(context).pop();
+                  context.go('/habits');
+                },
+              ),
+            if (!settings.visibleTabs.contains(AppTab.lists))
+              _DrawerTile(
+                icon: Icons.folder_copy_rounded,
+                label: kListNounPlural,
+                subtitle: 'Task lists & sections',
+                onTap: () {
+                  Navigator.of(context).pop();
+                  context.go('/lists');
+                },
+              ),
+            if (!settings.visibleTabs.contains(AppTab.trackers))
+              _DrawerTile(
+                icon: Icons.bar_chart_rounded,
+                label: 'Trackers',
+                subtitle: 'Checklists & session logs',
+                onTap: () {
+                  Navigator.of(context).pop();
+                  context.go('/trackers');
+                },
+              ),
+            if (!settings.visibleTabs.contains(AppTab.planner))
+              _DrawerTile(
+                icon: Icons.calendar_today_rounded,
+                label: 'Planner',
+                subtitle: 'Month calendar & day details',
+                onTap: () {
+                  Navigator.of(context).pop();
+                  context.go('/planner');
+                },
+              ),
+            if (!settings.visibleTabs.contains(AppTab.workout))
+              _DrawerTile(
+                icon: Icons.fitness_center_rounded,
+                label: 'Workout',
+                subtitle: 'Programs, sets & rest timer',
+                onTap: () {
+                  Navigator.of(context).pop();
+                  context.go('/workout');
+                },
+              ),
             _DrawerTile(
               icon: Icons.calendar_month_rounded,
               label: 'Work schedule',

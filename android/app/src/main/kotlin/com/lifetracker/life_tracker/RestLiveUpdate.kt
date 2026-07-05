@@ -7,6 +7,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.graphics.drawable.Icon
+import android.net.Uri
 import android.os.Build
 import android.util.Log
 
@@ -28,6 +29,7 @@ object RestLiveUpdate {
 
     private const val RC_ADD15 = 51005
     private const val RC_SKIP = 51006
+    private const val RC_OPEN_WORKOUT = 51008
 
     fun post(context: Context, endAtMillis: Long, totalSeconds: Int) {
         ensureChannel(context)
@@ -49,6 +51,19 @@ object RestLiveUpdate {
             .setChronometerCountDown(true)
             .addAction(action(context, "+15s", LiveActionReceiver.ACTION_REST_ADD15, RC_ADD15))
             .addAction(action(context, "Skip", LiveActionReceiver.ACTION_REST_SKIP, RC_SKIP))
+            // Tap → straight back into the active workout screen. The uri is
+            // routed by go_router's redirect (same mechanism as the widget's
+            // uplan://add_task deep link).
+            .setContentIntent(
+                PendingIntent.getActivity(
+                    context,
+                    RC_OPEN_WORKOUT,
+                    Intent(context, MainActivity::class.java)
+                        .setAction(Intent.ACTION_VIEW)
+                        .setData(Uri.parse("uplan://open_workout")),
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+                ),
+            )
 
         if (Build.VERSION.SDK_INT >= 36) {
             // Live Update: progress bar spanning the full rest, chip text.
