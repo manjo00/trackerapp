@@ -46,45 +46,29 @@ class HomeScreen extends ConsumerWidget {
       return mine;
     }
 
-    final List<HomeBlockType> visibleTypes = [];
+    // Every enabled block always renders — an empty one shows a quiet
+    // placeholder instead of vanishing (user feedback: the dashboard's
+    // structure should stay put even on an empty day).
     final List<Widget> children = [];
-    bool anyTaskContent = false;
-
     for (final HomeBlockType type in layout) {
-      Widget? content;
-      switch (type) {
-        case HomeBlockType.urgent:
-          final tasks = claim(urgentAll);
-          if (tasks.isEmpty) continue;
-          anyTaskContent = true;
-          content = _taskTiles(tasks);
-        case HomeBlockType.dueToday:
-          final tasks = claim(dueTodayAll);
-          if (tasks.isEmpty) continue;
-          anyTaskContent = true;
-          content = _taskTiles(tasks);
-        case HomeBlockType.captured:
-          final tasks = claim(capturedAll);
-          if (tasks.isEmpty) continue;
-          anyTaskContent = true;
-          content = _taskTiles(tasks);
-        case HomeBlockType.thisWeek:
-          if (week.isEmpty) continue;
-          anyTaskContent = true;
-          content = _WeekCard(tasks: week);
-        case HomeBlockType.workout:
-          content = const WorkoutBlock();
-      }
+      final Widget content = switch (type) {
+        HomeBlockType.urgent =>
+          _tasksOrEmpty(claim(urgentAll), 'Nothing urgent 🎉', cs),
+        HomeBlockType.dueToday =>
+          _tasksOrEmpty(claim(dueTodayAll), 'Nothing due today', cs),
+        HomeBlockType.captured =>
+          _tasksOrEmpty(claim(capturedAll), 'Nothing captured', cs),
+        HomeBlockType.thisWeek => _WeekCard(tasks: week),
+        HomeBlockType.workout => const WorkoutBlock(),
+      };
 
-      final int index = visibleTypes.length;
-      visibleTypes.add(type);
       children.add(Column(
         key: ValueKey(type),
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Long-press the header to drag the whole block.
           ReorderableDelayedDragStartListener(
-            index: index,
+            index: children.length,
             child: _BlockHeader(type: type, color: _headerColor(type, cs)),
           ),
           content,
@@ -92,16 +76,21 @@ class HomeScreen extends ConsumerWidget {
       ));
     }
 
-    final bool allClear = !anyTaskContent;
-
     return Scaffold(
       body: ReorderableListView(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 96),
         buildDefaultDragHandles: false,
         // onReorderItem (Flutter 3.41+) already adjusts newIndex for the
-        // removed item — no manual `newIndex -= 1` dance.
-        onReorderItem: (int oldIndex, int newIndex) =>
-            _onReorder(ref, layout, visibleTypes, oldIndex, newIndex),
+        // removed item — no manual `newIndex -= 1` dance. Children map 1:1
+        // onto the layout (every enabled block renders), so this is a
+        // straight list move.
+        onReorderItem: (int oldIndex, int newIndex) {
+          if (oldIndex == newIndex) return;
+          final List<HomeBlockType> next = List.of(layout);
+          final HomeBlockType moved = next.removeAt(oldIndex);
+          next.insert(newIndex, moved);
+          ref.read(settingsProvider.notifier).setHomeBlocks(next);
+        },
         header: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -117,20 +106,18 @@ class HomeScreen extends ConsumerWidget {
                 ),
               ),
             ),
-            if (allClear)
+            if (layout.isEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 48, bottom: 24),
                 child: Column(
                   children: [
-                    const Text('🎉', style: TextStyle(fontSize: 44)),
+                    const Text('🏗️', style: TextStyle(fontSize: 44)),
                     const SizedBox(height: 10),
-                    Text('All clear',
+                    Text('Home is empty',
                         style: Theme.of(context).textTheme.titleMedium),
                     const SizedBox(height: 4),
                     Text(
-                      layout.isEmpty
-                          ? 'No blocks — add some with the ✎ above'
-                          : 'Nothing urgent, nothing captured',
+                      'Add blocks with the ✎ above',
                       style: TextStyle(
                           fontSize: 13, color: cs.onSurface.withAlpha(120)),
                     ),
@@ -149,23 +136,6 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  /// Maps a drag within the VISIBLE blocks back onto the full layout
-  /// (hidden/empty blocks keep their relative positions).
-  void _onReorder(WidgetRef ref, List<HomeBlockType> layout,
-      List<HomeBlockType> visible, int oldIndex, int newIndex) {
-    if (oldIndex == newIndex) return;
-
-    final HomeBlockType moved = visible[oldIndex];
-    final List<HomeBlockType> anchor = List.of(visible)..removeAt(oldIndex);
-    final List<HomeBlockType> full = List.of(layout)..remove(moved);
-
-    final int insertAt = newIndex >= anchor.length
-        ? full.length
-        : full.indexOf(anchor[newIndex]);
-    full.insert(insertAt, moved);
-    ref.read(settingsProvider.notifier).setHomeBlocks(full);
-  }
-
   static Color _headerColor(HomeBlockType type, ColorScheme cs) =>
       switch (type) {
         HomeBlockType.urgent => cs.error,
@@ -175,11 +145,27 @@ class HomeScreen extends ConsumerWidget {
         HomeBlockType.workout => cs.primary,
       };
 
-  static Widget _taskTiles(List<TaskModel> tasks) => Column(
-        children: [
-          for (final t in tasks) TaskTile(task: t, showListName: true),
-        ],
+  /// Task tiles, or a quiet placeholder card when the block is empty.
+  static Widget _tasksOrEmpty(
+      List<TaskModel> tasks, String emptyText, ColorScheme cs) {
+    if (tasks.isEmpty) {
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Text(
+            emptyText,
+            style: TextStyle(
+                fontSize: 13, color: cs.onSurface.withAlpha(110)),
+          ),
+        ),
       );
+    }
+    return Column(
+      children: [
+        for (final t in tasks) TaskTile(task: t, showListName: true),
+      ],
+    );
+  }
 }
 
 // ── Block header (also the drag handle) ───────────────────────────────────
