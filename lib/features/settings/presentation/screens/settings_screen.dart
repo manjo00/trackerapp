@@ -246,6 +246,27 @@ class SettingsScreen extends ConsumerWidget {
           // ── Navigation tabs ────────────────────────────────────────────
           const _SectionHeader(label: 'Navigation tabs'),
 
+          // Which tab the app lands on when launched. Only visible tabs
+          // are offered; launch falls back safely if the choice is hidden.
+          ListTile(
+            leading: Icon(Icons.rocket_launch_rounded, color: cs.primary),
+            title: const Text('Open at launch'),
+            trailing: DropdownButton<AppTab>(
+              value: settings.visibleTabs.contains(settings.startupTab)
+                  ? settings.startupTab
+                  : AppTab.values.firstWhere(settings.visibleTabs.contains),
+              underline: const SizedBox.shrink(),
+              items: [
+                for (final AppTab tab in AppTab.values)
+                  if (settings.visibleTabs.contains(tab))
+                    DropdownMenuItem(value: tab, child: Text(tab.label)),
+              ],
+              onChanged: (AppTab? tab) {
+                if (tab != null) notifier.setStartupTab(tab);
+              },
+            ),
+          ),
+
           Padding(
             padding:
                 const EdgeInsets.symmetric(horizontal: 16, vertical: 4),

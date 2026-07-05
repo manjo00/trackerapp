@@ -51,8 +51,12 @@ import 'shell_scaffold.dart';
 ///  /workout/programs/:id                ← ProgramDetailScreen         (outside shell)
 ///  /workout/programs/:id/session/:sid   ← ProgramSessionEditorScreen  (outside shell)
 /// ```
+/// Set by main() (from the startup-tab preference) BEFORE the lazy
+/// [appRouter] global below is first touched. '/home' when unset.
+String appInitialLocation = '/home';
+
 final GoRouter appRouter = GoRouter(
-  initialLocation: '/home',
+  initialLocation: appInitialLocation,
   // Home-screen widget deep links arrive as custom-scheme URIs
   // (e.g. uplan://add_task). Translate them to real in-app routes here,
   // before go_router tries — and fails — to match them as paths.
@@ -65,9 +69,10 @@ final GoRouter appRouter = GoRouter(
     if (uri.host == 'open_workout' || uri.toString().contains('open_workout')) {
       return '/workout/active';
     }
-    // Some launch paths report a bare "/" which has no route — send Home.
+    // Some launch paths report a bare "/" which has no route — send the
+    // user's startup tab.
     if (uri.path.isEmpty || uri.path == '/') {
-      return '/home';
+      return appInitialLocation;
     }
     return null;
   },

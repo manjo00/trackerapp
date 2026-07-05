@@ -10,7 +10,9 @@ import 'app.dart';
 import 'core/diagnostics/crash_log.dart';
 import 'core/notifications/live_background_callback.dart';
 import 'core/notifications/notification_service.dart';
+import 'core/router/app_router.dart';
 import 'core/settings/settings_provider.dart';
+import 'core/settings/startup_tab.dart';
 
 /// App entry point.
 ///
@@ -57,6 +59,13 @@ void main() {
     ]);
 
     final SharedPreferences prefs = results[0] as SharedPreferences;
+
+    // Decide the launch tab BEFORE the router global is first touched —
+    // GoRouter's initialLocation is fixed at construction time.
+    appInitialLocation = startupLocation(
+      storedTab: prefs.getString('startup_tab'),
+      storedVisibleTabs: prefs.getStringList('visible_tabs'),
+    );
 
     CrashLog.note('app start');
 
