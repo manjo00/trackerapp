@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../features/home/data/home_block_type.dart';
 import '../constants/app_strings.dart';
 
 /// Every tab in the bottom navigation bar.
@@ -60,6 +61,8 @@ class AppSettings {
     required this.experimentalTargets,
     this.devMode = false,
     this.weekStartsSunday = false,
+    this.homeBlocks = HomeBlockType.defaults,
+    this.startupTab = AppTab.home,
   });
 
   final ThemeMode themeMode;
@@ -91,6 +94,14 @@ class AppSettings {
   /// the week (default: Monday, matching the original layouts).
   final bool weekStartsSunday;
 
+  /// The Home dashboard's blocks, in display order. A type not in the
+  /// list is hidden (re-addable from the Edit Home screen).
+  final List<HomeBlockType> homeBlocks;
+
+  /// Which tab the app opens on at launch (must be a visible tab;
+  /// launch code falls back to the first visible tab otherwise).
+  final AppTab startupTab;
+
   /// Convenience getter — the reminder as a Flutter [TimeOfDay].
   TimeOfDay get reminderTime => TimeOfDay(hour: reminderHour, minute: reminderMinute);
 
@@ -118,6 +129,8 @@ class AppSettings {
     bool? experimentalTargets,
     bool? devMode,
     bool? weekStartsSunday,
+    List<HomeBlockType>? homeBlocks,
+    AppTab? startupTab,
   }) =>
       AppSettings(
         themeMode: themeMode ?? this.themeMode,
@@ -128,5 +141,7 @@ class AppSettings {
         experimentalTargets: experimentalTargets ?? this.experimentalTargets,
         devMode: devMode ?? this.devMode,
         weekStartsSunday: weekStartsSunday ?? this.weekStartsSunday,
+        homeBlocks: homeBlocks ?? this.homeBlocks,
+        startupTab: startupTab ?? this.startupTab,
       );
 }

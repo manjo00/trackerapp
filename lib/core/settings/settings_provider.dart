@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../features/home/data/home_block_type.dart';
 import '../notifications/notification_service.dart';
 import 'app_settings.dart';
 
@@ -41,6 +42,8 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
   static const String _kExperimentalTargets = 'experimental_targets';
   static const String _kDevMode = 'dev_mode';
   static const String _kWeekStartsSunday = 'week_starts_sunday';
+  static const String _kHomeBlocks = 'home_blocks';
+  static const String _kStartupTab = 'startup_tab';
 
   // Settings schema version — increment when defaults need to be reset.
   static const int _currentSettingsVersion = 3;
@@ -91,7 +94,15 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
           AppSettings.defaults.experimentalTargets,
       devMode: _prefs.getBool(_kDevMode) ?? false,
       weekStartsSunday: _prefs.getBool(_kWeekStartsSunday) ?? false,
+      homeBlocks: HomeBlockType.parse(_prefs.getStringList(_kHomeBlocks)),
+      startupTab: _loadStartupTab(),
     );
+  }
+
+  AppTab _loadStartupTab() {
+    final String? raw = _prefs.getString(_kStartupTab);
+    return AppTab.values.where((t) => t.name == raw).firstOrNull ??
+        AppTab.home;
   }
 
   ThemeMode _loadTheme() {
@@ -171,6 +182,19 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
   void setWeekStartsSunday(bool enabled) {
     state = state.copyWith(weekStartsSunday: enabled);
     _prefs.setBool(_kWeekStartsSunday, enabled);
+  }
+
+  /// Saves the Home dashboard's block layout (order = display order).
+  void setHomeBlocks(List<HomeBlockType> blocks) {
+    state = state.copyWith(homeBlocks: List.unmodifiable(blocks));
+    _prefs.setStringList(
+        _kHomeBlocks, blocks.map((b) => b.name).toList());
+  }
+
+  /// Chooses which tab the app opens on at launch.
+  void setStartupTab(AppTab tab) {
+    state = state.copyWith(startupTab: tab);
+    _prefs.setString(_kStartupTab, tab.name);
   }
 
   /// Updates the reminder time and re-schedules if notifications are on.
