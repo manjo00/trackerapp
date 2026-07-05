@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/settings/settings_provider.dart';
+import '../../../../core/utils/week_utils.dart';
 import 'day_column.dart';
 
 /// Horizontal week navigator shown at the top of [PlannerScreen].
 ///
-/// Displays 7 [DayColumn] widgets (Mon–Sun) for the current week.
-/// Previous/next week buttons and a swipe gesture move between weeks.
-/// A "Today" chip appears when the displayed week is not the current week.
-class WeekStrip extends StatefulWidget {
+/// Displays 7 [DayColumn] widgets for the current week (first day per the
+/// week-start setting). Previous/next week buttons and a swipe gesture move
+/// between weeks. A "Today" chip appears when the displayed week is not the
+/// current week.
+class WeekStrip extends ConsumerStatefulWidget {
   const WeekStrip({
     required this.selectedDate,
     required this.onDateSelected,
@@ -21,33 +25,30 @@ class WeekStrip extends StatefulWidget {
   final ValueChanged<DateTime> onDateSelected;
 
   @override
-  State<WeekStrip> createState() => _WeekStripState();
+  ConsumerState<WeekStrip> createState() => _WeekStripState();
 }
 
-class _WeekStripState extends State<WeekStrip> {
-  /// The Monday of the currently displayed week.
+class _WeekStripState extends ConsumerState<WeekStrip> {
+  /// The first day of the currently displayed week.
   late DateTime _weekStart;
 
   @override
   void initState() {
     super.initState();
-    _weekStart = _mondayOf(widget.selectedDate);
+    _weekStart = _startOf(widget.selectedDate);
   }
 
   // ── Date helpers ────────────────────────────────────────────────────────
 
-  static DateTime _mondayOf(DateTime d) {
-    return DateTime(d.year, d.month, d.day)
-        .subtract(Duration(days: d.weekday - 1));
-  }
+  DateTime _startOf(DateTime d) => startOfWeek(d,
+      sundayStart: ref.read(settingsProvider).weekStartsSunday);
 
   static DateTime _todayDate() {
     final DateTime n = DateTime.now();
     return DateTime(n.year, n.month, n.day);
   }
 
-  bool get _isCurrentWeek =>
-      _weekStart == _mondayOf(_todayDate());
+  bool get _isCurrentWeek => _weekStart == _startOf(_todayDate());
 
   void _prevWeek() => setState(
         () => _weekStart = _weekStart.subtract(const Duration(days: 7)),
@@ -58,7 +59,7 @@ class _WeekStripState extends State<WeekStrip> {
 
   void _jumpToToday() {
     final DateTime today = _todayDate();
-    setState(() => _weekStart = _mondayOf(today));
+    setState(() => _weekStart = _startOf(today));
     widget.onDateSelected(today);
   }
 

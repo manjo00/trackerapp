@@ -1,10 +1,12 @@
 import 'dart:convert';
 import 'package:home_widget/home_widget.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../features/habits/data/dao/habits_dao.dart';
 import '../../features/shifts/data/dao/shifts_dao.dart';
 import '../../features/shifts/data/models/work_shift_model.dart';
 import '../../features/tasks/data/dao/tasks_dao.dart';
 import '../database/app_database.dart';
+import '../utils/week_utils.dart';
 
 /// Pushes a "Today" snapshot to the native home-screen widget.
 ///
@@ -131,6 +133,11 @@ class HomeWidgetService {
       // Build a range of months (last month → +3) so the widget arrows can
       // navigate without re-querying. Keyed by "yyyy-MM".
       final String todayKey = _dateKey(DateTime(now.year, now.month, now.day));
+      // Read the week-start setting straight from prefs — this also runs in
+      // the headless background isolate where no provider scope exists.
+      final bool sundayStart = (await SharedPreferences.getInstance())
+              .getBool('week_starts_sunday') ??
+          false;
       final Map<String, List<Map<String, dynamic>>> monthCellsMap = {};
       final Map<String, String> monthTitlesMap = {};
       for (int off = -1; off <= 3; off++) {
@@ -138,7 +145,8 @@ class HomeWidgetService {
         final String key =
             '${m.year}-${m.month.toString().padLeft(2, '0')}';
         monthCellsMap[key] = _buildMonthCells(
-            m, todayKey, shiftTypeByDate, dotsByDate, rotationByDate);
+            m, todayKey, shiftTypeByDate, dotsByDate, rotationByDate,
+            sundayStart: sundayStart);
         monthTitlesMap[key] = '${_fullMonths[m.month]} ${m.year}';
       }
       final String currentKey =
@@ -285,11 +293,12 @@ class HomeWidgetService {
     String todayStr,
     Map<String, String> shiftTypeByDate,
     Map<String, List<String>> dotsByDate,
-    Map<String, String> rotationByDate,
-  ) {
+    Map<String, String> rotationByDate, {
+    required bool sundayStart,
+  }) {
     final DateTime first = DateTime(month.year, month.month, 1);
     final int daysInMonth = DateTime(month.year, month.month + 1, 0).day;
-    final int leading = first.weekday - 1; // Monday = 1 → 0 blanks
+    final int leading = monthLeadingBlanks(first, sundayStart: sundayStart);
 
     final List<Map<String, dynamic>> cells = [];
     for (int i = 0; i < leading; i++) {

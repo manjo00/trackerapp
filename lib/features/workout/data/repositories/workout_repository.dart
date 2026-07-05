@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart' show Value;
 import 'package:intl/intl.dart';
 import '../../../../core/database/app_database.dart';
+import '../../../../core/utils/week_utils.dart';
 import '../dao/workout_dao.dart';
 import '../models/exercise_model.dart';
 import '../models/workout_session_model.dart';
@@ -38,9 +39,12 @@ class WorkoutRepository {
 
   // ── Weekly scoreboard ───────────────────────────────────────────────────────
 
-  /// Sets logged this week (Mon..Sun of [around], default now), with muscle tags.
-  Stream<List<SetMuscleRow>> watchWeekSets({DateTime? around}) {
-    final (DateTime start, DateTime end) = weekRange(around ?? DateTime.now());
+  /// Sets logged this week (7 days from the week start containing [around],
+  /// default now), with muscle tags.
+  Stream<List<SetMuscleRow>> watchWeekSets(
+      {DateTime? around, bool sundayStart = false}) {
+    final (DateTime start, DateTime end) =
+        weekRange(around ?? DateTime.now(), sundayStart: sundayStart);
     return _dao.watchSetsInRange(_dateFmt.format(start), _dateFmt.format(end));
   }
 
@@ -52,12 +56,14 @@ class WorkoutRepository {
   Future<void> updateMuscleTarget(MuscleTargetsCompanion companion) =>
       _dao.updateMuscleTarget(companion);
 
-  /// Monday 00:00 → Sunday of the week containing [d] (date-only bounds).
-  static (DateTime, DateTime) weekRange(DateTime d) {
-    final DateTime day = DateTime(d.year, d.month, d.day);
-    final DateTime monday = day.subtract(Duration(days: day.weekday - 1));
-    final DateTime sunday = monday.add(const Duration(days: 6));
-    return (monday, sunday);
+  /// First day 00:00 → last day of the week containing [d] (date-only
+  /// bounds), honouring the week-start setting.
+  static (DateTime, DateTime) weekRange(DateTime d,
+      {bool sundayStart = false}) {
+    final DateTime first =
+        startOfWeek(d, sundayStart: sundayStart);
+    final DateTime last = first.add(const Duration(days: 6));
+    return (first, last);
   }
 
   /// Creates a new workout session and returns its id.

@@ -59,6 +59,7 @@ class AppSettings {
     required this.reminderMinute,
     required this.experimentalTargets,
     this.devMode = false,
+    this.weekStartsSunday = false,
   });
 
   final ThemeMode themeMode;
@@ -86,6 +87,10 @@ class AppSettings {
   /// visible in the build friends install; off by default.
   final bool devMode;
 
+  /// Whether calendars and weekly stats treat Sunday as the first day of
+  /// the week (default: Monday, matching the original layouts).
+  final bool weekStartsSunday;
+
   /// Convenience getter — the reminder as a Flutter [TimeOfDay].
   TimeOfDay get reminderTime => TimeOfDay(hour: reminderHour, minute: reminderMinute);
 
@@ -112,6 +117,7 @@ class AppSettings {
     int? reminderMinute,
     bool? experimentalTargets,
     bool? devMode,
+    bool? weekStartsSunday,
   }) =>
       AppSettings(
         themeMode: themeMode ?? this.themeMode,
@@ -121,5 +127,6 @@ class AppSettings {
         reminderMinute: reminderMinute ?? this.reminderMinute,
         experimentalTargets: experimentalTargets ?? this.experimentalTargets,
         devMode: devMode ?? this.devMode,
+        weekStartsSunday: weekStartsSunday ?? this.weekStartsSunday,
       );
 }

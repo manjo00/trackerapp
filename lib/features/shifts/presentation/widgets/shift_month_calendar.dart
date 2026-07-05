@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/settings/settings_provider.dart';
+import '../../../../core/utils/week_utils.dart';
 import '../../../planner/presentation/providers/planner_providers.dart';
 import '../../../tasks/data/models/task_model.dart';
 import '../../data/models/work_shift_model.dart';
@@ -85,8 +87,10 @@ class _ShiftMonthCalendarState extends ConsumerState<ShiftMonthCalendar> {
         DateTime(_visibleMonth.year, _visibleMonth.month, 1);
     final int daysInMonth =
         DateTime(_visibleMonth.year, _visibleMonth.month + 1, 0).day;
-    // Monday = 1 → 0 leading blanks; Sunday = 7 → 6 leading blanks.
-    final int leadingBlanks = firstOfMonth.weekday - 1;
+    final bool sundayStart =
+        ref.watch(settingsProvider.select((s) => s.weekStartsSunday));
+    final int leadingBlanks =
+        monthLeadingBlanks(firstOfMonth, sundayStart: sundayStart);
 
     final DateTime now = DateTime.now();
     final String todayStr = _dateStr(DateTime(now.year, now.month, now.day));
@@ -191,7 +195,7 @@ class _ShiftMonthCalendarState extends ConsumerState<ShiftMonthCalendar> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8),
           child: Row(
-            children: const ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+            children: weekdayHeaderLetters(sundayStart: sundayStart)
                 .map((d) => Expanded(
                       child: Center(
                         child: Padding(

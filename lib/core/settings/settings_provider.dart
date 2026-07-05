@@ -40,6 +40,7 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
   static const String _kReminderMinute = 'reminder_minute';
   static const String _kExperimentalTargets = 'experimental_targets';
   static const String _kDevMode = 'dev_mode';
+  static const String _kWeekStartsSunday = 'week_starts_sunday';
 
   // Settings schema version — increment when defaults need to be reset.
   static const int _currentSettingsVersion = 3;
@@ -89,6 +90,7 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
       experimentalTargets: _prefs.getBool(_kExperimentalTargets) ??
           AppSettings.defaults.experimentalTargets,
       devMode: _prefs.getBool(_kDevMode) ?? false,
+      weekStartsSunday: _prefs.getBool(_kWeekStartsSunday) ?? false,
     );
   }
 
@@ -163,6 +165,12 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
   void setDevMode(bool enabled) {
     state = state.copyWith(devMode: enabled);
     _prefs.setBool(_kDevMode, enabled);
+  }
+
+  /// Switches the first day of the week (calendars + weekly stats).
+  void setWeekStartsSunday(bool enabled) {
+    state = state.copyWith(weekStartsSunday: enabled);
+    _prefs.setBool(_kWeekStartsSunday, enabled);
   }
 
   /// Updates the reminder time and re-schedules if notifications are on.

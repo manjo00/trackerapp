@@ -8,6 +8,8 @@ import '../../../../core/database/app_database.dart';
 import '../../../../core/database/database_provider.dart';
 import '../../../../core/notifications/live_dashboard_service.dart';
 import '../../../../core/notifications/notification_service.dart';
+import '../../../../core/settings/settings_provider.dart';
+import '../../../../core/utils/week_utils.dart';
 import '../../../shifts/data/models/work_shift_model.dart';
 import '../../../shifts/presentation/providers/shifts_providers.dart';
 import '../../data/dao/workout_dao.dart';
@@ -49,7 +51,11 @@ Stream<List<MuscleTarget>> weeklyTargets(WeeklyTargetsRef ref) {
 /// Sets logged in the current week, with each set's muscle tags.
 @riverpod
 Stream<List<SetMuscleRow>> weekSets(WeekSetsRef ref) {
-  return ref.watch(workoutRepositoryProvider).watchWeekSets();
+  final bool sundayStart =
+      ref.watch(settingsProvider.select((s) => s.weekStartsSunday));
+  return ref
+      .watch(workoutRepositoryProvider)
+      .watchWeekSets(sundayStart: sundayStart);
 }
 
 /// Free days (no work shift) in the current Mon..Sun week: [total] across the
@@ -60,7 +66,10 @@ Stream<List<SetMuscleRow>> weekSets(WeekSetsRef ref) {
       ref.watch(shiftsByDateProvider).valueOrNull ?? const {};
   final DateTime now = DateTime.now();
   final DateTime today = DateTime(now.year, now.month, now.day);
-  final (DateTime start, DateTime _) = WorkoutRepository.weekRange(now);
+  final bool sundayStart =
+      ref.watch(settingsProvider.select((s) => s.weekStartsSunday));
+  final (DateTime start, DateTime _) =
+      WorkoutRepository.weekRange(now, sundayStart: sundayStart);
 
   int total = 0;
   int remaining = 0;
@@ -600,11 +609,9 @@ Future<int> sessionsThisWeek(SessionsThisWeekRef ref) async {
       .getAllSessions();
 
   final DateTime now = DateTime.now();
-  // ISO week starts on Monday.
-  final DateTime weekStart =
-      now.subtract(Duration(days: now.weekday - 1));
-  final DateTime weekStartDate =
-      DateTime(weekStart.year, weekStart.month, weekStart.day);
+  final DateTime weekStartDate = startOfWeek(now,
+      sundayStart:
+          ref.watch(settingsProvider.select((s) => s.weekStartsSunday)));
 
   return sessions
       .where((s) => DateTime.parse(s.date).isAfter(

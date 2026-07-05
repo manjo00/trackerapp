@@ -67,11 +67,19 @@ class _SetRowState extends State<SetRow> {
   @override
   void didUpdateWidget(SetRow oldWidget) {
     super.didUpdateWidget(oldWidget);
-    final newWeight =
-        widget.set.weightKg != null ? _fmt(widget.set.weightKg!) : '';
-    final newReps = widget.set.reps != null ? '${widget.set.reps}' : '';
-    if (_weightCtrl.text != newWeight) _weightCtrl.text = newWeight;
-    if (_repsCtrl.text != newReps) _repsCtrl.text = newReps;
+    // Compare PARSED values, not strings: every keystroke round-trips
+    // through the provider and back here, and a string compare would
+    // rewrite "23." as "23" — silently deleting a just-typed decimal
+    // point (and bumping the cursor). Only rewrite on a real change
+    // (prev-copy, history pick, ± step).
+    final double? weight = widget.set.weightKg;
+    if (parseWeight(_weightCtrl.text) != weight) {
+      _weightCtrl.text = weight != null ? _fmt(weight) : '';
+    }
+    final int? reps = widget.set.reps;
+    if (int.tryParse(_repsCtrl.text) != reps) {
+      _repsCtrl.text = reps != null ? '$reps' : '';
+    }
   }
 
   @override

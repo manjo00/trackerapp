@@ -9,6 +9,7 @@ import '../../data/models/program_session_model.dart';
 import '../../data/models/quick_start_templates.dart';
 import '../../data/models/workout_session_model.dart';
 import '../../../../core/settings/settings_provider.dart';
+import '../../../../core/utils/week_utils.dart';
 import '../providers/program_providers.dart';
 import '../providers/workout_providers.dart';
 import '../widgets/weekly_scoreboard_card.dart';
@@ -96,7 +97,9 @@ class WorkoutHomeScreen extends ConsumerWidget {
                   child: _WeekStrip(
                     program: program,
                     loggedIds: _loggedThisWeek(
-                        sessionsAsync.valueOrNull ?? const []),
+                        sessionsAsync.valueOrNull ?? const [],
+                        sundayStart: ref.watch(settingsProvider
+                            .select((s) => s.weekStartsSunday))),
                   ),
                 ),
             ],
@@ -223,16 +226,16 @@ class WorkoutHomeScreen extends ConsumerWidget {
   }
 }
 
-/// Program-session ids that have a workout logged within the current ISO week.
-Set<int> _loggedThisWeek(List<WorkoutSessionModel> sessions) {
-  final now = DateTime.now();
-  final monday = DateTime(now.year, now.month, now.day)
-      .subtract(Duration(days: now.weekday - 1));
+/// Program-session ids that have a workout logged within the current week
+/// (first day per the week-start setting).
+Set<int> _loggedThisWeek(
+    List<WorkoutSessionModel> sessions, {required bool sundayStart}) {
+  final weekStart = startOfWeek(DateTime.now(), sundayStart: sundayStart);
   final ids = <int>{};
   for (final s in sessions) {
     final d = DateTime.tryParse(s.date);
     if (d == null) continue;
-    if (s.programSessionId != null && !d.isBefore(monday)) {
+    if (s.programSessionId != null && !d.isBefore(weekStart)) {
       ids.add(s.programSessionId!);
     }
   }

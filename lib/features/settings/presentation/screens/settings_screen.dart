@@ -81,6 +81,15 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
 
+          SwitchListTile(
+            secondary: Icon(Icons.view_week_rounded, color: cs.primary),
+            title: const Text('Start week on Sunday'),
+            subtitle: const Text(
+                'Calendars, weekly stats & the home widget'),
+            value: settings.weekStartsSunday,
+            onChanged: (bool v) => notifier.setWeekStartsSunday(v),
+          ),
+
           const Divider(indent: 16, endIndent: 16),
 
           // ── Notifications ──────────────────────────────────────────────
