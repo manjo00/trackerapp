@@ -9,10 +9,11 @@ import '../../data/models/program_session_model.dart';
 import '../../data/models/quick_start_templates.dart';
 import '../../data/models/workout_session_model.dart';
 import '../../../../core/settings/settings_provider.dart';
-import '../../../../core/utils/week_utils.dart';
 import '../providers/program_providers.dart';
 import '../providers/workout_providers.dart';
+import '../widgets/week_attendance_strip.dart';
 import '../widgets/weekly_scoreboard_card.dart';
+import '../workout_actions.dart';
 
 /// The main Workout tab.
 ///
@@ -94,9 +95,9 @@ class WorkoutHomeScreen extends ConsumerWidget {
               ),
               if (program != null && program.sessions.isNotEmpty)
                 SliverToBoxAdapter(
-                  child: _WeekStrip(
+                  child: WeekAttendanceStrip(
                     program: program,
-                    loggedIds: _loggedThisWeek(
+                    loggedIds: loggedThisWeek(
                         sessionsAsync.valueOrNull ?? const [],
                         sundayStart: ref.watch(settingsProvider
                             .select((s) => s.weekStartsSunday))),
@@ -169,20 +170,8 @@ class WorkoutHomeScreen extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref, {
     ProgramSessionModel? session,
-  }) async {
-    // If already active, just resume.
-    final active = ref.read(activeWorkoutProvider).valueOrNull;
-    if (active != null) {
-      context.push('/workout/active');
-      return;
-    }
-    await ref.read(activeWorkoutProvider.notifier).start(
-          programSessionId: session?.id,
-          programExercises: session?.exercises ?? [],
-          programSessionName: session?.name,
-        );
-    if (context.mounted) context.push('/workout/active');
-  }
+  }) =>
+      startProgramSession(context, ref, session: session);
 
   /// Starts an ad-hoc session from a quick-start template: looks up each
   /// exercise in the library and pre-loads them (no program link).
@@ -226,21 +215,8 @@ class WorkoutHomeScreen extends ConsumerWidget {
   }
 }
 
-/// Program-session ids that have a workout logged within the current week
-/// (first day per the week-start setting).
-Set<int> _loggedThisWeek(
-    List<WorkoutSessionModel> sessions, {required bool sundayStart}) {
-  final weekStart = startOfWeek(DateTime.now(), sundayStart: sundayStart);
-  final ids = <int>{};
-  for (final s in sessions) {
-    final d = DateTime.tryParse(s.date);
-    if (d == null) continue;
-    if (s.programSessionId != null && !d.isBefore(weekStart)) {
-      ids.add(s.programSessionId!);
-    }
-  }
-  return ids;
-}
+// (loggedThisWeek + the attendance strip live in
+// widgets/week_attendance_strip.dart — shared with the Home dashboard.)
 
 // ── Mode toggle ───────────────────────────────────────────────────────────────
 
@@ -318,103 +294,6 @@ class _QuickStartRow extends StatelessWidget {
               ],
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── This-week attendance strip ─────────────────────────────────────────────────
-
-class _WeekStrip extends StatelessWidget {
-  const _WeekStrip({required this.program, required this.loggedIds});
-
-  final ProgramModel program;
-  final Set<int> loggedIds;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final doneCount =
-        program.sessions.where((s) => loggedIds.contains(s.id)).length;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Text('This Week',
-                  style:
-                      TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              const Spacer(),
-              Text(
-                '$doneCount/${program.sessions.length} done',
-                style: TextStyle(
-                    fontSize: 13, color: cs.onSurface.withAlpha(160)),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: program.sessions.map((s) {
-              final logged = loggedIds.contains(s.id);
-              return _AttendanceChip(session: s, logged: logged);
-            }).toList(),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AttendanceChip extends StatelessWidget {
-  const _AttendanceChip({required this.session, required this.logged});
-
-  final ProgramSessionModel session;
-  final bool logged;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = session.color;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-      decoration: BoxDecoration(
-        color: logged ? color : color.withAlpha(30),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withAlpha(logged ? 0 : 120)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            logged ? Icons.check_circle_rounded : Icons.circle_outlined,
-            size: 15,
-            color: logged ? Colors.white : color,
-          ),
-          const SizedBox(width: 6),
-          Text(
-            session.name,
-            style: TextStyle(
-              color: logged ? Colors.white : color,
-              fontWeight: logged ? FontWeight.bold : FontWeight.w500,
-              fontSize: 12,
-            ),
-          ),
-          if (session.weekDayLabel.isNotEmpty) ...[
-            const SizedBox(width: 6),
-            Text(
-              session.weekDayLabel,
-              style: TextStyle(
-                color: (logged ? Colors.white : color).withAlpha(180),
-                fontSize: 10,
-              ),
-            ),
-          ],
         ],
       ),
     );
