@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import '../../data/models/exercise_model.dart';
-import '../../data/models/program_exercise_model.dart';
 import '../../data/models/program_model.dart';
 import '../../data/models/program_session_model.dart';
 import '../../data/models/quick_start_templates.dart';
@@ -173,46 +171,14 @@ class WorkoutHomeScreen extends ConsumerWidget {
   }) =>
       startProgramSession(context, ref, session: session);
 
-  /// Starts an ad-hoc session from a quick-start template: looks up each
-  /// exercise in the library and pre-loads them (no program link).
+  /// Starts an ad-hoc session from a quick-start template (shared logic
+  /// lives in workout_actions.dart — also used by the Home workout block).
   Future<void> _startTemplate(
     BuildContext context,
     WidgetRef ref,
     QuickStartTemplate template,
-  ) async {
-    final active = ref.read(activeWorkoutProvider).valueOrNull;
-    if (active != null) {
-      context.push('/workout/active');
-      return;
-    }
-
-    final List<ExerciseModel> library =
-        await ref.read(workoutRepositoryProvider).getAllExercises();
-    final Map<String, ExerciseModel> byName = {
-      for (final ExerciseModel e in library) e.name: e,
-    };
-
-    final List<ProgramExerciseModel> planned = [];
-    int order = 0;
-    for (final String name in template.exercises) {
-      final ExerciseModel? ex = byName[name];
-      if (ex == null) continue; // skip anything not in the library
-      planned.add(ProgramExerciseModel(
-        id: -1 - order, // synthetic (no DB row); negative to avoid clashes
-        programSessionId: -1,
-        exerciseId: ex.id,
-        exerciseName: ex.name,
-        orderIndex: order,
-      ));
-      order++;
-    }
-
-    await ref.read(activeWorkoutProvider.notifier).start(
-          programExercises: planned,
-          programSessionName: template.name,
-        );
-    if (context.mounted) context.push('/workout/active');
-  }
+  ) =>
+      startQuickTemplate(context, ref, template);
 }
 
 // (loggedThisWeek + the attendance strip live in
