@@ -2,94 +2,145 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/settings/settings_provider.dart';
 import '../../../tasks/data/models/task_model.dart';
 import '../../../tasks/presentation/providers/lists_providers.dart';
 import '../../../tasks/presentation/providers/tasks_providers.dart';
 import '../../../tasks/presentation/widgets/task_tile.dart';
+import '../../data/home_block_type.dart';
+import '../widgets/workout_block.dart';
+import 'edit_home_screen.dart';
 
-/// The app's landing dashboard (replaced the Inbox tab).
+/// The app's landing dashboard.
 ///
-/// v1 = four fixed blocks; the customizable block engine (saved filters,
-/// pinned lists, habit blocks…) is the next slice of the plan.
-///   1. Urgent    — overdue + high-priority due within 2 days (red)
-///   2. Due today — today's remaining tasks not already shown above
-///   3. Captured  — tasks not filed under any list (quick-add lands here)
-///   4. This week — compact 7-day strip, taps through to the Planner
+/// Renders the user's blocks in their chosen order (settings.homeBlocks).
+/// Long-press a block header to drag it into a new position; the ✎ button
+/// opens the Edit Home screen for add/remove/reorder with full controls.
+///
+/// Task de-dupe follows the USER'S order: walking the blocks top-down, a
+/// task appears only in the first block that claims it.
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ColorScheme cs = Theme.of(context).colorScheme;
+    final List<HomeBlockType> layout =
+        ref.watch(settingsProvider.select((s) => s.homeBlocks));
 
-    final List<TaskModel> urgent = ref.watch(urgentTasksProvider);
-    final Set<int> urgentIds = urgent.map((t) => t.id).toSet();
-
-    final List<TaskModel> dueToday =
-        (ref.watch(tasksDueTodayProvider).valueOrNull ?? const [])
-            .where((t) => !urgentIds.contains(t.id))
-            .toList();
-
-    final Set<int> shownIds = {...urgentIds, ...dueToday.map((t) => t.id)};
-    final List<TaskModel> captured =
-        (ref.watch(capturedTasksProvider).valueOrNull ?? const [])
-            .where((t) => !shownIds.contains(t.id))
-            .toList();
-
+    // Task sources (watched up-front; cheap streams already running).
+    final List<TaskModel> urgentAll = ref.watch(urgentTasksProvider);
+    final List<TaskModel> dueTodayAll =
+        ref.watch(tasksDueTodayProvider).valueOrNull ?? const [];
+    final List<TaskModel> capturedAll =
+        ref.watch(capturedTasksProvider).valueOrNull ?? const [];
     final List<TaskModel> week =
         ref.watch(thisWeekTasksProvider).valueOrNull ?? const [];
 
-    final bool allClear =
-        urgent.isEmpty && dueToday.isEmpty && captured.isEmpty && week.isEmpty;
+    // Build visible blocks in the user's order, de-duping as we go.
+    final Set<int> shownIds = {};
+    List<TaskModel> claim(List<TaskModel> tasks) {
+      final List<TaskModel> mine =
+          tasks.where((t) => !shownIds.contains(t.id)).toList();
+      shownIds.addAll(mine.map((t) => t.id));
+      return mine;
+    }
+
+    final List<HomeBlockType> visibleTypes = [];
+    final List<Widget> children = [];
+    bool anyTaskContent = false;
+
+    for (final HomeBlockType type in layout) {
+      Widget? content;
+      switch (type) {
+        case HomeBlockType.urgent:
+          final tasks = claim(urgentAll);
+          if (tasks.isEmpty) continue;
+          anyTaskContent = true;
+          content = _taskTiles(tasks);
+        case HomeBlockType.dueToday:
+          final tasks = claim(dueTodayAll);
+          if (tasks.isEmpty) continue;
+          anyTaskContent = true;
+          content = _taskTiles(tasks);
+        case HomeBlockType.captured:
+          final tasks = claim(capturedAll);
+          if (tasks.isEmpty) continue;
+          anyTaskContent = true;
+          content = _taskTiles(tasks);
+        case HomeBlockType.thisWeek:
+          if (week.isEmpty) continue;
+          anyTaskContent = true;
+          content = _WeekCard(tasks: week);
+        case HomeBlockType.workout:
+          content = const WorkoutBlock();
+      }
+
+      final int index = visibleTypes.length;
+      visibleTypes.add(type);
+      children.add(Column(
+        key: ValueKey(type),
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Long-press the header to drag the whole block.
+          ReorderableDelayedDragStartListener(
+            index: index,
+            child: _BlockHeader(type: type, color: _headerColor(type, cs)),
+          ),
+          content,
+        ],
+      ));
+    }
+
+    final bool allClear = !anyTaskContent;
 
     return Scaffold(
-      body: allClear
-          ? Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text('🎉', style: TextStyle(fontSize: 44)),
-                  const SizedBox(height: 10),
-                  Text(
-                    'All clear',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Nothing urgent, nothing captured',
-                    style: TextStyle(
-                        fontSize: 13, color: cs.onSurface.withAlpha(120)),
-                  ),
-                ],
+      body: ReorderableListView(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 96),
+        buildDefaultDragHandles: false,
+        // onReorderItem (Flutter 3.41+) already adjusts newIndex for the
+        // removed item — no manual `newIndex -= 1` dance.
+        onReorderItem: (int oldIndex, int newIndex) =>
+            _onReorder(ref, layout, visibleTypes, oldIndex, newIndex),
+        header: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Align(
+              alignment: Alignment.centerRight,
+              child: IconButton(
+                icon: Icon(Icons.edit_rounded,
+                    size: 18, color: cs.onSurface.withAlpha(120)),
+                tooltip: 'Edit Home',
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                      builder: (_) => const EditHomeScreen()),
+                ),
               ),
-            )
-          : ListView(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-              children: [
-                if (urgent.isNotEmpty)
-                  _HomeBlock(
-                    title: 'Urgent',
-                    icon: Icons.local_fire_department_rounded,
-                    color: cs.error,
-                    tasks: urgent,
-                  ),
-                if (dueToday.isNotEmpty)
-                  _HomeBlock(
-                    title: 'Due today',
-                    icon: Icons.today_rounded,
-                    color: cs.primary,
-                    tasks: dueToday,
-                  ),
-                if (captured.isNotEmpty)
-                  _HomeBlock(
-                    title: 'Captured',
-                    icon: Icons.inbox_rounded,
-                    color: cs.tertiary,
-                    tasks: captured,
-                  ),
-                if (week.isNotEmpty) _WeekStrip(tasks: week),
-              ],
             ),
+            if (allClear)
+              Padding(
+                padding: const EdgeInsets.only(top: 48, bottom: 24),
+                child: Column(
+                  children: [
+                    const Text('🎉', style: TextStyle(fontSize: 44)),
+                    const SizedBox(height: 10),
+                    Text('All clear',
+                        style: Theme.of(context).textTheme.titleMedium),
+                    const SizedBox(height: 4),
+                    Text(
+                      layout.isEmpty
+                          ? 'No blocks — add some with the ✎ above'
+                          : 'Nothing urgent, nothing captured',
+                      style: TextStyle(
+                          fontSize: 13, color: cs.onSurface.withAlpha(120)),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+        children: children,
+      ),
       floatingActionButton: FloatingActionButton(
         heroTag: 'home_fab',
         onPressed: () => context.push('/tasks/add'),
@@ -97,63 +148,74 @@ class HomeScreen extends ConsumerWidget {
       ),
     );
   }
+
+  /// Maps a drag within the VISIBLE blocks back onto the full layout
+  /// (hidden/empty blocks keep their relative positions).
+  void _onReorder(WidgetRef ref, List<HomeBlockType> layout,
+      List<HomeBlockType> visible, int oldIndex, int newIndex) {
+    if (oldIndex == newIndex) return;
+
+    final HomeBlockType moved = visible[oldIndex];
+    final List<HomeBlockType> anchor = List.of(visible)..removeAt(oldIndex);
+    final List<HomeBlockType> full = List.of(layout)..remove(moved);
+
+    final int insertAt = newIndex >= anchor.length
+        ? full.length
+        : full.indexOf(anchor[newIndex]);
+    full.insert(insertAt, moved);
+    ref.read(settingsProvider.notifier).setHomeBlocks(full);
+  }
+
+  static Color _headerColor(HomeBlockType type, ColorScheme cs) =>
+      switch (type) {
+        HomeBlockType.urgent => cs.error,
+        HomeBlockType.dueToday => cs.primary,
+        HomeBlockType.captured => cs.tertiary,
+        HomeBlockType.thisWeek => cs.secondary,
+        HomeBlockType.workout => cs.primary,
+      };
+
+  static Widget _taskTiles(List<TaskModel> tasks) => Column(
+        children: [
+          for (final t in tasks) TaskTile(task: t, showListName: true),
+        ],
+      );
 }
 
-// ── One titled block of task tiles ────────────────────────────────────────
+// ── Block header (also the drag handle) ───────────────────────────────────
 
-class _HomeBlock extends StatelessWidget {
-  const _HomeBlock({
-    required this.title,
-    required this.icon,
-    required this.color,
-    required this.tasks,
-  });
+class _BlockHeader extends StatelessWidget {
+  const _BlockHeader({required this.type, required this.color});
 
-  final String title;
-  final IconData icon;
+  final HomeBlockType type;
   final Color color;
-  final List<TaskModel> tasks;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(4, 14, 4, 6),
-          child: Row(
-            children: [
-              Icon(icon, size: 16, color: color),
-              const SizedBox(width: 6),
-              Text(
-                title.toUpperCase(),
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: color,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1,
-                    ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                '${tasks.length}',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: color.withAlpha(150),
-                      fontWeight: FontWeight.w700,
-                    ),
-              ),
-            ],
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 14, 4, 6),
+      child: Row(
+        children: [
+          Icon(type.icon, size: 16, color: color),
+          const SizedBox(width: 6),
+          Text(
+            type.label.toUpperCase(),
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1,
+                ),
           ),
-        ),
-        ...tasks.map((t) => TaskTile(task: t, showListName: true)),
-      ],
+        ],
+      ),
     );
   }
 }
 
-// ── This-week strip ───────────────────────────────────────────────────────
+// ── This-week card ────────────────────────────────────────────────────────
 
-class _WeekStrip extends StatelessWidget {
-  const _WeekStrip({required this.tasks});
+class _WeekCard extends StatelessWidget {
+  const _WeekCard({required this.tasks});
 
   final List<TaskModel> tasks;
 
@@ -162,7 +224,6 @@ class _WeekStrip extends StatelessWidget {
     final ColorScheme cs = Theme.of(context).colorScheme;
     final DateTime today = DateTime.now();
 
-    // Group the (already date-sorted) range stream per day.
     final Map<String, List<TaskModel>> byDate = {};
     for (final TaskModel t in tasks) {
       final String? d = t.dueDate;
@@ -173,55 +234,32 @@ class _WeekStrip extends StatelessWidget {
       '', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun',
     ];
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(4, 14, 4, 6),
-          child: Row(
-            children: [
-              Icon(Icons.view_week_rounded, size: 16, color: cs.secondary),
-              const SizedBox(width: 6),
-              Text(
-                'THIS WEEK',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: cs.secondary,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1,
-                    ),
-              ),
-            ],
-          ),
-        ),
-        Card(
-          child: Column(
-            children: [
-              for (int i = 0; i < 7; i++)
-                _dayRow(
-                  context,
-                  DateTime(today.year, today.month, today.day + i),
-                  byDate,
-                  weekdays,
-                  isToday: i == 0,
-                ),
-            ],
-          ),
-        ),
-      ],
+    return Card(
+      child: Column(
+        children: [
+          for (int i = 0; i < 7; i++)
+            _dayRow(
+              context,
+              cs,
+              DateTime(today.year, today.month, today.day + i),
+              byDate,
+              weekdays,
+              isToday: i == 0,
+            ),
+        ],
+      ),
     );
   }
 
-  Widget _dayRow(BuildContext context, DateTime day,
+  Widget _dayRow(BuildContext context, ColorScheme cs, DateTime day,
       Map<String, List<TaskModel>> byDate, List<String> weekdays,
       {required bool isToday}) {
-    final ColorScheme cs = Theme.of(context).colorScheme;
     final String key = '${day.year}-${day.month.toString().padLeft(2, '0')}-'
         '${day.day.toString().padLeft(2, '0')}';
     final List<TaskModel> dayTasks = byDate[key] ?? const [];
     if (dayTasks.isEmpty && !isToday) return const SizedBox.shrink();
 
-    final String preview =
-        dayTasks.take(2).map((t) => t.title).join(' · ');
+    final String preview = dayTasks.take(2).map((t) => t.title).join(' · ');
 
     return InkWell(
       onTap: () => context.go('/planner'),
