@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../data/models/weight_steps.dart';
 import '../../data/models/workout_set_model.dart';
 import '../../data/repositories/workout_repository.dart';
 import 'exercise_history_sheet.dart';
@@ -84,7 +85,7 @@ class _SetRowState extends State<SetRow> {
       kg == kg.truncateToDouble() ? '${kg.toInt()}' : '$kg';
 
   void _flush() {
-    final double? kg = double.tryParse(_weightCtrl.text);
+    final double? kg = parseWeight(_weightCtrl.text);
     final int? reps = int.tryParse(_repsCtrl.text);
     widget.onUpdate(widget.set.copyWith(weightKg: kg, reps: reps));
   }
@@ -96,9 +97,13 @@ class _SetRowState extends State<SetRow> {
     setState(() {});
   }
 
-  void _stepWeight(double delta) {
-    final current = double.tryParse(_weightCtrl.text) ?? 0.0;
-    _apply((current + delta).clamp(0.0, 999.0), int.tryParse(_repsCtrl.text));
+  /// ± snaps to the plate ladder (… 10 → 12.5 → 15 …) rather than adding a
+  /// blind 2.5 from any value — from 11, "+" gives 12.5 and "−" gives 10.
+  void _stepWeight({required bool up}) {
+    final double current = parseWeight(_weightCtrl.text) ?? 0.0;
+    final double next =
+        up ? nextWeightUp(current) : nextWeightDown(current);
+    _apply(next.clamp(0.0, 999.0), int.tryParse(_repsCtrl.text));
   }
 
   void _stepReps(int delta) {
@@ -258,8 +263,8 @@ class _SetRowState extends State<SetRow> {
                     hint: 'kg',
                     isDecimal: true,
                     onEditingComplete: _flush,
-                    onDecrement: () => _stepWeight(-2.5),
-                    onIncrement: () => _stepWeight(2.5),
+                    onDecrement: () => _stepWeight(up: false),
+                    onIncrement: () => _stepWeight(up: true),
                   ),
                 ),
                 Padding(
@@ -368,8 +373,10 @@ class _NumberField extends StatelessWidget {
       controller: controller,
       textAlign: TextAlign.center,
       keyboardType: TextInputType.numberWithOptions(decimal: isDecimal),
+      // Accept comma / Arabic decimal separators too — several keyboards'
+      // number pads have no "." key, which made floats untypeable.
       inputFormatters: isDecimal
-          ? [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))]
+          ? [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,٫]'))]
           : [FilteringTextInputFormatter.digitsOnly],
       decoration: InputDecoration(
         hintText: hint,
