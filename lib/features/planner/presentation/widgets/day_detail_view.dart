@@ -1,95 +1,320 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../features/habits/data/models/habit_with_status.dart';
-import '../../../../features/habits/presentation/providers/habits_providers.dart';
-import '../../../../features/tasks/data/models/task_model.dart';
-import '../../../../features/tasks/presentation/widgets/task_tile.dart';
-import '../providers/planner_providers.dart';
 
-/// Scrollable content area showing habits and tasks for [selectedDate].
+import '../../../../core/database/app_database.dart';
+import '../../../../core/settings/settings_provider.dart';
+import '../../../habits/data/models/habit_with_status.dart';
+import '../../../habits/presentation/providers/habits_providers.dart';
+import '../../../shifts/presentation/providers/shifts_providers.dart';
+import '../../../tasks/data/models/task_model.dart';
+import '../../../tasks/presentation/providers/lists_providers.dart';
+import '../../../tasks/presentation/widgets/task_tile.dart';
+import '../day_grid_layout.dart';
+import '../providers/planner_providers.dart';
+import 'day_time_grid.dart';
+
+/// Day panel of the Planner: habits + tasks for [selectedDate], in either
+/// a list (timed-by-start, then untimed-by-urgency) or a 24-hour time grid.
 ///
-/// Habits are tappable — tapping toggles completion for that specific date
-/// (not necessarily today). Tasks reuse the existing [TaskTile] which already
-/// handles toggling via its own provider.
-class DayDetailView extends ConsumerWidget {
+/// Header controls: List ⇄ Grid switch and a ⋮ menu with per-visit filters
+/// (hide completed, by list, by label) plus the persisted default view.
+class DayDetailView extends ConsumerStatefulWidget {
   const DayDetailView({required this.selectedDate, super.key});
 
   final DateTime selectedDate;
 
-  String get _dateStr =>
-      '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
+  @override
+  ConsumerState<DayDetailView> createState() => _DayDetailViewState();
+}
+
+class _DayDetailViewState extends ConsumerState<DayDetailView> {
+  late bool _grid;
+  bool _hideCompleted = false;
+
+  /// null = all lists · -1 = Captured only · otherwise a list id.
+  int? _filterListId;
+  int? _filterLabelId; // null = all labels
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<List<HabitWithStatus>> habitsAsync =
-        ref.watch(habitsForDateProvider(_dateStr));
+  void initState() {
+    super.initState();
+    _grid = ref.read(settingsProvider).plannerDayView == 'grid';
+  }
+
+  String get _dateStr =>
+      '${widget.selectedDate.year}-${widget.selectedDate.month.toString().padLeft(2, '0')}-${widget.selectedDate.day.toString().padLeft(2, '0')}';
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme cs = Theme.of(context).colorScheme;
     final AsyncValue<List<TaskModel>> tasksAsync =
         ref.watch(tasksForDateProvider(_dateStr));
 
-    return ListView(
-      padding: const EdgeInsets.only(top: 12, bottom: 80),
+    // Label filter needs the label's task-id set (empty while loading —
+    // brief flicker beats blocking the whole panel).
+    final Set<int>? labelTaskIds = _filterLabelId == null
+        ? null
+        : ref.watch(taskIdsForLabelProvider(_filterLabelId ?? -1)).valueOrNull ??
+            const {};
+
+    List<TaskModel> applyFilters(List<TaskModel> tasks) => tasks.where((t) {
+          if (_hideCompleted && t.isCompleted) return false;
+          if (_filterListId == -1 && t.listId != null) return false;
+          if (_filterListId != null &&
+              _filterListId != -1 &&
+              t.listId != _filterListId) {
+            return false;
+          }
+          if (labelTaskIds != null && !labelTaskIds.contains(t.id)) {
+            return false;
+          }
+          return true;
+        }).toList();
+
+    final bool filtersActive =
+        _hideCompleted || _filterListId != null || _filterLabelId != null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // ── Habits section ─────────────────────────────────────────────────
-        const _SectionLabel(label: 'Habits', icon: Icons.loop_rounded),
-        ..._buildHabits(context, ref, habitsAsync),
+        // ── Header: view switch + menu ─────────────────────────────────
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 2, 4, 0),
+          child: Row(
+            children: [
+              if (filtersActive)
+                Expanded(
+                  child: Text(
+                    'Filters on',
+                    style: TextStyle(
+                        fontSize: 11, color: cs.primary.withAlpha(180)),
+                  ),
+                )
+              else
+                const Spacer(),
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                icon: Icon(
+                  _grid
+                      ? Icons.view_agenda_outlined
+                      : Icons.grid_view_rounded,
+                  size: 18,
+                  color: cs.onSurface.withAlpha(150),
+                ),
+                tooltip: _grid ? 'List view' : 'Time grid',
+                onPressed: () => setState(() => _grid = !_grid),
+              ),
+              PopupMenuButton<String>(
+                iconSize: 18,
+                onSelected: _onMenu,
+                itemBuilder: (context) => [
+                  CheckedPopupMenuItem(
+                    value: 'hide_completed',
+                    checked: _hideCompleted,
+                    child: const Text('Hide completed'),
+                  ),
+                  const PopupMenuItem(
+                      value: 'filter_list', child: Text('Filter by list…')),
+                  const PopupMenuItem(
+                      value: 'filter_label',
+                      child: Text('Filter by label…')),
+                  if (filtersActive)
+                    const PopupMenuItem(
+                        value: 'clear', child: Text('Clear filters')),
+                  const PopupMenuDivider(),
+                  PopupMenuItem(
+                    value: 'default_view',
+                    child: Text(
+                        'Default view: ${ref.read(settingsProvider).plannerDayView == 'grid' ? 'Grid' : 'List'} → '
+                        '${ref.read(settingsProvider).plannerDayView == 'grid' ? 'List' : 'Grid'}'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
 
-        const SizedBox(height: 4),
-
-        // ── Tasks section ──────────────────────────────────────────────────
-        const _SectionLabel(label: 'Tasks due', icon: Icons.task_alt_rounded),
-        ..._buildTasks(tasksAsync),
+        // ── Body ───────────────────────────────────────────────────────
+        Expanded(
+          child: tasksAsync.when(
+            skipLoadingOnReload: true,
+            loading: () =>
+                const Center(child: CircularProgressIndicator()),
+            error: (_, __) =>
+                const Center(child: Text('Could not load tasks')),
+            data: (List<TaskModel> all) {
+              final List<TaskModel> tasks = applyFilters(all);
+              return _grid
+                  ? _buildGrid(tasks)
+                  : _buildList(context, tasks);
+            },
+          ),
+        ),
       ],
     );
   }
 
-  // ── Section builders ────────────────────────────────────────────────────
+  void _onMenu(String action) {
+    switch (action) {
+      case 'hide_completed':
+        setState(() => _hideCompleted = !_hideCompleted);
+      case 'filter_list':
+        _pickListFilter();
+      case 'filter_label':
+        _pickLabelFilter();
+      case 'clear':
+        setState(() {
+          _hideCompleted = false;
+          _filterListId = null;
+          _filterLabelId = null;
+        });
+      case 'default_view':
+        final String next =
+            ref.read(settingsProvider).plannerDayView == 'grid'
+                ? 'list'
+                : 'grid';
+        ref.read(settingsProvider.notifier).setPlannerDayView(next);
+        setState(() => _grid = next == 'grid');
+    }
+  }
 
-  List<Widget> _buildHabits(
-    BuildContext context,
-    WidgetRef ref,
-    AsyncValue<List<HabitWithStatus>> async,
-  ) {
+  Future<void> _pickListFilter() async {
+    final List<TaskList> lists =
+        ref.read(taskListsProvider).valueOrNull ?? const [];
+    final int? picked = await showDialog<int?>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: const Text('Show tasks from'),
+        children: [
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(ctx, null),
+            child: const Text('All'),
+          ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(ctx, -1),
+            child: const Text('Captured (no list)'),
+          ),
+          for (final TaskList l in lists)
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(ctx, l.id),
+              child: Row(children: [
+                Icon(Icons.circle, size: 12, color: Color(l.colorValue)),
+                const SizedBox(width: 10),
+                Text(l.name),
+              ]),
+            ),
+        ],
+      ),
+    );
+    if (!mounted) return;
+    setState(() => _filterListId = picked);
+  }
+
+  Future<void> _pickLabelFilter() async {
+    final List<Label> labels =
+        ref.read(labelsProvider).valueOrNull ?? const [];
+    final int? picked = await showDialog<int?>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: const Text('Show tasks labelled'),
+        children: [
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(ctx, null),
+            child: const Text('All'),
+          ),
+          for (final Label l in labels)
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(ctx, l.id),
+              child: Row(children: [
+                Icon(Icons.circle, size: 12, color: Color(l.colorValue)),
+                const SizedBox(width: 10),
+                Text(l.name),
+              ]),
+            ),
+        ],
+      ),
+    );
+    if (!mounted) return;
+    setState(() => _filterLabelId = picked);
+  }
+
+  // ── List view ─────────────────────────────────────────────────────────
+
+  Widget _buildList(BuildContext context, List<TaskModel> tasks) {
+    final AsyncValue<List<HabitWithStatus>> habitsAsync =
+        ref.watch(habitsForDateProvider(_dateStr));
+    final (List<TaskModel> timed, List<TaskModel> untimed) =
+        splitTimed(tasks);
+
+    return ListView(
+      padding: const EdgeInsets.only(top: 4, bottom: 80),
+      children: [
+        const _SectionLabel(label: 'Habits', icon: Icons.loop_rounded),
+        ..._buildHabits(habitsAsync),
+        const SizedBox(height: 4),
+        if (timed.isNotEmpty) ...[
+          const _SectionLabel(
+              label: 'Scheduled', icon: Icons.schedule_rounded),
+          ...timed.map((t) => TaskTile(task: t)),
+        ],
+        _SectionLabel(
+            label: timed.isEmpty ? 'Tasks due' : 'Anytime',
+            icon: Icons.task_alt_rounded),
+        if (tasks.isEmpty)
+          const _EmptyNote(text: 'Nothing due this day')
+        else if (untimed.isEmpty)
+          const _EmptyNote(text: 'Everything is scheduled 🎉')
+        else
+          ...untimed.map((t) => TaskTile(task: t)),
+      ],
+    );
+  }
+
+  List<Widget> _buildHabits(AsyncValue<List<HabitWithStatus>> async) {
     return async.when(
       skipLoadingOnReload: true,
-      loading: () => [
-        const Padding(
+      loading: () => const [
+        Padding(
           padding: EdgeInsets.symmetric(vertical: 24),
           child: Center(child: CircularProgressIndicator()),
         ),
       ],
-      error: (_, __) => [const _ErrorNote(text: 'Could not load habits')],
+      error: (_, __) => const [_ErrorNote(text: 'Could not load habits')],
       data: (List<HabitWithStatus> habits) {
         if (habits.isEmpty) {
-          return [const _EmptyNote(text: 'No habits created yet')];
+          return const [_EmptyNote(text: 'No habits created yet')];
         }
         return habits
-            .map(
-              (h) => _HabitItem(
-                item: h,
-                date: _dateStr,
-              ),
-            )
+            .map((h) => _HabitItem(item: h, date: _dateStr))
             .toList();
       },
     );
   }
 
-  List<Widget> _buildTasks(AsyncValue<List<TaskModel>> async) {
-    return async.when(
-      skipLoadingOnReload: true,
-      loading: () => [
-        const Padding(
-          padding: EdgeInsets.symmetric(vertical: 24),
-          child: Center(child: CircularProgressIndicator()),
+  // ── Grid view ─────────────────────────────────────────────────────────
+
+  Widget _buildGrid(List<TaskModel> tasks) {
+    final shift = ref.watch(shiftsByDateProvider).valueOrNull?[_dateStr];
+    final (List<TaskModel> _, List<TaskModel> untimed) = splitTimed(tasks);
+
+    return Column(
+      children: [
+        if (untimed.isNotEmpty)
+          ExpansionTile(
+            dense: true,
+            title: Text('Anytime · ${untimed.length}'),
+            leading: const Icon(Icons.task_alt_rounded, size: 18),
+            childrenPadding: const EdgeInsets.only(bottom: 8),
+            children: [for (final t in untimed) TaskTile(task: t)],
+          ),
+        Expanded(
+          child: DayTimeGrid(
+            dateStr: _dateStr,
+            tasks: tasks,
+            shift: shift,
+          ),
         ),
       ],
-      error: (_, __) => [const _ErrorNote(text: 'Could not load tasks')],
-      data: (List<TaskModel> tasks) {
-        if (tasks.isEmpty) {
-          return [const _EmptyNote(text: 'Nothing due this day')];
-        }
-        return tasks.map((t) => TaskTile(task: t)).toList();
-      },
     );
   }
 }
@@ -113,17 +338,13 @@ class _HabitItem extends ConsumerWidget {
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: () =>
-            ref.read(toggleCompletionProvider.notifier).toggle(
-                  item.habit.id,
-                  date: date,
-                ),
+        onTap: () => ref
+            .read(toggleCompletionProvider.notifier)
+            .toggle(item.habit.id, date: date),
         child: Padding(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           child: Row(
             children: [
-              // Animated circle checkbox
               AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 width: 22,
@@ -204,8 +425,7 @@ class _EmptyNote extends StatelessWidget {
       child: Text(
         text,
         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color:
-                  Theme.of(context).colorScheme.onSurface.withAlpha(110),
+              color: Theme.of(context).colorScheme.onSurface.withAlpha(110),
               fontStyle: FontStyle.italic,
             ),
       ),
@@ -222,8 +442,7 @@ class _ErrorNote extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       child: Text(text,
-          style:
-              TextStyle(color: Theme.of(context).colorScheme.error)),
+          style: TextStyle(color: Theme.of(context).colorScheme.error)),
     );
   }
 }

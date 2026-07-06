@@ -46,6 +46,11 @@ final labelIdsForTaskProvider = StreamProvider.family<List<int>, int>(
     (ref, taskId) =>
         ref.watch(listsRepositoryProvider).watchLabelIdsForTask(taskId));
 
+/// Task ids carrying a given label — used by the Planner day-view filter.
+final taskIdsForLabelProvider = StreamProvider.family<Set<int>, int>(
+    (ref, labelId) =>
+        ref.watch(listsDaoProvider).watchTaskIdsForLabel(labelId));
+
 // ── Home blocks ───────────────────────────────────────────────────────────
 //
 // Date-anchored: app.dart invalidates these on resume (like the other

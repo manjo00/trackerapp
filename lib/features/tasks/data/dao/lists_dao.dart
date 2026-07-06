@@ -92,6 +92,13 @@ class ListsDao extends DatabaseAccessor<AppDatabase> with _$ListsDaoMixin {
         .map((rows) => rows.map((r) => r.labelId).toList());
   }
 
+  /// The task ids carrying one label (drives the day-view label filter).
+  Stream<Set<int>> watchTaskIdsForLabel(int labelId) {
+    return (select(taskLabels)..where((tl) => tl.labelId.equals(labelId)))
+        .watch()
+        .map((rows) => rows.map((r) => r.taskId).toSet());
+  }
+
   /// Replaces a task's label set atomically (delete-then-insert so the
   /// caller never observes a half-updated set).
   Future<void> setTaskLabels(int taskId, Set<int> labelIds) {

@@ -63,6 +63,7 @@ class AppSettings {
     this.weekStartsSunday = false,
     this.homeBlocks = HomeBlockType.defaults,
     this.startupTab = AppTab.home,
+    this.plannerDayView = 'list',
   });
 
   final ThemeMode themeMode;
@@ -102,6 +103,9 @@ class AppSettings {
   /// launch code falls back to the first visible tab otherwise).
   final AppTab startupTab;
 
+  /// Default layout for the Planner's day panel: 'list' or 'grid'.
+  final String plannerDayView;
+
   /// Convenience getter — the reminder as a Flutter [TimeOfDay].
   TimeOfDay get reminderTime => TimeOfDay(hour: reminderHour, minute: reminderMinute);
 
@@ -131,6 +135,7 @@ class AppSettings {
     bool? weekStartsSunday,
     List<HomeBlockType>? homeBlocks,
     AppTab? startupTab,
+    String? plannerDayView,
   }) =>
       AppSettings(
         themeMode: themeMode ?? this.themeMode,
@@ -143,5 +148,6 @@ class AppSettings {
         weekStartsSunday: weekStartsSunday ?? this.weekStartsSunday,
         homeBlocks: homeBlocks ?? this.homeBlocks,
         startupTab: startupTab ?? this.startupTab,
+        plannerDayView: plannerDayView ?? this.plannerDayView,
       );
 }

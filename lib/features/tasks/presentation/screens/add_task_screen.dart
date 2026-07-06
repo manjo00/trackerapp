@@ -16,9 +16,14 @@ import '../widgets/label_picker_row.dart';
 /// (planner date, or the list/section the "+" was tapped in). The router
 /// stays back-compatible with the old plain-String date extra.
 class AddTaskArgs {
-  const AddTaskArgs({this.initialDate, this.listId, this.sectionId});
+  const AddTaskArgs(
+      {this.initialDate, this.initialTime, this.listId, this.sectionId});
 
   final String? initialDate;
+
+  /// Pre-filled start time ("HH:mm") — the Planner grid's long-press
+  /// passes the tapped hour.
+  final String? initialTime;
   final int? listId;
   final int? sectionId;
 }
@@ -38,6 +43,7 @@ class AddTaskScreen extends ConsumerStatefulWidget {
   const AddTaskScreen({
     this.task,
     this.initialDate,
+    this.initialTime,
     this.initialListId,
     this.initialSectionId,
     super.key,
@@ -48,6 +54,9 @@ class AddTaskScreen extends ConsumerStatefulWidget {
 
   /// Optional pre-filled due date ("yyyy-MM-dd") for new tasks from planner.
   final String? initialDate;
+
+  /// Optional pre-filled start time ("HH:mm") from the planner day grid.
+  final String? initialTime;
 
   /// Optional pre-assigned list/section for new tasks from a list screen.
   final int? initialListId;
@@ -109,6 +118,7 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
       if (widget.initialDate != null) {
         _dueDate = DateTime.parse(widget.initialDate!);
       }
+      _dueTime = _parseTimeOfDay(widget.initialTime);
     }
 
     // Edit mode: load the task's current labels once (the user's edits own

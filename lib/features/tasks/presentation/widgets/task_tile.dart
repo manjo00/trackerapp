@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/utils/time_block_utils.dart';
 import '../../data/models/task_model.dart';
 import '../providers/lists_providers.dart';
 import '../providers/tasks_providers.dart';
@@ -119,7 +120,12 @@ class TaskTile extends ConsumerWidget {
                       // Due date chip (only shown when set)
                       if (task.dueDate != null) ...[
                         const SizedBox(height: 4),
-                        _DueDateChip(dueDate: task.dueDate!, done: done),
+                        _DueDateChip(
+                          dueDate: task.dueDate!,
+                          done: done,
+                          dueTime: task.dueTime,
+                          durationMinutes: task.durationMinutes,
+                        ),
                       ],
                     ],
                   ),
@@ -194,10 +200,17 @@ class _ListNameHint extends ConsumerWidget {
 // ── Due date chip ─────────────────────────────────────────────────────────────
 
 class _DueDateChip extends StatelessWidget {
-  const _DueDateChip({required this.dueDate, required this.done});
+  const _DueDateChip({
+    required this.dueDate,
+    required this.done,
+    this.dueTime,
+    this.durationMinutes,
+  });
 
   final String dueDate; // "yyyy-MM-dd"
   final bool done;
+  final String? dueTime; // "HH:mm"
+  final int? durationMinutes; // time-block length
 
   @override
   Widget build(BuildContext context) {
@@ -210,13 +223,22 @@ class _DueDateChip extends StatelessWidget {
             ? cs.error
             : cs.onSurface.withAlpha(140);
 
+    // "Today · 14:00–15:30" when a range is set, "Today · 14:00" for a
+    // bare time, plain date otherwise.
+    final String? time = dueTime;
+    final int? duration = durationMinutes;
+    final String label = time == null
+        ? _formatDate(dueDate)
+        : '${_formatDate(dueDate)} · '
+            '${duration != null ? formatRange(time, duration) : time}';
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Icon(Icons.calendar_today_rounded, size: 12, color: color),
         const SizedBox(width: 4),
         Text(
-          _formatDate(dueDate),
+          label,
           style: TextStyle(fontSize: 12, color: color),
         ),
       ],

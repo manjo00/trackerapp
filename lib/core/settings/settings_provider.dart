@@ -44,6 +44,7 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
   static const String _kWeekStartsSunday = 'week_starts_sunday';
   static const String _kHomeBlocks = 'home_blocks';
   static const String _kStartupTab = 'startup_tab';
+  static const String _kPlannerDayView = 'planner_day_view';
 
   // Settings schema version — increment when defaults need to be reset.
   static const int _currentSettingsVersion = 3;
@@ -96,6 +97,8 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
       weekStartsSunday: _prefs.getBool(_kWeekStartsSunday) ?? false,
       homeBlocks: HomeBlockType.parse(_prefs.getStringList(_kHomeBlocks)),
       startupTab: _loadStartupTab(),
+      plannerDayView:
+          _prefs.getString(_kPlannerDayView) == 'grid' ? 'grid' : 'list',
     );
   }
 
@@ -195,6 +198,12 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
   void setStartupTab(AppTab tab) {
     state = state.copyWith(startupTab: tab);
     _prefs.setString(_kStartupTab, tab.name);
+  }
+
+  /// Default layout for the Planner day panel ('list' | 'grid').
+  void setPlannerDayView(String view) {
+    state = state.copyWith(plannerDayView: view == 'grid' ? 'grid' : 'list');
+    _prefs.setString(_kPlannerDayView, view == 'grid' ? 'grid' : 'list');
   }
 
   /// Updates the reminder time and re-schedules if notifications are on.

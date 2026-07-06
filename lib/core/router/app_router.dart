@@ -203,6 +203,7 @@ final GoRouter appRouter = GoRouter(
         if (extra is AddTaskArgs) {
           return AddTaskScreen(
             initialDate: extra.initialDate,
+            initialTime: extra.initialTime,
             initialListId: extra.listId,
             initialSectionId: extra.sectionId,
           );
