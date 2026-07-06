@@ -60,4 +60,9 @@ class Tasks extends Table {
   IntColumn get sectionId => integer()
       .nullable()
       .references(ListSections, #id, onDelete: KeyAction.setNull)();
+
+  /// Optional length of the task's time block in minutes ("time blocking").
+  /// Only meaningful together with [dueTime] (the start); the end time is
+  /// always computed so rescheduling the start moves the whole block.
+  IntColumn get durationMinutes => integer().nullable()();
 }

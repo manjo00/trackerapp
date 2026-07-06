@@ -71,6 +71,7 @@ class AddTask extends _$AddTask {
     String? reminderLeadTimes,
     int? listId,
     int? sectionId,
+    int? durationMinutes,
   }) async {
     state = const AsyncLoading();
     int? newId;
@@ -85,6 +86,7 @@ class AddTask extends _$AddTask {
             reminderLeadTimes: reminderLeadTimes,
             listId: listId,
             sectionId: sectionId,
+            durationMinutes: durationMinutes,
           );
     });
     return newId;

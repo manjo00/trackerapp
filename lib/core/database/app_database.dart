@@ -100,8 +100,10 @@ class AppDatabase extends _$AppDatabase {
   ///        group) so one muscle can't be masked by another; reseed targets
   /// v11 → task organization: task_lists, list_sections, labels, task_labels
   ///        tables + nullable listId/sectionId on tasks (NULL list = Captured)
+  /// v12 → time blocking: nullable durationMinutes on tasks (with dueTime as
+  ///        the start; end time is computed, never stored)
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 12;
 
   /// The old vs. new default rotation-label colour (see v8 migration).
   static const int _oldRotationColor = 0xFFFFB347;
@@ -191,6 +193,10 @@ class AppDatabase extends _$AppDatabase {
             await m.createTable(taskLabels);
             await m.addColumn(tasks, tasks.listId);
             await m.addColumn(tasks, tasks.sectionId);
+          }
+          if (from < 12) {
+            // Time blocking: optional block length per task.
+            await m.addColumn(tasks, tasks.durationMinutes);
           }
         },
         beforeOpen: (details) async {

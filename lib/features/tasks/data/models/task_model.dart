@@ -30,6 +30,8 @@ abstract class TaskModel with _$TaskModel {
     int? listId,
     /// Section within [listId]'s list; null = list body.
     int? sectionId,
+    /// Optional time-block length in minutes (start = [dueTime]).
+    int? durationMinutes,
   }) = _TaskModel;
 
   // Private constructor required for custom getters in freezed classes.

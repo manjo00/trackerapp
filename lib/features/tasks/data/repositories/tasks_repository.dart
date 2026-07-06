@@ -88,6 +88,7 @@ class TasksRepository {
     String? reminderLeadTimes,
     int? listId,
     int? sectionId,
+    int? durationMinutes,
   }) {
     return _dao.insertTask(
       TasksCompanion(
@@ -101,6 +102,7 @@ class TasksRepository {
         reminderLeadTimes: Value(reminderLeadTimes),
         listId: Value(listId),
         sectionId: Value(sectionId),
+        durationMinutes: Value(durationMinutes),
       ),
     );
   }
@@ -130,6 +132,7 @@ class TasksRepository {
         reminderLeadTimes: Value(task.reminderLeadTimes),
         listId: Value(task.listId),
         sectionId: Value(task.sectionId),
+        durationMinutes: Value(task.durationMinutes),
       ),
     );
   }
@@ -197,5 +200,6 @@ class TasksRepository {
         reminderLeadTimes: row.reminderLeadTimes,
         listId: row.listId,
         sectionId: row.sectionId,
+        durationMinutes: row.durationMinutes,
       );
 }
