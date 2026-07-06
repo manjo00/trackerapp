@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/utils/time_block_utils.dart';
+import '../../../archive/presentation/archive_providers.dart';
 import '../../data/models/task_model.dart';
 import '../providers/lists_providers.dart';
 import '../providers/tasks_providers.dart';
@@ -31,17 +32,18 @@ class TaskTile extends ConsumerWidget {
     return Dismissible(
       key: ValueKey(task.id),
       direction: DismissDirection.endToStart,
-      // Red background with trash icon revealed on left-swipe.
+      // Swipe archives (recoverable) — delete-forever lives in the
+      // Archived screen. Amber background with an archive icon.
       background: Container(
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 24),
         decoration: BoxDecoration(
-          color: cs.errorContainer,
+          color: cs.tertiaryContainer,
           borderRadius: BorderRadius.circular(16),
         ),
-        child: Icon(Icons.delete_rounded, color: cs.onErrorContainer),
+        child: Icon(Icons.archive_rounded, color: cs.onTertiaryContainer),
       ),
-      onDismissed: (_) => _delete(context, ref),
+      onDismissed: (_) => _archive(context, ref),
       child: Card(
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
@@ -150,13 +152,18 @@ class TaskTile extends ConsumerWidget {
         );
   }
 
-  Future<void> _delete(BuildContext context, WidgetRef ref) async {
-    await ref.read(deleteTaskProvider.notifier).delete(task.id);
+  Future<void> _archive(BuildContext context, WidgetRef ref) async {
+    final ArchiveService svc = ref.read(archiveServiceProvider);
+    await svc.archiveTask(task.id, DateTime.now());
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('"${task.title}" deleted'),
-          duration: const Duration(seconds: 2),
+          content: Text('"${task.title}" archived'),
+          duration: const Duration(seconds: 3),
+          action: SnackBarAction(
+            label: 'Undo',
+            onPressed: () => svc.restoreTask(task.id),
+          ),
         ),
       );
     }

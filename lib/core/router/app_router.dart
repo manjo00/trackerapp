@@ -4,6 +4,7 @@ import '../../features/habits/data/models/habit_model.dart';
 import '../../features/habits/presentation/screens/habit_list_screen.dart';
 import '../../features/habits/presentation/screens/add_habit_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
+import '../../features/archive/presentation/screens/archived_screen.dart';
 import '../../features/tasks/data/models/task_model.dart';
 import '../../features/tasks/presentation/screens/add_task_screen.dart';
 import '../../features/tasks/presentation/screens/list_detail_screen.dart';
@@ -181,6 +182,11 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/settings',
       builder: (context, state) => const SettingsScreen(),
+    ),
+
+    GoRoute(
+      path: '/archived',
+      builder: (context, state) => const ArchivedScreen(),
     ),
 
     GoRoute(

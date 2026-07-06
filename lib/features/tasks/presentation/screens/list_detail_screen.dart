@@ -8,6 +8,7 @@ import '../../../../core/github/github_feedback_providers.dart';
 import '../../../../core/github/github_feedback_service.dart';
 import '../../../../core/github/markdown_feedback_builder.dart';
 import '../../../../core/settings/settings_provider.dart';
+import '../../../archive/presentation/archive_providers.dart';
 import '../../data/models/task_model.dart';
 import '../providers/lists_providers.dart';
 import '../widgets/list_form_dialog.dart';
@@ -68,6 +69,8 @@ class ListDetailScreen extends ConsumerWidget {
                 const PopupMenuItem(
                     value: 'push_github',
                     child: Text('Push feedback to GitHub')),
+              const PopupMenuItem(
+                  value: 'archive', child: Text('Archive')),
               const PopupMenuItem(value: 'delete', child: Text('Delete')),
             ],
           ),
@@ -144,6 +147,21 @@ class ListDetailScreen extends ConsumerWidget {
         );
         if (result != null) {
           await repo.renameList(list.id, result.$1, result.$2);
+        }
+      case 'archive':
+        await ref
+            .read(archiveServiceProvider)
+            .archiveList(list.id, DateTime.now());
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('"${list.name}" archived'),
+            action: SnackBarAction(
+              label: 'Undo',
+              onPressed: () =>
+                  ref.read(archiveServiceProvider).restoreList(list.id),
+            ),
+          ));
+          context.pop();
         }
       case 'delete':
         final bool? confirmed = await showDialog<bool>(

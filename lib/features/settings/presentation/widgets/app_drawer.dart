@@ -217,6 +217,15 @@ class AppDrawer extends ConsumerWidget {
 
             // ── Settings & info ─────────────────────────────────────────
             _DrawerTile(
+              icon: Icons.inventory_2_rounded,
+              label: 'Archived',
+              subtitle: 'Restore or delete hidden items',
+              onTap: () {
+                Navigator.of(context).pop();
+                context.push('/archived');
+              },
+            ),
+            _DrawerTile(
               icon: Icons.settings_rounded,
               label: 'Settings',
               subtitle: 'Tabs, theme & more',
