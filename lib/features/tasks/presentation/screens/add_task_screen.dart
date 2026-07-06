@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../../../core/utils/time_block_utils.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/notifications/notification_service.dart';
 import '../../../shifts/presentation/widgets/shift_date_picker_sheet.dart';
@@ -63,6 +64,9 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
 
   DateTime? _dueDate;
   TimeOfDay? _dueTime;
+
+  /// Time-block length; only meaningful while [_dueTime] is set.
+  int? _durationMinutes;
   late TaskPriority _priority;
   int? _listId;
   int? _sectionId;
@@ -89,6 +93,7 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
       _reminderEnabled = t.reminderEnabled;
       _listId = t.listId;
       _sectionId = t.sectionId;
+      _durationMinutes = t.durationMinutes;
       final List<int> leads = t.leadTimeMinutes;
       _lead1d = leads.contains(1440);
       _lead3h = leads.contains(180);
@@ -200,6 +205,41 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
     if (picked != null) setState(() => _dueTime = picked);
   }
 
+  String _endTimeLabel() {
+    final TimeOfDay? start = _dueTime;
+    final int? minutes = _durationMinutes;
+    if (start == null || minutes == null) return 'No end time  (optional)';
+    final int h = minutes ~/ 60;
+    final int m = minutes % 60;
+    final String len = [
+      if (h > 0) '${h}h',
+      if (m > 0) '${m}m',
+    ].join(' ');
+    return '${formatRange(_timeStr(start), minutes)}  ·  $len';
+  }
+
+  Future<void> _pickEndTime() async {
+    final TimeOfDay? start = _dueTime;
+    if (start == null) return;
+    final int startMin = start.hour * 60 + start.minute;
+    final int suggested =
+        (startMin + (_durationMinutes ?? 60)).clamp(0, 1439);
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime:
+          TimeOfDay(hour: suggested ~/ 60, minute: suggested % 60),
+    );
+    if (picked == null || !mounted) return;
+    final int? duration =
+        durationBetween(_timeStr(start), _timeStr(picked));
+    if (duration == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('End time must be after the start time')));
+      return;
+    }
+    setState(() => _durationMinutes = duration);
+  }
+
   // ── Save ──────────────────────────────────────────────────────────────────
 
   Future<void> _save() async {
@@ -224,6 +264,7 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
           reminderLeadTimes: leadTimesStr,
           listId: _listId,
           sectionId: _sectionId,
+          durationMinutes: _dueTime != null ? _durationMinutes : null,
         );
         await ref.read(updateTaskProvider.notifier).save(updated);
         await ref
@@ -242,6 +283,7 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
               reminderLeadTimes: leadTimesStr,
               listId: _listId,
               sectionId: _sectionId,
+              durationMinutes: _dueTime != null ? _durationMinutes : null,
             );
         if (newId != null && _labelIds.isNotEmpty) {
           await ref
@@ -472,8 +514,28 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
                   : 'No time set',
               active: _dueTime != null,
               onTap: _pickDueTime,
-              onClear: _dueTime != null ? () => setState(() => _dueTime = null) : null,
+              onClear: _dueTime != null
+                  // A block without a start makes no sense — clear both.
+                  ? () => setState(() {
+                        _dueTime = null;
+                        _durationMinutes = null;
+                      })
+                  : null,
             ),
+
+            // ── End time (time blocking, only once a start exists) ────────
+            if (_dueTime != null) ...[
+              const SizedBox(height: 12),
+              _DateTimeTile(
+                icon: Icons.hourglass_bottom_rounded,
+                label: _endTimeLabel(),
+                active: _durationMinutes != null,
+                onTap: _pickEndTime,
+                onClear: _durationMinutes != null
+                    ? () => setState(() => _durationMinutes = null)
+                    : null,
+              ),
+            ],
 
             const SizedBox(height: 28),
 
