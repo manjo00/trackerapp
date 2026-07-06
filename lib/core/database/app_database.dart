@@ -102,8 +102,10 @@ class AppDatabase extends _$AppDatabase {
   ///        tables + nullable listId/sectionId on tasks (NULL list = Captured)
   /// v12 → time blocking: nullable durationMinutes on tasks (with dueTime as
   ///        the start; end time is computed, never stored)
+  /// v13 → archive system: nullable archivedAt on tasks/task_lists/
+  ///        custom_trackers/habits (NULL = active, non-null = archived)
   @override
-  int get schemaVersion => 12;
+  int get schemaVersion => 13;
 
   /// The old vs. new default rotation-label colour (see v8 migration).
   static const int _oldRotationColor = 0xFFFFB347;
@@ -197,6 +199,14 @@ class AppDatabase extends _$AppDatabase {
           if (from < 12) {
             // Time blocking: optional block length per task.
             await m.addColumn(tasks, tasks.durationMinutes);
+          }
+          if (from < 13) {
+            // Archive: nullable archivedAt on each archivable table. Existing
+            // rows stay NULL = active, so nothing to backfill.
+            await m.addColumn(tasks, tasks.archivedAt);
+            await m.addColumn(taskLists, taskLists.archivedAt);
+            await m.addColumn(customTrackers, customTrackers.archivedAt);
+            await m.addColumn(habits, habits.archivedAt);
           }
         },
         beforeOpen: (details) async {

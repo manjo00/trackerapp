@@ -17,15 +17,29 @@ class TrackersDao extends DatabaseAccessor<AppDatabase>
 
   Stream<List<CustomTracker>> watchAllTrackers() =>
       (select(customTrackers)
+            ..where((t) => t.archivedAt.isNull())
             ..orderBy([(t) => OrderingTerm.asc(t.createdAt)]))
           .watch();
 
   Future<int> insertTracker(CustomTrackersCompanion companion) =>
       into(customTrackers).insert(companion);
 
-  /// One-shot fetch of all trackers — used by rescheduleAll on app start.
+  /// One-shot fetch of active trackers — used by rescheduleAll on app start.
+  /// Archived trackers are excluded so their reminders aren't rescheduled.
   Future<List<CustomTracker>> getAllTrackers() =>
-      select(customTrackers).get();
+      (select(customTrackers)..where((t) => t.archivedAt.isNull())).get();
+
+  /// Archived trackers, most-recently-archived first (Archived screen).
+  Stream<List<CustomTracker>> watchArchivedTrackers() =>
+      (select(customTrackers)
+            ..where((t) => t.archivedAt.isNotNull())
+            ..orderBy([(t) => OrderingTerm.desc(t.archivedAt)]))
+          .watch();
+
+  /// Sets/clears a tracker's archived state ([at] = null unarchives).
+  Future<void> setTrackerArchived(int id, DateTime? at) =>
+      (update(customTrackers)..where((t) => t.id.equals(id)))
+          .write(CustomTrackersCompanion(archivedAt: Value(at)));
 
   Future<void> deleteTracker(int id) =>
       (delete(customTrackers)..where((t) => t.id.equals(id))).go();

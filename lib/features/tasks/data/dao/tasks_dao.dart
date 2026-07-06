@@ -19,6 +19,7 @@ class TasksDao extends DatabaseAccessor<AppDatabase> with _$TasksDaoMixin {
   /// handles the full sort including null due-date handling.
   Stream<List<Task>> watchAllTasks() {
     return (select(tasks)
+          ..where((t) => t.archivedAt.isNull())
           ..orderBy([
             (t) => OrderingTerm.asc(t.isCompleted),
             (t) => OrderingTerm.desc(t.priority),
@@ -32,7 +33,10 @@ class TasksDao extends DatabaseAccessor<AppDatabase> with _$TasksDaoMixin {
   Stream<List<Task>> watchTasksDueToday(String today) {
     return (select(tasks)
           ..where(
-            (t) => t.dueDate.equals(today) & t.isCompleted.equals(false),
+            (t) =>
+                t.dueDate.equals(today) &
+                t.isCompleted.equals(false) &
+                t.archivedAt.isNull(),
           )
           ..orderBy([(t) => OrderingTerm.desc(t.priority)]))
         .watch();
@@ -47,6 +51,7 @@ class TasksDao extends DatabaseAccessor<AppDatabase> with _$TasksDaoMixin {
             (t) =>
                 t.dueDate.isNotNull() &
                 t.isCompleted.equals(false) &
+                t.archivedAt.isNull() &
                 t.dueDate.isSmallerThanValue(today),
           )
           ..orderBy([
@@ -60,7 +65,7 @@ class TasksDao extends DatabaseAccessor<AppDatabase> with _$TasksDaoMixin {
   /// completion ascending (incomplete first) then priority descending.
   Stream<List<Task>> watchTasksForDate(String date) {
     return (select(tasks)
-          ..where((t) => t.dueDate.equals(date))
+          ..where((t) => t.dueDate.equals(date) & t.archivedAt.isNull())
           ..orderBy([
             (t) => OrderingTerm.asc(t.isCompleted),
             (t) => OrderingTerm.desc(t.priority),
@@ -72,7 +77,10 @@ class TasksDao extends DatabaseAccessor<AppDatabase> with _$TasksDaoMixin {
   /// (No Inbox row exists by design: listId NULL *is* the inbox.)
   Stream<List<Task>> watchCapturedTasks() {
     return (select(tasks)
-          ..where((t) => t.listId.isNull() & t.isCompleted.equals(false))
+          ..where((t) =>
+              t.listId.isNull() &
+              t.isCompleted.equals(false) &
+              t.archivedAt.isNull())
           ..orderBy([
             (t) => OrderingTerm.desc(t.priority),
             (t) => OrderingTerm.asc(t.createdAt),
@@ -85,7 +93,7 @@ class TasksDao extends DatabaseAccessor<AppDatabase> with _$TasksDaoMixin {
   /// priority descending within a section.
   Stream<List<Task>> watchTasksForList(int listId) {
     return (select(tasks)
-          ..where((t) => t.listId.equals(listId))
+          ..where((t) => t.listId.equals(listId) & t.archivedAt.isNull())
           ..orderBy([
             (t) => OrderingTerm.asc(t.isCompleted),
             (t) => OrderingTerm.asc(t.sectionId),
@@ -101,6 +109,7 @@ class TasksDao extends DatabaseAccessor<AppDatabase> with _$TasksDaoMixin {
     return (select(tasks)
           ..where((t) =>
               t.isCompleted.equals(false) &
+              t.archivedAt.isNull() &
               t.dueDate.isBetweenValues(from, to))
           ..orderBy([
             (t) => OrderingTerm.asc(t.dueDate),
@@ -109,8 +118,23 @@ class TasksDao extends DatabaseAccessor<AppDatabase> with _$TasksDaoMixin {
         .watch();
   }
 
-  /// All tasks as a one-shot list (used by rescheduleAll on app start).
-  Future<List<Task>> getAllTasks() => select(tasks).get();
+  /// Active tasks as a one-shot list (used by rescheduleAll on app start).
+  /// Archived tasks are excluded so their reminders don't get rescheduled.
+  Future<List<Task>> getAllTasks() =>
+      (select(tasks)..where((t) => t.archivedAt.isNull())).get();
+
+  /// Archived tasks, most-recently-archived first (Archived screen).
+  Stream<List<Task>> watchArchivedTasks() {
+    return (select(tasks)
+          ..where((t) => t.archivedAt.isNotNull())
+          ..orderBy([(t) => OrderingTerm.desc(t.archivedAt)]))
+        .watch();
+  }
+
+  /// Sets/clears a task's archived state ([at] = null unarchives).
+  Future<void> setTaskArchived(int taskId, DateTime? at) =>
+      (update(tasks)..where((t) => t.id.equals(taskId)))
+          .write(TasksCompanion(archivedAt: Value(at)));
 
   // ── Writes ────────────────────────────────────────────────────────────────
 

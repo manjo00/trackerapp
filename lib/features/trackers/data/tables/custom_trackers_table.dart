@@ -38,4 +38,8 @@ class CustomTrackers extends Table {
   /// Templates appear in the template picker but not in the progress list.
   BoolColumn get isTemplate =>
       boolean().withDefault(const Constant(false))();
+
+  /// When set, the tracker is archived — hidden from active views but
+  /// recoverable from the Archived screen. NULL = active.
+  DateTimeColumn get archivedAt => dateTime().nullable()();
 }

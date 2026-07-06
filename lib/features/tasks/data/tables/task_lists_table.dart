@@ -9,6 +9,11 @@ class TaskLists extends Table {
       integer().withDefault(const Constant(0xFF8AB4F8))();
   IntColumn get orderIndex => integer().withDefault(const Constant(0))();
   DateTimeColumn get createdAt => dateTime()();
+
+  /// When set, the list is archived — hidden from active views but
+  /// recoverable from the Archived screen. NULL = active. Its tasks stay
+  /// (they show as "no list"/Captured) until the list is restored.
+  DateTimeColumn get archivedAt => dateTime().nullable()();
 }
 
 /// Named group inside a list (e.g. "Planning" / "Buying" / "Doing").

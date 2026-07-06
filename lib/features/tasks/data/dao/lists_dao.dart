@@ -17,15 +17,29 @@ class ListsDao extends DatabaseAccessor<AppDatabase> with _$ListsDaoMixin {
 
   // ── Lists ─────────────────────────────────────────────────────────────────
 
-  /// All lists, in user order (then name for stable ties).
+  /// All active lists, in user order (then name for stable ties).
   Stream<List<TaskList>> watchLists() {
     return (select(taskLists)
+          ..where((l) => l.archivedAt.isNull())
           ..orderBy([
             (l) => OrderingTerm.asc(l.orderIndex),
             (l) => OrderingTerm.asc(l.name),
           ]))
         .watch();
   }
+
+  /// Archived lists, most-recently-archived first (Archived screen).
+  Stream<List<TaskList>> watchArchivedLists() {
+    return (select(taskLists)
+          ..where((l) => l.archivedAt.isNotNull())
+          ..orderBy([(l) => OrderingTerm.desc(l.archivedAt)]))
+        .watch();
+  }
+
+  /// Sets/clears a list's archived state ([at] = null unarchives).
+  Future<void> setListArchived(int listId, DateTime? at) =>
+      (update(taskLists)..where((l) => l.id.equals(listId)))
+          .write(TaskListsCompanion(archivedAt: Value(at)));
 
   Future<int> insertList(TaskListsCompanion companion) =>
       into(taskLists).insert(companion);
@@ -119,7 +133,9 @@ class ListsDao extends DatabaseAccessor<AppDatabase> with _$ListsDaoMixin {
     final countExp = tasks.id.count();
     final query = selectOnly(tasks)
       ..addColumns([tasks.listId, countExp])
-      ..where(tasks.isCompleted.equals(false) & tasks.listId.isNotNull())
+      ..where(tasks.isCompleted.equals(false) &
+          tasks.listId.isNotNull() &
+          tasks.archivedAt.isNull())
       ..groupBy([tasks.listId]);
     return query.watch().map((rows) {
       final Map<int, int> counts = {};

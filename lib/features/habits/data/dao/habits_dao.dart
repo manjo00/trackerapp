@@ -25,9 +25,24 @@ class HabitsDao extends DatabaseAccessor<AppDatabase> with _$HabitsDaoMixin {
   /// A Stream means the UI receives a new list automatically whenever the
   /// habits table changes — no manual refreshing needed.
   Stream<List<Habit>> watchAllHabits() {
-    return (select(habits)..orderBy([(h) => OrderingTerm.asc(h.createdAt)]))
+    return (select(habits)
+          ..where((h) => h.archivedAt.isNull())
+          ..orderBy([(h) => OrderingTerm.asc(h.createdAt)]))
         .watch();
   }
+
+  /// Archived habits, most-recently-archived first (Archived screen).
+  Stream<List<Habit>> watchArchivedHabits() {
+    return (select(habits)
+          ..where((h) => h.archivedAt.isNotNull())
+          ..orderBy([(h) => OrderingTerm.desc(h.archivedAt)]))
+        .watch();
+  }
+
+  /// Sets/clears a habit's archived state ([at] = null unarchives).
+  Future<void> setHabitArchived(int habitId, DateTime? at) =>
+      (update(habits)..where((h) => h.id.equals(habitId)))
+          .write(HabitsCompanion(archivedAt: Value(at)));
 
   /// Inserts a new habit row and returns its auto-assigned [id].
   Future<int> insertHabit(HabitsCompanion companion) =>
@@ -76,6 +91,7 @@ class HabitsDao extends DatabaseAccessor<AppDatabase> with _$HabitsDaoMixin {
   /// Used by the planner to compute date-specific status without a stream.
   Future<List<Habit>> getAllHabits() {
     return (select(habits)
+          ..where((h) => h.archivedAt.isNull())
           ..orderBy([(h) => OrderingTerm.asc(h.createdAt)]))
         .get();
   }
@@ -106,6 +122,7 @@ class HabitsDao extends DatabaseAccessor<AppDatabase> with _$HabitsDaoMixin {
         habitCompletions.habitId.equalsExp(habits.id),
       ),
     ])
+      ..where(habits.archivedAt.isNull())
       ..orderBy([OrderingTerm.asc(habits.createdAt)]);
 
     return query.watch().map((rows) {

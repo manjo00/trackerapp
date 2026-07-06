@@ -65,4 +65,8 @@ class Tasks extends Table {
   /// Only meaningful together with [dueTime] (the start); the end time is
   /// always computed so rescheduling the start moves the whole block.
   IntColumn get durationMinutes => integer().nullable()();
+
+  /// When set, the task is archived — hidden from every active view but
+  /// recoverable from the Archived screen. NULL = active.
+  DateTimeColumn get archivedAt => dateTime().nullable()();
 }

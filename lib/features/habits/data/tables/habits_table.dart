@@ -31,4 +31,8 @@ class Habits extends Table {
   /// Time-of-day for the reminder, stored as "HH:mm" (e.g. "07:00").
   /// NULL means no time has been set (reminder won't fire even if enabled).
   TextColumn get reminderTime => text().nullable()();
+
+  /// When set, the habit is archived — hidden from every active view but
+  /// recoverable from the Archived screen. NULL = active.
+  DateTimeColumn get archivedAt => dateTime().nullable()();
 }
