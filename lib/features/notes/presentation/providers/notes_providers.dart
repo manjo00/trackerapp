@@ -30,3 +30,27 @@ final notesForNotebookProvider =
 /// The blocks of one note, in order.
 final noteBlocksProvider = StreamProvider.family<List<NoteBlock>, int>(
     (ref, noteId) => ref.watch(notesDaoProvider).watchBlocks(noteId));
+
+/// Latest note-edit time per notebook (notebookId → max note updatedAt).
+final lastNoteEditByNotebookProvider = StreamProvider<Map<int, DateTime>>(
+    (ref) => ref.watch(notesDaoProvider).watchLastNoteEditByNotebook());
+
+/// Active notebooks ordered by recent activity — the greater of the
+/// notebook's own createdAt and its latest note edit — newest first. Drives
+/// the Home "Notes" block.
+final recentNotebooksProvider = Provider<List<Notebook>>((ref) {
+  final List<Notebook> nbs =
+      ref.watch(notebooksProvider).valueOrNull ?? const [];
+  final Map<int, DateTime> lastEdit =
+      ref.watch(lastNoteEditByNotebookProvider).valueOrNull ?? const {};
+  DateTime recency(Notebook n) {
+    final DateTime? edited = lastEdit[n.id];
+    return (edited != null && edited.isAfter(n.createdAt))
+        ? edited
+        : n.createdAt;
+  }
+
+  final List<Notebook> sorted = [...nbs]
+    ..sort((a, b) => recency(b).compareTo(recency(a)));
+  return sorted;
+});

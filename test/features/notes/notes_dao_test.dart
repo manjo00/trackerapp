@@ -73,6 +73,24 @@ void main() {
     expect((await dao.watchNotes(null).first).map((n) => n.id), [note]);
   });
 
+  test('watchLastNoteEditByNotebook returns the latest edit per notebook',
+      () async {
+    final nb = await dao.createNotebook(
+        name: 'A', colorValue: 0, icon: '📓', now: DateTime(2026, 1, 1));
+    final n1 = await dao.createNote(notebookId: nb, now: DateTime(2026, 1, 2));
+    await dao.createNote(notebookId: nb, now: DateTime(2026, 1, 5));
+    await dao.touchNote(n1, DateTime(2026, 1, 10)); // now the newest edit
+
+    final map = await dao.watchLastNoteEditByNotebook().first;
+    expect(map[nb], DateTime(2026, 1, 10));
+
+    // A notebook with no notes is absent from the map.
+    final empty = await dao.createNotebook(
+        name: 'B', colorValue: 0, icon: '📓', now: DateTime(2026, 1, 1));
+    final map2 = await dao.watchLastNoteEditByNotebook().first;
+    expect(map2.containsKey(empty), false);
+  });
+
   test('archived notebook and note leave the active streams', () async {
     final nb = await dao.createNotebook(
         name: 'A', colorValue: 0xFF000000, icon: '📓', now: now);

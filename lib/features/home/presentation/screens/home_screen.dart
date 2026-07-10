@@ -8,6 +8,7 @@ import '../../../tasks/presentation/providers/lists_providers.dart';
 import '../../../tasks/presentation/providers/tasks_providers.dart';
 import '../../../tasks/presentation/widgets/task_tile.dart';
 import '../../data/home_block_type.dart';
+import '../widgets/notes_block.dart';
 import '../widgets/workout_block.dart';
 import 'edit_home_screen.dart';
 
@@ -60,6 +61,7 @@ class HomeScreen extends ConsumerWidget {
           _tasksOrEmpty(claim(capturedAll), 'Nothing captured', cs),
         HomeBlockType.thisWeek => _WeekCard(tasks: week),
         HomeBlockType.workout => const WorkoutBlock(),
+        HomeBlockType.notes => const NotesBlock(),
       };
 
       children.add(Column(
@@ -143,6 +145,7 @@ class HomeScreen extends ConsumerWidget {
         HomeBlockType.captured => cs.tertiary,
         HomeBlockType.thisWeek => cs.secondary,
         HomeBlockType.workout => cs.primary,
+        HomeBlockType.notes => cs.tertiary,
       };
 
   /// Task tiles, or a quiet placeholder card when the block is empty.

@@ -10,7 +10,8 @@ enum HomeBlockType {
   dueToday,
   captured,
   thisWeek,
-  workout;
+  workout,
+  notes;
 
   String get label => switch (this) {
         urgent => 'Urgent',
@@ -18,6 +19,7 @@ enum HomeBlockType {
         captured => 'Captured',
         thisWeek => 'This week',
         workout => 'Workout',
+        notes => 'Notes',
       };
 
   IconData get icon => switch (this) {
@@ -26,16 +28,18 @@ enum HomeBlockType {
         captured => Icons.inbox_rounded,
         thisWeek => Icons.view_week_rounded,
         workout => Icons.fitness_center_rounded,
+        notes => Icons.sticky_note_2_rounded,
       };
 
-  /// Shipped layout — slice-1 order with the workout block appended, so
-  /// existing users see what they had plus the new block at the bottom.
+  /// Shipped layout — the original blocks with workout then notes appended, so
+  /// existing users see what they had plus the new blocks at the bottom.
   static const List<HomeBlockType> defaults = [
     urgent,
     dueToday,
     captured,
     thisWeek,
     workout,
+    notes,
   ];
 
   /// Parses a stored layout. Unknown names are dropped and duplicates

@@ -108,6 +108,25 @@ class NotesDao extends DatabaseAccessor<AppDatabase> with _$NotesDaoMixin {
   Future<List<NoteBlock>> getBlocks(int noteId) =>
       (select(noteBlocks)..where((b) => b.noteId.equals(noteId))).get();
 
+  /// Latest note-edit time per notebook (notebookId → max updatedAt), for the
+  /// Home "recent notebooks" block. Notebooks with no active notes are absent.
+  Stream<Map<int, DateTime>> watchLastNoteEditByNotebook() {
+    final maxUpdated = notes.updatedAt.max();
+    final query = selectOnly(notes)
+      ..addColumns([notes.notebookId, maxUpdated])
+      ..where(notes.archivedAt.isNull() & notes.notebookId.isNotNull())
+      ..groupBy([notes.notebookId]);
+    return query.watch().map((rows) {
+      final Map<int, DateTime> out = {};
+      for (final row in rows) {
+        final int? nb = row.read(notes.notebookId);
+        final DateTime? u = row.read(maxUpdated);
+        if (nb != null && u != null) out[nb] = u;
+      }
+      return out;
+    });
+  }
+
   Future<void> deleteNote(int id) =>
       (delete(notes)..where((n) => n.id.equals(id))).go();
 
