@@ -6,6 +6,9 @@ import 'package:path_provider/path_provider.dart';
 import '../../features/habits/data/dao/habits_dao.dart';
 import '../../features/habits/data/tables/habit_completions_table.dart';
 import '../../features/habits/data/tables/habits_table.dart';
+import '../../features/notes/data/tables/note_blocks_table.dart';
+import '../../features/notes/data/tables/notebooks_table.dart';
+import '../../features/notes/data/tables/notes_table.dart';
 import '../../features/shifts/data/dao/shifts_dao.dart';
 import '../../features/shifts/data/tables/shift_rotations_table.dart';
 import '../../features/shifts/data/tables/work_shifts_table.dart';
@@ -70,6 +73,10 @@ part 'app_database.g.dart';
     ShiftRotations,
     // ── Weekly muscle targets (v9) ───────────────────────────────────────────
     MuscleTargets,
+    // ── Notes (v14) ──────────────────────────────────────────────────────────
+    Notebooks,
+    Notes,
+    NoteBlocks,
   ],
   daos: [HabitsDao, TasksDao, TrackersDao, WorkoutDao, ProgramDao, ShiftsDao],
 )
@@ -104,8 +111,10 @@ class AppDatabase extends _$AppDatabase {
   ///        the start; end time is computed, never stored)
   /// v13 → archive system: nullable archivedAt on tasks/task_lists/
   ///        custom_trackers/habits (NULL = active, non-null = archived)
+  /// v14 → notes system: notebooks, notes, note_blocks tables (block editor —
+  ///        each note is a stack of text/checkbox/photo blocks)
   @override
-  int get schemaVersion => 13;
+  int get schemaVersion => 14;
 
   /// The old vs. new default rotation-label colour (see v8 migration).
   static const int _oldRotationColor = 0xFFFFB347;
@@ -207,6 +216,12 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(taskLists, taskLists.archivedAt);
             await m.addColumn(customTrackers, customTrackers.archivedAt);
             await m.addColumn(habits, habits.archivedAt);
+          }
+          if (from < 14) {
+            // Notes system: notebooks → notes → note_blocks (FK order).
+            await m.createTable(notebooks);
+            await m.createTable(notes);
+            await m.createTable(noteBlocks);
           }
         },
         beforeOpen: (details) async {
