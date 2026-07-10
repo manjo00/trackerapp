@@ -47,7 +47,7 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
   static const String _kPlannerDayView = 'planner_day_view';
 
   // Settings schema version — increment when defaults need to be reset.
-  static const int _currentSettingsVersion = 3;
+  static const int _currentSettingsVersion = 4;
   static const String _kSettingsVersion = 'settings_version';
 
   // ── Load ───────────────────────────────────────────────────────────────
@@ -76,6 +76,15 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
         } else {
           _prefs.setStringList(_kTabs, mapped);
         }
+      }
+    }
+    if (savedVersion < 4) {
+      // v4: the Notes home block is new. Append it to an existing custom Home
+      // layout so it's discoverable (users who never customised have no stored
+      // list and pick it up from defaults). Skip if already present.
+      final List<String>? raw = _prefs.getStringList(_kHomeBlocks);
+      if (raw != null && !raw.contains('notes')) {
+        _prefs.setStringList(_kHomeBlocks, [...raw, 'notes']);
       }
     }
     if (savedVersion < _currentSettingsVersion) {
