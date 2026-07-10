@@ -98,6 +98,14 @@ class BackupService {
         b.insertAll(_db.tasks, rowsFor('tasks').map(Task.fromJson));
         b.insertAll(
             _db.taskLabels, rowsFor('task_labels').map(TaskLabel.fromJson));
+        // Notes (v14): notebooks → notes → note_blocks (FK order). Photo image
+        // FILES are not in this JSON — restored photo blocks show the
+        // "Image unavailable" placeholder (cloud sync is the cross-device fix).
+        b.insertAll(
+            _db.notebooks, rowsFor('notebooks').map(Notebook.fromJson));
+        b.insertAll(_db.notes, rowsFor('notes').map(Note.fromJson));
+        b.insertAll(
+            _db.noteBlocks, rowsFor('note_blocks').map(NoteBlock.fromJson));
         b.insertAll(
             _db.workShifts, rowsFor('work_shifts').map(WorkShift.fromJson));
         // Standalone tables that were missing from restore entirely
@@ -113,6 +121,9 @@ class BackupService {
   /// Tables in delete order: children first, then their parents, so foreign
   /// keys are never violated while wiping.
   List<TableInfo<Table, dynamic>> get _deleteOrder => [
+        _db.noteBlocks,
+        _db.notes,
+        _db.notebooks,
         _db.trackerLogValues,
         _db.trackerLogs,
         _db.trackerItems,
