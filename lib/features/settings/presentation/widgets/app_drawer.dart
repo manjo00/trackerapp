@@ -204,6 +204,15 @@ class AppDrawer extends ConsumerWidget {
                 },
               ),
             _DrawerTile(
+              icon: Icons.sticky_note_2_rounded,
+              label: 'Notes',
+              subtitle: 'Notebooks for rounds & knowledge',
+              onTap: () {
+                Navigator.of(context).pop();
+                context.push('/notes');
+              },
+            ),
+            _DrawerTile(
               icon: Icons.calendar_month_rounded,
               label: 'Work schedule',
               subtitle: 'Day / night shifts calendar',

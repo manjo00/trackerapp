@@ -5,6 +5,9 @@ import '../../features/habits/presentation/screens/habit_list_screen.dart';
 import '../../features/habits/presentation/screens/add_habit_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
 import '../../features/archive/presentation/screens/archived_screen.dart';
+import '../../features/notes/presentation/screens/note_editor_screen.dart';
+import '../../features/notes/presentation/screens/notebook_detail_screen.dart';
+import '../../features/notes/presentation/screens/notes_overview_screen.dart';
 import '../../features/tasks/data/models/task_model.dart';
 import '../../features/tasks/presentation/screens/add_task_screen.dart';
 import '../../features/tasks/presentation/screens/list_detail_screen.dart';
@@ -187,6 +190,27 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/archived',
       builder: (context, state) => const ArchivedScreen(),
+    ),
+
+    // ── Notes (full-screen, no bottom nav) ────────────────────────────────
+    GoRoute(
+      path: '/notes',
+      builder: (context, state) => const NotesOverviewScreen(),
+    ),
+    // More specific than '/notes/:id' — listed first so '/notes/notebook/5'
+    // matches here. Path param 'unfiled' = the null-notebook bucket.
+    GoRoute(
+      path: '/notes/notebook/:id',
+      builder: (context, state) {
+        final String raw = state.pathParameters['id'] ?? 'unfiled';
+        final int? notebookId = raw == 'unfiled' ? null : int.tryParse(raw);
+        return NotebookDetailScreen(notebookId: notebookId);
+      },
+    ),
+    GoRoute(
+      path: '/notes/:id',
+      builder: (context, state) =>
+          NoteEditorScreen(noteId: int.parse(state.pathParameters['id']!)),
     ),
 
     GoRoute(
