@@ -51,6 +51,21 @@ device, then pull:
 
 Then Read the pulled PNG to view it.
 
+**From the Bash tool (Git Bash), `adb exec-out screencap -p > x.png` DOES work**
+(bash doesn't re-encode the stream like PowerShell) — but two Git-Bash gotchas bite:
+1. **Black screenshots.** A Flutter *release* build on the emulator renders through a
+   hardware overlay that `screencap` captures as pure black. Force GPU composition first:
+   `adb -s <serial> shell service call SurfaceFlinger 1008 i32 1` (once), then screencap —
+   the surface now captures. (`... i32 0` re-enables overlays.) The app is fine; only the
+   capture was blocked. Confirm with a grayscale min/max check if unsure.
+2. **`/sdcard/...` path mangling.** Git Bash rewrites a leading `/sdcard/...` into
+   `C:/Program Files/Git/sdcard/...` (MSYS path conversion), so `adb push`/`pull`/dump to
+   `/sdcard` fails with "No such file or directory". Prefix the command with
+   `MSYS_NO_PATHCONV=1` (or use `//sdcard/...`).
+
+Note `uiautomator dump` returns almost nothing for a Flutter app (no native view tree
+unless a screen reader is on) — verify UI by screenshot, not by dumping the hierarchy.
+
 **Coordinate scaling:** the Read tool displays the 1080×2640 screenshot at ~818×2000.
 To tap something you located in the displayed image, multiply both coordinates by
 **1.32** before `shell input tap X Y`. After any tap, take a fresh screenshot to verify
