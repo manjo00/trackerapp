@@ -184,6 +184,11 @@ class HomeWidgetService {
           'month_cells_map', jsonEncode(monthCellsMap));
       await HomeWidget.saveWidgetData<String>(
           'month_titles_map', jsonEncode(monthTitlesMap));
+      // Weekday header letters in display order — so the native header row
+      // tracks the Sunday/Monday-start setting (was hardcoded Monday-start,
+      // which shifted the dates under the wrong columns on Sunday-start).
+      await HomeWidget.saveWidgetData<String>(
+          'month_dow', weekdayHeaderLetters(sundayStart: sundayStart).join(','));
       await HomeWidget.saveWidgetData<String>('widget_today', today);
       await HomeWidget.saveWidgetData<String>(
           'combined_tasks', jsonEncode(combinedTasks));

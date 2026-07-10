@@ -82,13 +82,13 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:orientation="horizontal">
-        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="M" android:textColor="#CCFFFFFF" android:textSize="11sp" />
-        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="T" android:textColor="#CCFFFFFF" android:textSize="11sp" />
-        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="W" android:textColor="#CCFFFFFF" android:textSize="11sp" />
-        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="T" android:textColor="#CCFFFFFF" android:textSize="11sp" />
-        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="F" android:textColor="#CCFFFFFF" android:textSize="11sp" />
-        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="S" android:textColor="#CCFFFFFF" android:textSize="11sp" />
-        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="S" android:textColor="#CCFFFFFF" android:textSize="11sp" />
+        <TextView android:id="@+id/dow_0" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="M" android:textColor="#CCFFFFFF" android:textSize="11sp" />
+        <TextView android:id="@+id/dow_1" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="T" android:textColor="#CCFFFFFF" android:textSize="11sp" />
+        <TextView android:id="@+id/dow_2" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="W" android:textColor="#CCFFFFFF" android:textSize="11sp" />
+        <TextView android:id="@+id/dow_3" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="T" android:textColor="#CCFFFFFF" android:textSize="11sp" />
+        <TextView android:id="@+id/dow_4" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="F" android:textColor="#CCFFFFFF" android:textSize="11sp" />
+        <TextView android:id="@+id/dow_5" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="S" android:textColor="#CCFFFFFF" android:textSize="11sp" />
+        <TextView android:id="@+id/dow_6" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="S" android:textColor="#CCFFFFFF" android:textSize="11sp" />
     </LinearLayout>
 
     <!-- Calendar grid: full width, natural height (just its rows) so the extra

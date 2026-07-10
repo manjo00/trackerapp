@@ -83,6 +83,19 @@ class UplanMonthWidgetProvider : HomeWidgetProvider() {
                 prefs.getString("month_title", "") ?: ""
             )
 
+            // Weekday header, driven by the app's Sunday/Monday-start setting
+            // (Dart writes it as month_dow, matching how the day cells are laid
+            // out). Fallback is the historic Monday-start row.
+            val dow = (prefs.getString("month_dow", "M,T,W,T,F,S,S")
+                ?: "M,T,W,T,F,S,S").split(",")
+            val dowIds = intArrayOf(
+                R.id.dow_0, R.id.dow_1, R.id.dow_2, R.id.dow_3,
+                R.id.dow_4, R.id.dow_5, R.id.dow_6
+            )
+            for (i in dowIds.indices) {
+                views.setTextViewText(dowIds[i], dow.getOrElse(i) { "" })
+            }
+
             // Calendar grid adapter.
             val gridIntent = Intent(context, MonthRemoteViewsService::class.java).apply {
                 putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
