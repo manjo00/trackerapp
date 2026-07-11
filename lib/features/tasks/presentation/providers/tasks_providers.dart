@@ -1,6 +1,7 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../../core/database/database_provider.dart';
 import '../../../../core/notifications/notification_service.dart';
+import '../../../notes/presentation/providers/notes_providers.dart';
 import '../../data/dao/tasks_dao.dart';
 import '../../data/models/task_model.dart';
 import '../../data/models/task_priority.dart';
@@ -107,6 +108,10 @@ class ToggleTask extends _$ToggleTask {
             currentlyCompleted: currentlyCompleted,
           ),
     );
+    // If this task came from a note checkbox, tick/untick that checkbox too.
+    await ref
+        .read(noteTaskLinkerProvider)
+        .mirrorTaskCompletionToBlock(id, !currentlyCompleted);
     // Marking a task complete → cancel its pending notifications.
     // Marking incomplete → leave as-is; user can re-edit to set new reminders.
     if (!currentlyCompleted) {

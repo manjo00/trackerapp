@@ -140,6 +140,10 @@ class NotesDao extends DatabaseAccessor<AppDatabase> with _$NotesDaoMixin {
         ]))
       .watch();
 
+  /// One-shot fetch of a single block by id (null if gone).
+  Future<NoteBlock?> getBlock(int id) =>
+      (select(noteBlocks)..where((b) => b.id.equals(id))).getSingleOrNull();
+
   Future<int> addBlock({
     required int noteId,
     required NoteBlockType type,

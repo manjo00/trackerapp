@@ -40,12 +40,17 @@ class _TextBlockViewState extends ConsumerState<TextBlockView> {
     }
   }
 
-  void _save() {
+  Future<void> _save() async {
     final String text = _ctrl.text;
     if (text == (widget.block.content ?? '')) return;
+    final now = DateTime.now();
     final dao = ref.read(notesDaoProvider);
-    dao.updateBlockContent(widget.block.id, text);
-    dao.touchNote(widget.block.noteId, DateTime.now());
+    await dao.updateBlockContent(widget.block.id, text);
+    await dao.touchNote(widget.block.noteId, now);
+    // Recognise / update / remove any "@time" task on this line.
+    await ref
+        .read(noteTaskLinkerProvider)
+        .reconcileBlock(block: widget.block, content: text, now: now);
   }
 
   @override

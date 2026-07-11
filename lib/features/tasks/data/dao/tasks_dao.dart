@@ -136,6 +136,16 @@ class TasksDao extends DatabaseAccessor<AppDatabase> with _$TasksDaoMixin {
       (update(tasks)..where((t) => t.id.equals(taskId)))
           .write(TasksCompanion(archivedAt: Value(at)));
 
+  /// One-shot fetch of a single task by id (null if it doesn't exist).
+  Future<Task?> getTask(int id) =>
+      (select(tasks)..where((t) => t.id.equals(id))).getSingleOrNull();
+
+  /// The task auto-created from a given note block, if any. Used by the
+  /// note→task linker to decide whether to create, update, or delete it.
+  Future<Task?> getTaskForBlock(int blockId) =>
+      (select(tasks)..where((t) => t.sourceNoteBlockId.equals(blockId)))
+          .getSingleOrNull();
+
   // ── Writes ────────────────────────────────────────────────────────────────
 
   /// Inserts a new task row and returns its auto-assigned id.
