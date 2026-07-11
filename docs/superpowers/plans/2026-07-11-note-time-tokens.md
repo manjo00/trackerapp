@@ -89,3 +89,51 @@ tombstone the line instead).
 Reverting drops schema v15. Because both columns are nullable and additive, a DB
 already migrated to v15 keeps working with reverted (v14) code — the extra
 columns are simply ignored. No data migration is needed to go back.
+
+## Build & release runbook — RUN ON THE LAPTOP
+
+> The cloud/phone session could NOT do this: `dl.google.com` (Android SDK +
+> Google Maven) is blocked by that environment's network policy, there is no adb
+> bridge to the phone, and its token has no write access to `manjo00/uplan-releases`.
+> The laptop has the SDK, the phone cable, the **matching debug keystore** (so the
+> APK installs over the existing app with no data loss), and `gh`. Version is
+> already bumped to **1.8.0+12** on this branch.
+
+PowerShell, from `C:\Projects\life_tracker`, on branch
+`claude/costa-screen-recorder-issue-vh6yhx`:
+
+```powershell
+# 0. Get this branch + regenerate Drift/Riverpod code
+git fetch origin
+git checkout claude/costa-screen-recorder-issue-vh6yhx
+git pull
+flutter pub get
+dart run build_runner build --delete-conflicting-outputs
+flutter analyze        # expect: No issues found
+
+# 1. Build the release APK (debug-signed = same key as the installed app)
+flutter build apk --release
+#    → build\app\outputs\flutter-apk\app-release.apk
+
+# 2a. Install straight onto the connected phone (Z Flip 6, serial R5CX631BMJB)
+$adb = "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"
+& $adb -s R5CX631BMJB install -r build\app\outputs\flutter-apk\app-release.apk
+& $adb -s R5CX631BMJB shell am force-stop com.lifetracker.life_tracker
+& $adb -s R5CX631BMJB shell monkey -p com.lifetracker.life_tracker -c android.intent.category.LAUNCHER 1
+
+# 2b. AND publish the beta release so any phone can self-update
+gh release create v1.8.0 --repo manjo00/uplan-releases `
+  --title "Uplan v1.8.0 (beta)" `
+  --notes "Phone-session beta: Notes '@time' task tokens (auto-create + two-way-linked tasks)." `
+  build\app\outputs\flutter-apk\app-release.apk
+```
+
+After 2b, on any phone: **Uplan → Settings → "Check for updates"** pulls v1.8.0
+(the manual tile bypasses the 24 h auto-check throttle).
+
+Release ritual reminders (hard-learned, from the device skill):
+- The **`.apk` asset is mandatory** — `UpdateService` silently ignores a release
+  with no APK attached.
+- **Publish, not draft** — a draft release is invisible to the `releases/latest` API.
+- The release **tag semver must be > the installed version** or the update dialog
+  never fires (`v1.8.0` > `1.7.1`, so this is fine).
