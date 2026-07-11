@@ -47,10 +47,8 @@ class _TextBlockViewState extends ConsumerState<TextBlockView> {
     final dao = ref.read(notesDaoProvider);
     await dao.updateBlockContent(widget.block.id, text);
     await dao.touchNote(widget.block.noteId, now);
-    // Recognise / update / remove any "@time" task on this line.
-    await ref
-        .read(noteTaskLinkerProvider)
-        .reconcileBlock(block: widget.block, content: text, now: now);
+    // Text lines never spawn tasks — only checkbox lines do (see
+    // CheckboxBlockView). This keeps prose from becoming tasks.
   }
 
   @override

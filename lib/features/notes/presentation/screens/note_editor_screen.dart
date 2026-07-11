@@ -9,11 +9,10 @@ import '../widgets/checkbox_block_view.dart';
 import '../widgets/photo_block_view.dart';
 import '../widgets/text_block_view.dart';
 
-/// The block editor for one note: a title plus a stack of text / checkbox /
-/// photo blocks. Auto-saves (blocks save themselves on focus-loss; the title
-/// saves on focus-loss and on leaving). A note left completely empty — no
-/// title and no blocks — is deleted on exit so abandoned "new note" taps don't
-/// litter the notebook.
+/// The block editor for one note: a title plus a reorderable stack of text /
+/// checkbox / photo blocks. Auto-saves (blocks save on focus-loss; the title
+/// on focus-loss and on leaving). A note left completely empty is deleted on
+/// exit. AppBar ⋮ deletes the whole note (cascading its tasks + auto-list).
 class NoteEditorScreen extends ConsumerStatefulWidget {
   const NoteEditorScreen({required this.noteId, super.key});
 
@@ -27,6 +26,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
   final TextEditingController _titleCtrl = TextEditingController();
   final FocusNode _titleFocus = FocusNode();
   String _savedTitle = '';
+  bool _deleted = false;
 
   @override
   void initState() {
@@ -47,6 +47,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
   }
 
   void _saveTitle() {
+    if (_deleted) return;
     final String title = _titleCtrl.text;
     if (title == _savedTitle) return;
     _savedTitle = title;
@@ -99,40 +100,63 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
         .addPhotoBlock(widget.noteId, source, _nextOrder, now: DateTime.now());
   }
 
-  Future<void> _removePhoto(NoteBlock block) async {
+  /// Deletes a single block (photo file cleaned up); its linked task, if any,
+  /// is removed by the database's ON DELETE CASCADE.
+  Future<void> _deleteBlock(NoteBlock b) async {
+    if (b.type == NoteBlockType.photo.storageKey) {
+      await ref
+          .read(notesRepositoryProvider)
+          .removePhotoBlock(b, now: DateTime.now());
+    } else {
+      final dao = ref.read(notesDaoProvider);
+      await dao.deleteBlock(b.id);
+      await dao.touchNote(b.noteId, DateTime.now());
+    }
+  }
+
+  Future<void> _deleteNote() async {
     final bool? confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Remove photo?'),
-        content: const Text('The image file is deleted.'),
+        title: const Text('Delete note?'),
+        content: const Text(
+            'The note, its photos, and any tasks it created are deleted.'),
         actions: [
           TextButton(
               onPressed: () => Navigator.of(ctx).pop(false),
               child: const Text('Cancel')),
           FilledButton(
               onPressed: () => Navigator.of(ctx).pop(true),
-              child: const Text('Remove')),
+              child: const Text('Delete')),
         ],
       ),
     );
     if (confirmed != true) return;
+    _deleted = true;
     await ref
         .read(notesRepositoryProvider)
-        .removePhotoBlock(block, now: DateTime.now());
+        .deleteNoteWithPhotos(widget.noteId);
+    if (mounted) Navigator.of(context).pop();
   }
 
-  /// Saves the title and deletes the note if it ended up completely empty
-  /// (no title and no blocks). Runs after the pop; providers are app-scoped so
-  /// the captured refs stay valid past this widget's disposal.
+  void _onReorder(List<NoteBlock> blocks, int oldIndex, int newIndex) {
+    // onReorderItem gives newIndex already adjusted for the removed item.
+    if (oldIndex == newIndex) return;
+    final List<int> ids = blocks.map((b) => b.id).toList();
+    final int moved = ids.removeAt(oldIndex);
+    ids.insert(newIndex, moved);
+    ref.read(notesDaoProvider).reorderBlocks(ids);
+  }
+
+  /// Saves the title and deletes the note if it ended up completely empty.
   Future<void> _onLeave() async {
+    if (_deleted) return;
     _saveTitle();
     final dao = ref.read(notesDaoProvider);
     final repo = ref.read(notesRepositoryProvider);
     if (_titleCtrl.text.trim().isEmpty) {
       final List<NoteBlock> blocks = await dao.getBlocks(widget.noteId);
-      if (blocks.isEmpty) {
-        await repo.deleteNoteWithPhotos(widget.noteId);
-      }
+      if (blocks.isEmpty) await repo.deleteNoteWithPhotos(widget.noteId);
     }
   }
 
@@ -148,34 +172,61 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
         if (didPop) _onLeave();
       },
       child: Scaffold(
-        appBar: AppBar(title: const Text('Note')),
-        body: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-          children: [
-            TextField(
-              controller: _titleCtrl,
-              focusNode: _titleFocus,
-              textCapitalization: TextCapitalization.sentences,
-              onTapOutside: (_) => _titleFocus.unfocus(),
-              style: Theme.of(context)
-                  .textTheme
-                  .headlineSmall
-                  ?.copyWith(fontWeight: FontWeight.w600),
-              decoration: const InputDecoration(
-                border: InputBorder.none,
-                hintText: 'Title',
-              ),
+        appBar: AppBar(
+          title: const Text('Note'),
+          actions: [
+            PopupMenuButton<String>(
+              onSelected: (v) {
+                if (v == 'delete') _deleteNote();
+              },
+              itemBuilder: (context) => const [
+                PopupMenuItem(value: 'delete', child: Text('Delete note')),
+              ],
             ),
-            const SizedBox(height: 4),
-            if (blocks.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 24),
-                child: Text(
-                  'Add a text line, a checkbox, or a photo below.',
-                  style: TextStyle(color: cs.onSurface.withAlpha(120)),
+          ],
+        ),
+        body: ReorderableListView(
+          padding: const EdgeInsets.fromLTRB(8, 8, 8, 96),
+          buildDefaultDragHandles: false,
+          onReorderItem: (o, n) => _onReorder(blocks, o, n),
+          header: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextField(
+                  controller: _titleCtrl,
+                  focusNode: _titleFocus,
+                  textCapitalization: TextCapitalization.sentences,
+                  onTapOutside: (_) => _titleFocus.unfocus(),
+                  style: Theme.of(context)
+                      .textTheme
+                      .headlineSmall
+                      ?.copyWith(fontWeight: FontWeight.w600),
+                  decoration: const InputDecoration(
+                    border: InputBorder.none,
+                    hintText: 'Title',
+                  ),
                 ),
+                if (blocks.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    child: Text(
+                      'Add a text line, a checkbox, or a photo below.',
+                      style: TextStyle(color: cs.onSurface.withAlpha(120)),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          children: [
+            for (int i = 0; i < blocks.length; i++)
+              _BlockRow(
+                key: ValueKey(blocks[i].id),
+                index: i,
+                child: _blockWidget(blocks[i]),
+                onDelete: () => _deleteBlock(blocks[i]),
               ),
-            ...blocks.map(_blockWidget),
           ],
         ),
         bottomNavigationBar: _BlockToolbar(
@@ -190,13 +241,55 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
   Widget _blockWidget(NoteBlock b) {
     switch (NoteBlockType.parse(b.type)) {
       case NoteBlockType.text:
-        return TextBlockView(key: ValueKey(b.id), block: b);
+        return TextBlockView(block: b);
       case NoteBlockType.checkbox:
-        return CheckboxBlockView(key: ValueKey(b.id), block: b);
+        return CheckboxBlockView(block: b);
       case NoteBlockType.photo:
-        return PhotoBlockView(
-            key: ValueKey(b.id), block: b, onRemove: () => _removePhoto(b));
+        return PhotoBlockView(block: b, onRemove: () => _deleteBlock(b));
     }
+  }
+}
+
+/// One reorderable block row: drag handle · block content · delete.
+class _BlockRow extends StatelessWidget {
+  const _BlockRow({
+    required this.index,
+    required this.child,
+    required this.onDelete,
+    super.key,
+  });
+
+  final int index;
+  final Widget child;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ReorderableDragStartListener(
+            index: index,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 8, right: 4),
+              child: Icon(Icons.drag_indicator_rounded,
+                  size: 20, color: cs.onSurface.withAlpha(90)),
+            ),
+          ),
+          Expanded(child: child),
+          IconButton(
+            visualDensity: VisualDensity.compact,
+            icon: Icon(Icons.close_rounded,
+                size: 18, color: cs.onSurface.withAlpha(110)),
+            tooltip: 'Delete line',
+            onPressed: onDelete,
+          ),
+        ],
+      ),
+    );
   }
 }
 

@@ -167,4 +167,13 @@ class NotesDao extends DatabaseAccessor<AppDatabase> with _$NotesDaoMixin {
 
   Future<void> deleteBlock(int id) =>
       (delete(noteBlocks)..where((b) => b.id.equals(id))).go();
+
+  /// Rewrites block order for a note: [orderedIds] in their new top-to-bottom
+  /// order become orderIndex 0,1,2,… in a single transaction.
+  Future<void> reorderBlocks(List<int> orderedIds) => transaction(() async {
+        for (int i = 0; i < orderedIds.length; i++) {
+          await (update(noteBlocks)..where((b) => b.id.equals(orderedIds[i])))
+              .write(NoteBlocksCompanion(orderIndex: Value(i)));
+        }
+      });
 }
