@@ -19,6 +19,12 @@ void main() {
       expect(r.time, '17:00');
       expect(WhenParser.stripFrom('5pm gym', r), 'gym');
     });
+    test('a dangling "at" connector is stripped from the title', () {
+      const s = 'call mom at 5pm';
+      final r = WhenParser.parseTaskText(s, now: now)!;
+      expect(r.time, '17:00');
+      expect(WhenParser.stripFrom(s, r), 'call mom');
+    });
     test('"at 1250" (no colon) is a time', () {
       expect(WhenParser.parseTaskText('meet at 1250', now: now)!.time, '12:50');
     });

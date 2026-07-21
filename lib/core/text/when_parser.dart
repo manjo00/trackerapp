@@ -151,8 +151,11 @@ class WhenParser {
   /// Removes a matched [when] from [text] and tidies the surrounding spaces —
   /// the title the user is left with after a token is recognised.
   static String stripFrom(String text, ParsedWhen when) {
-    final String out =
-        (text.substring(0, when.start) + text.substring(when.end));
+    // Also drop a connector word left dangling before the removed token, so
+    // "call mom at 5pm" → "call mom", not "call mom at".
+    final String left = text.substring(0, when.start).replaceFirst(
+        RegExp(r'\s+(at|on|by|due|for)\s*$', caseSensitive: false), '');
+    final String out = left + text.substring(when.end);
     return out.replaceAll(RegExp(r'\s{2,}'), ' ').trim();
   }
 
