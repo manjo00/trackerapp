@@ -4,12 +4,12 @@ import 'package:intl/intl.dart';
 import '../../../core/database/app_database.dart';
 import '../../tasks/data/dao/lists_dao.dart';
 import '../../tasks/data/dao/tasks_dao.dart';
+import '../../../core/text/when_parser.dart';
 import '../data/dao/notes_dao.dart';
-import 'task_token_parser.dart';
 
 /// Keeps a note line and its auto-created task in sync.
 ///
-/// A line that starts with an "@time" token (see [TaskTokenParser]) spawns a
+/// A line that starts with an "@time" token (see [WhenParser]) spawns a
 /// task, filed under a list that is auto-created per note (`task_lists`
 /// .sourceNoteId). The task links back to its block (`tasks.sourceNoteBlockId`).
 ///
@@ -37,7 +37,7 @@ class NoteTaskLinker {
     required String content,
     required DateTime now,
   }) async {
-    final ParsedTaskToken? parsed = TaskTokenParser.parse(content, now: now);
+    final NoteWhen? parsed = WhenParser.parseNoteLine(content, now: now);
     final Task? existing = await _tasksDao.getTaskForBlock(block.id);
 
     if (parsed == null) {
