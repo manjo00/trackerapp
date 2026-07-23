@@ -137,3 +137,48 @@ Release ritual reminders (hard-learned, from the device skill):
 - **Publish, not draft** — a draft release is invisible to the `releases/latest` API.
 - The release **tag semver must be > the installed version** or the update dialog
   never fires (`v1.8.0` > `1.7.1`, so this is fine).
+
+---
+
+## Follow-ups shipped on this branch (v1.9.0, 2026-07-22)
+
+Three chunks built on top of the original token feature. All committed on
+`claude/costa-screen-recorder-issue-vh6yhx`, `flutter analyze` clean, **135/135
+tests**, released as the **v1.9.0** beta (`manjo00/uplan-releases`). No schema
+change (still v15).
+
+**Chunk 1 — notes editor polish** (`73afcd4`)
+- Delete a whole note (editor AppBar ⋮ → Delete note → `deleteNoteWithPhotos`,
+  cascading blocks / linked tasks / auto-list).
+- Delete a single block (✕ per row) + **drag-reorder blocks**
+  (`NotesDao.reorderBlocks` in a transaction; ReorderableListView /
+  `onReorderItem`).
+- Auto-tasks fire from **checkbox lines only** — `reconcileBlock` removed from
+  `TextBlockView`.
+
+**Chunk 2 — shared natural-language date/time parser** (`7388324`, `11f486e`, `3d338aa`)
+- New pure `lib/core/text/when_parser.dart` (`WhenParser`, 23 tests) replaces the
+  note-only `TaskTokenParser` (deleted). `parseTaskText` finds a time and/or date
+  anywhere in free text and returns its char span; `parseNoteLine` keeps the
+  start-anchored checkbox grammar (now also accepting `at …` + richer trailing
+  dates). Precise-not-greedy: a time needs `@`/`at`/colon/am-pm, a date needs a
+  month word / ordinal (`12th`) / relative word (`today`/`tomorrow`) — so clinical
+  shorthand (`bed 7`, `35flow`, `O2 30`) is never a due date (guarded by tests).
+- Task editor (`add_task_screen`): a **"Set due …" suggestion chip** appears as
+  you type a title; tapping it fills due date/time and strips the phrase
+  (dropping a dangling `at`/`on`/`by` connector). Verified on-device.
+- **Build-vs-buy research:** `chrono_dart` (the only Dart NLP date lib) rejected —
+  stale (Aug 2024, 12 likes) and it misreads bare `1250` as a year and hunts dates
+  in arbitrary prose (false positives in clinical text). Own parser chosen.
+
+**Chunk 3 — note↔task archive/delete sync** (`320a871`) — **resolves the respawn
+open-question above.**
+- `ArchiveService.deleteTask` on a note-linked task deletes the source note line
+  (DB cascade then removes the task); no more respawn on the next note save.
+- `ArchiveService.archiveTask` strips the `@token` from the line (kept as a plain
+  checkbox — text preserved, task stays recoverable in Archived, no respawn).
+- Completion was already mirrored both ways.
+
+**Deferred:** the same NL chip on the quick-add half-sheet; a per-line archived
+state on `note_blocks` (would let archive *hide* the line instead of stripping the
+token). Open PR: `manjo00/trackerapp` #1.
