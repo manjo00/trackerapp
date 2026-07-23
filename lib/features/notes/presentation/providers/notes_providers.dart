@@ -3,8 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/database/database_provider.dart';
 import '../../../../core/images/image_storage_service.dart';
+import '../../../tasks/data/dao/lists_dao.dart';
+import '../../../tasks/data/dao/tasks_dao.dart';
 import '../../data/dao/notes_dao.dart';
 import '../../data/repositories/notes_repository.dart';
+import '../../domain/note_task_linker.dart';
 
 /// Reusable image storage (files on disk, filenames in the DB).
 final imageStorageServiceProvider =
@@ -17,6 +20,15 @@ final notesDaoProvider =
 final notesRepositoryProvider = Provider<NotesRepository>((ref) =>
     NotesRepository(ref.watch(notesDaoProvider),
         ref.watch(imageStorageServiceProvider)));
+
+/// Coordinates the note↔task link (recognises "@time" lines, mirrors ticks).
+/// Constructs its own task/list DAOs against the shared database — the same
+/// pattern [notesDaoProvider] uses — so it stays independent of the tasks
+/// feature's own providers.
+final noteTaskLinkerProvider = Provider<NoteTaskLinker>((ref) {
+  final db = ref.watch(appDatabaseProvider);
+  return NoteTaskLinker(NotesDao(db), TasksDao(db), ListsDao(db));
+});
 
 /// All active notebooks.
 final notebooksProvider = StreamProvider<List<Notebook>>(

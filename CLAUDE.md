@@ -90,6 +90,16 @@ I am a **beginner** to Flutter and mobile development. When helping me:
 - Conventional Commits: `feat:`, `fix:`, `refactor:`, `docs:`, `test:`, `chore:`
 - `main` branch stays green; feature work in branches
 
+## Open Questions / To Revisit
+- **Note→task links — deleting the task directly.** Note lines starting with an
+  `@time` token auto-create a linked task (feature added 2026-07). The note is
+  currently the **source of truth**: if you delete the auto-created task from the
+  Tasks screen while the `@…` line still exists, the task **respawns** the next
+  time that note line is saved. This was chosen for simplicity but isn't
+  necessarily the cleanest behaviour — revisit whether deleting the task should
+  instead strip the token from the note (or "tombstone" the line so it doesn't
+  respawn).
+
 ## Out of Scope (for now)
 - Web build, desktop builds
 - Sharing / social features

@@ -1,0 +1,184 @@
+# Note "@time" Task Tokens — Implementation Record
+
+> **Status: DONE & VERIFIED.** This is a handoff/changelog for a feature that is
+> already implemented, tested, and committed — not a to-do plan. It exists so a
+> later session can understand exactly what changed and revert cleanly.
+
+**Commit:** `66e2279` — *"feat: auto-create tasks from \"@time\" note lines (two-way linked)"*
+**Branch:** `claude/costa-screen-recorder-issue-vh6yhx` (branched off `master`; `master` untouched)
+**Date:** 2026-07-11
+**Schema:** v14 → **v15**
+
+## Goal
+Typing a line that starts with a time token inside a note auto-creates a task
+that stays two-way linked to that note line.
+
+```
+@1250pm             → task today at 12:50
+@1250pm/17july      → task on 17 Jul at 12:50
+@1450pm take bloods → task "take bloods" today at 14:50
+```
+The task is filed under a list auto-created per note (named after the note).
+
+## Behaviour
+- Save a note line with a token → task appears in the note's auto-list.
+- Edit the token → task updates; remove the token → task deleted.
+- Delete the line, or the whole note → task **and** its empty auto-list deleted
+  (database ON DELETE CASCADE, no app code).
+- Tick the note checkbox ⇄ complete the task (both directions).
+- Title-less token (`@0900` alone) borrows the note's title, falling back to
+  "Reminder" for an untitled note.
+
+## Architecture
+- **`TaskTokenParser`** (`lib/features/notes/domain/task_token_parser.dart`) —
+  pure, unit-tested function: `"@time[/date] title"` → time / date / title.
+  If the hour is ≥13 the am/pm is ignored (already 24-hour), so `@1450pm` = 14:50.
+- **Schema v15** — two nullable FK columns, links stored **by identity**:
+  - `tasks.sourceNoteBlockId` → `note_blocks(id)` ON DELETE CASCADE.
+  - `task_lists.sourceNoteId` → `notes(id)` ON DELETE CASCADE.
+- **`NoteTaskLinker`** (`lib/features/notes/domain/note_task_linker.dart`) —
+  coordinator that reconciles a block ↔ its task and mirrors completion both
+  ways. Lives in the notes feature so neither repository imports the other.
+
+## Files changed
+**New**
+- `lib/features/notes/domain/task_token_parser.dart`
+- `lib/features/notes/domain/note_task_linker.dart`
+- `test/features/notes/task_token_parser_test.dart`
+- `test/features/notes/note_task_linker_test.dart`
+- `test/core/database/note_task_link_migration_test.dart`
+
+**Edited**
+- `lib/features/tasks/data/tables/tasks_table.dart` — `sourceNoteBlockId` column + import.
+- `lib/features/tasks/data/tables/task_lists_table.dart` — `sourceNoteId` column + import.
+- `lib/core/database/app_database.dart` — `schemaVersion` 15 + `if (from < 15)` migration.
+- `lib/features/tasks/data/dao/tasks_dao.dart` — `getTask`, `getTaskForBlock`.
+- `lib/features/tasks/data/dao/lists_dao.dart` — `getListForNote`.
+- `lib/features/notes/data/dao/notes_dao.dart` — `getBlock`.
+- `lib/features/notes/presentation/providers/notes_providers.dart` — `noteTaskLinkerProvider`.
+- `lib/features/notes/presentation/widgets/text_block_view.dart` — reconcile on save.
+- `lib/features/notes/presentation/widgets/checkbox_block_view.dart` — reconcile on save + mirror tick.
+- `lib/features/tasks/presentation/providers/tasks_providers.dart` — mirror task→note on toggle.
+- `lib/core/backup/backup_service.dart` — insert/delete order reworked for the new FKs
+  (notes cluster now inserted before tasks; task cluster deleted before notes).
+- `CLAUDE.md` — "Open Questions / To Revisit" note on task-deletion behaviour.
+
+## Verification (already run, all green)
+```
+dart run build_runner build --delete-conflicting-outputs   # clean
+flutter test                                               # 131/131 pass
+flutter analyze lib/features/notes lib/features/tasks ...   # No issues found
+```
+> ⚠️ NOT yet checked on a real Android emulator (no device in the cloud session).
+> That manual pass is the one remaining "Definition of Done" item.
+
+## Open question (see CLAUDE.md)
+The note is the **source of truth**: deleting the auto-created task directly from
+the Tasks screen makes it **respawn** on the next save of that note line. Chosen
+for simplicity; flagged in `CLAUDE.md` to revisit (e.g. strip the token or
+tombstone the line instead).
+
+## How to revert
+`master` never changed, so the safe options are, easiest first:
+1. **Don't merge** this branch — nothing to undo.
+2. Undo just this change if already merged: `git revert 66e2279`, then
+   `dart run build_runner build --delete-conflicting-outputs`.
+3. Discard the branch entirely: `git branch -D claude/costa-screen-recorder-issue-vh6yhx`
+   (and delete the remote branch on GitHub).
+
+Reverting drops schema v15. Because both columns are nullable and additive, a DB
+already migrated to v15 keeps working with reverted (v14) code — the extra
+columns are simply ignored. No data migration is needed to go back.
+
+## Build & release runbook — RUN ON THE LAPTOP
+
+> The cloud/phone session could NOT do this: `dl.google.com` (Android SDK +
+> Google Maven) is blocked by that environment's network policy, there is no adb
+> bridge to the phone, and its token has no write access to `manjo00/uplan-releases`.
+> The laptop has the SDK, the phone cable, the **matching debug keystore** (so the
+> APK installs over the existing app with no data loss), and `gh`. Version is
+> already bumped to **1.8.0+12** on this branch.
+
+PowerShell, from `C:\Projects\life_tracker`, on branch
+`claude/costa-screen-recorder-issue-vh6yhx`:
+
+```powershell
+# 0. Get this branch + regenerate Drift/Riverpod code
+git fetch origin
+git checkout claude/costa-screen-recorder-issue-vh6yhx
+git pull
+flutter pub get
+dart run build_runner build --delete-conflicting-outputs
+flutter analyze        # expect: No issues found
+
+# 1. Build the release APK (debug-signed = same key as the installed app)
+flutter build apk --release
+#    → build\app\outputs\flutter-apk\app-release.apk
+
+# 2a. Install straight onto the connected phone (Z Flip 6, serial R5CX631BMJB)
+$adb = "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"
+& $adb -s R5CX631BMJB install -r build\app\outputs\flutter-apk\app-release.apk
+& $adb -s R5CX631BMJB shell am force-stop com.lifetracker.life_tracker
+& $adb -s R5CX631BMJB shell monkey -p com.lifetracker.life_tracker -c android.intent.category.LAUNCHER 1
+
+# 2b. AND publish the beta release so any phone can self-update
+gh release create v1.8.0 --repo manjo00/uplan-releases `
+  --title "Uplan v1.8.0 (beta)" `
+  --notes "Phone-session beta: Notes '@time' task tokens (auto-create + two-way-linked tasks)." `
+  build\app\outputs\flutter-apk\app-release.apk
+```
+
+After 2b, on any phone: **Uplan → Settings → "Check for updates"** pulls v1.8.0
+(the manual tile bypasses the 24 h auto-check throttle).
+
+Release ritual reminders (hard-learned, from the device skill):
+- The **`.apk` asset is mandatory** — `UpdateService` silently ignores a release
+  with no APK attached.
+- **Publish, not draft** — a draft release is invisible to the `releases/latest` API.
+- The release **tag semver must be > the installed version** or the update dialog
+  never fires (`v1.8.0` > `1.7.1`, so this is fine).
+
+---
+
+## Follow-ups shipped on this branch (v1.9.0, 2026-07-22)
+
+Three chunks built on top of the original token feature. All committed on
+`claude/costa-screen-recorder-issue-vh6yhx`, `flutter analyze` clean, **135/135
+tests**, released as the **v1.9.0** beta (`manjo00/uplan-releases`). No schema
+change (still v15).
+
+**Chunk 1 — notes editor polish** (`73afcd4`)
+- Delete a whole note (editor AppBar ⋮ → Delete note → `deleteNoteWithPhotos`,
+  cascading blocks / linked tasks / auto-list).
+- Delete a single block (✕ per row) + **drag-reorder blocks**
+  (`NotesDao.reorderBlocks` in a transaction; ReorderableListView /
+  `onReorderItem`).
+- Auto-tasks fire from **checkbox lines only** — `reconcileBlock` removed from
+  `TextBlockView`.
+
+**Chunk 2 — shared natural-language date/time parser** (`7388324`, `11f486e`, `3d338aa`)
+- New pure `lib/core/text/when_parser.dart` (`WhenParser`, 23 tests) replaces the
+  note-only `TaskTokenParser` (deleted). `parseTaskText` finds a time and/or date
+  anywhere in free text and returns its char span; `parseNoteLine` keeps the
+  start-anchored checkbox grammar (now also accepting `at …` + richer trailing
+  dates). Precise-not-greedy: a time needs `@`/`at`/colon/am-pm, a date needs a
+  month word / ordinal (`12th`) / relative word (`today`/`tomorrow`) — so clinical
+  shorthand (`bed 7`, `35flow`, `O2 30`) is never a due date (guarded by tests).
+- Task editor (`add_task_screen`): a **"Set due …" suggestion chip** appears as
+  you type a title; tapping it fills due date/time and strips the phrase
+  (dropping a dangling `at`/`on`/`by` connector). Verified on-device.
+- **Build-vs-buy research:** `chrono_dart` (the only Dart NLP date lib) rejected —
+  stale (Aug 2024, 12 likes) and it misreads bare `1250` as a year and hunts dates
+  in arbitrary prose (false positives in clinical text). Own parser chosen.
+
+**Chunk 3 — note↔task archive/delete sync** (`320a871`) — **resolves the respawn
+open-question above.**
+- `ArchiveService.deleteTask` on a note-linked task deletes the source note line
+  (DB cascade then removes the task); no more respawn on the next note save.
+- `ArchiveService.archiveTask` strips the `@token` from the line (kept as a plain
+  checkbox — text preserved, task stays recoverable in Archived, no respawn).
+- Completion was already mirrored both ways.
+
+**Deferred:** the same NL chip on the quick-add half-sheet; a per-line archived
+state on `note_blocks` (would let archive *hide* the line instead of stripping the
+token). Open PR: `manjo00/trackerapp` #1.
