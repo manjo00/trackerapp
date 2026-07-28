@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 
+import '../../../notes/data/tables/note_blocks_table.dart';
 import 'task_lists_table.dart';
 
 /// Defines the [tasks] table in SQLite.
@@ -69,4 +70,12 @@ class Tasks extends Table {
   /// When set, the task is archived — hidden from every active view but
   /// recoverable from the Archived screen. NULL = active.
   DateTimeColumn get archivedAt => dateTime().nullable()();
+
+  /// Set when this task was auto-created from a note line (an "@time …" token).
+  /// Points at the source [NoteBlocks] row; ON DELETE CASCADE means deleting
+  /// that block — or the whole note it belongs to — deletes this task too.
+  /// NULL = an ordinary, hand-made task.
+  IntColumn get sourceNoteBlockId => integer()
+      .nullable()
+      .references(NoteBlocks, #id, onDelete: KeyAction.cascade)();
 }

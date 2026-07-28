@@ -88,6 +88,16 @@ class BackupService {
             _db.trackerLogs, rowsFor('tracker_logs').map(TrackerLog.fromJson));
         b.insertAll(_db.trackerLogValues,
             rowsFor('tracker_log_values').map(TrackerLogValue.fromJson));
+        // Notes (v14) MUST be inserted before task_lists/tasks: since v15,
+        // task_lists.sourceNoteId → notes and tasks.sourceNoteBlockId →
+        // note_blocks, so those parent rows have to exist first. Photo image
+        // FILES aren't in this JSON — restored photo blocks show the
+        // "Image unavailable" placeholder (cloud sync is the cross-device fix).
+        b.insertAll(
+            _db.notebooks, rowsFor('notebooks').map(Notebook.fromJson));
+        b.insertAll(_db.notes, rowsFor('notes').map(Note.fromJson));
+        b.insertAll(
+            _db.noteBlocks, rowsFor('note_blocks').map(NoteBlock.fromJson));
         // Task organization (v11): lists + sections before tasks (FKs),
         // labels before the junction, junction after tasks.
         b.insertAll(
@@ -98,14 +108,6 @@ class BackupService {
         b.insertAll(_db.tasks, rowsFor('tasks').map(Task.fromJson));
         b.insertAll(
             _db.taskLabels, rowsFor('task_labels').map(TaskLabel.fromJson));
-        // Notes (v14): notebooks → notes → note_blocks (FK order). Photo image
-        // FILES are not in this JSON — restored photo blocks show the
-        // "Image unavailable" placeholder (cloud sync is the cross-device fix).
-        b.insertAll(
-            _db.notebooks, rowsFor('notebooks').map(Notebook.fromJson));
-        b.insertAll(_db.notes, rowsFor('notes').map(Note.fromJson));
-        b.insertAll(
-            _db.noteBlocks, rowsFor('note_blocks').map(NoteBlock.fromJson));
         b.insertAll(
             _db.workShifts, rowsFor('work_shifts').map(WorkShift.fromJson));
         // Standalone tables that were missing from restore entirely
@@ -121,6 +123,13 @@ class BackupService {
   /// Tables in delete order: children first, then their parents, so foreign
   /// keys are never violated while wiping.
   List<TableInfo<Table, dynamic>> get _deleteOrder => [
+        // v15 FKs: tasks → note_blocks and task_lists → notes, so the whole
+        // task cluster must be wiped before the notes cluster.
+        _db.taskLabels,
+        _db.tasks,
+        _db.listSections,
+        _db.taskLists,
+        _db.labels,
         _db.noteBlocks,
         _db.notes,
         _db.notebooks,
@@ -136,11 +145,6 @@ class BackupService {
         _db.exerciseLibrary,
         _db.habitCompletions,
         _db.habits,
-        _db.taskLabels,
-        _db.labels,
-        _db.tasks,
-        _db.listSections,
-        _db.taskLists,
         _db.workShifts,
         _db.shiftRotations,
         _db.muscleTargets,

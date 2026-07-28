@@ -287,15 +287,15 @@ class _DayCell extends ConsumerWidget {
     final String? rotLabel = shift?.rotationLabel;
     final int? rotColor = shift?.rotationColor;
 
-    // Selected day gets a bold, filled highlight; today only a faint ring.
+    // Selected day gets a bold, filled highlight. Today is marked by a filled
+    // chip on its number (below), so it stays obvious even when another day is
+    // selected — no reliance on a border that the selection would out-shout.
     final Color cellBg = isSelected && !hasShift
         ? cs.primary.withAlpha(45)
         : (hasShift ? ShiftStyle.fill(shift!.type) : Colors.transparent);
     final BoxBorder border = isSelected
         ? Border.all(color: cs.primary, width: 2.5)
-        : isToday
-            ? Border.all(color: cs.primary.withAlpha(90), width: 1.5)
-            : Border.all(color: Colors.transparent, width: 2);
+        : Border.all(color: Colors.transparent, width: 2);
 
     return GestureDetector(
       onTap: onTap,
@@ -309,14 +309,36 @@ class _DayCell extends ConsumerWidget {
         ),
         child: Stack(
           children: [
-            // Day number (top-left)
+            // Day number (top-left). Today is a filled primary chip so it's
+            // unmistakable even when another day is selected.
             Positioned(
-              top: 3,
-              left: 5,
-              child: Text(
-                '$day',
-                style: TextStyle(fontSize: 12, color: fg),
-              ),
+              top: 2,
+              left: 3,
+              child: isToday
+                  ? Container(
+                      width: 19,
+                      height: 19,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: cs.primary,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        '$day',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: cs.onPrimary,
+                        ),
+                      ),
+                    )
+                  : Padding(
+                      padding: const EdgeInsets.only(top: 1, left: 2),
+                      child: Text(
+                        '$day',
+                        style: TextStyle(fontSize: 12, color: fg),
+                      ),
+                    ),
             ),
             // Sun/moon (top-right)
             if (hasShift)

@@ -113,8 +113,12 @@ class AppDatabase extends _$AppDatabase {
   ///        custom_trackers/habits (NULL = active, non-null = archived)
   /// v14 → notes system: notebooks, notes, note_blocks tables (block editor —
   ///        each note is a stack of text/checkbox/photo blocks)
+  /// v15 → note→task links: nullable sourceNoteBlockId on tasks (the note line
+  ///        that spawned it) + sourceNoteId on task_lists (the note whose "@time"
+  ///        tasks it holds). Both CASCADE, so deleting a note/line deletes its
+  ///        auto-created task and list.
   @override
-  int get schemaVersion => 14;
+  int get schemaVersion => 15;
 
   /// The old vs. new default rotation-label colour (see v8 migration).
   static const int _oldRotationColor = 0xFFFFB347;
@@ -222,6 +226,12 @@ class AppDatabase extends _$AppDatabase {
             await m.createTable(notebooks);
             await m.createTable(notes);
             await m.createTable(noteBlocks);
+          }
+          if (from < 15) {
+            // Note→task links. Both nullable FK columns, so existing rows stay
+            // NULL (ordinary tasks/lists) — nothing to backfill.
+            await m.addColumn(tasks, tasks.sourceNoteBlockId);
+            await m.addColumn(taskLists, taskLists.sourceNoteId);
           }
         },
         beforeOpen: (details) async {

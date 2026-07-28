@@ -41,6 +41,12 @@ class ListsDao extends DatabaseAccessor<AppDatabase> with _$ListsDaoMixin {
       (update(taskLists)..where((l) => l.id.equals(listId)))
           .write(TaskListsCompanion(archivedAt: Value(at)));
 
+  /// The auto-created list backing a given note (matched by identity, not
+  /// name), if one exists. Drives the note→task linker's "find or create".
+  Future<TaskList?> getListForNote(int noteId) =>
+      (select(taskLists)..where((l) => l.sourceNoteId.equals(noteId)))
+          .getSingleOrNull();
+
   Future<int> insertList(TaskListsCompanion companion) =>
       into(taskLists).insert(companion);
 

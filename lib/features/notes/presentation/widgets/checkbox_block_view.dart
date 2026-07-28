@@ -38,18 +38,28 @@ class _CheckboxBlockViewState extends ConsumerState<CheckboxBlockView> {
     }
   }
 
-  void _save() {
+  Future<void> _save() async {
     final String text = _ctrl.text;
     if (text == (widget.block.content ?? '')) return;
+    final now = DateTime.now();
     final dao = ref.read(notesDaoProvider);
-    dao.updateBlockContent(widget.block.id, text);
-    dao.touchNote(widget.block.noteId, DateTime.now());
+    await dao.updateBlockContent(widget.block.id, text);
+    await dao.touchNote(widget.block.noteId, now);
+    // Recognise / update / remove any "@time" task on this line.
+    await ref
+        .read(noteTaskLinkerProvider)
+        .reconcileBlock(block: widget.block, content: text, now: now);
   }
 
-  void _toggle(bool? v) {
+  Future<void> _toggle(bool? v) async {
+    final bool checked = v ?? false;
     final dao = ref.read(notesDaoProvider);
-    dao.setBlockChecked(widget.block.id, v ?? false);
-    dao.touchNote(widget.block.noteId, DateTime.now());
+    await dao.setBlockChecked(widget.block.id, checked);
+    await dao.touchNote(widget.block.noteId, DateTime.now());
+    // Keep the linked task's completion in step with the tick.
+    await ref
+        .read(noteTaskLinkerProvider)
+        .onBlockCheckedChanged(widget.block, checked);
   }
 
   @override

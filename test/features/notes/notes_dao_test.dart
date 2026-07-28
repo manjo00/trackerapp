@@ -63,6 +63,21 @@ void main() {
     expect(await dao.watchBlocks(note).first, isEmpty);
   });
 
+  test('reorderBlocks rewrites orderIndex to the new top-to-bottom order',
+      () async {
+    final note = await dao.createNote(now: now);
+    final a = await dao.addBlock(
+        noteId: note, type: NoteBlockType.text, content: 'a', orderIndex: 0);
+    final b = await dao.addBlock(
+        noteId: note, type: NoteBlockType.text, content: 'b', orderIndex: 1);
+    final c = await dao.addBlock(
+        noteId: note, type: NoteBlockType.text, content: 'c', orderIndex: 2);
+
+    await dao.reorderBlocks([c, a, b]); // move c to the top
+    final ordered = await dao.watchBlocks(note).first;
+    expect(ordered.map((x) => x.content), ['c', 'a', 'b']);
+  });
+
   test('deleting a notebook moves its notes to Unfiled (notebookId NULL)',
       () async {
     final nb = await dao.createNotebook(

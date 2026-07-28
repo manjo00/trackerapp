@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../../../core/text/when_parser.dart';
 import '../../../../core/utils/time_block_utils.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/notifications/notification_service.dart';
@@ -73,6 +74,11 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
 
   DateTime? _dueDate;
   TimeOfDay? _dueTime;
+
+  /// A date/time phrase recognised in the title as the user types (Todoist
+  /// style). Shown as a one-tap suggestion chip; applying it fills the due
+  /// fields and strips the phrase from the title.
+  ParsedWhen? _detected;
 
   /// Time-block length; only meaningful while [_dueTime] is set.
   int? _durationMinutes;
@@ -251,6 +257,28 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
   }
 
   // ── Save ──────────────────────────────────────────────────────────────────
+
+  /// Applies the recognised date/time to the due fields and strips the phrase
+  /// from the title (fires when the user taps the suggestion chip).
+  void _applyDetected() {
+    final ParsedWhen? d = _detected;
+    if (d == null) return;
+    setState(() {
+      _titleCtrl.text = WhenParser.stripFrom(_titleCtrl.text, d);
+      if (d.date != null) _dueDate = DateTime.parse(d.date!);
+      if (d.time != null) _dueTime = _parseTimeOfDay(d.time);
+      _detected = null;
+    });
+  }
+
+  /// Human label for the suggestion chip (e.g. "Jul 12 · 14:50").
+  String _detectedLabel() {
+    final ParsedWhen d = _detected!;
+    final List<String> parts = [];
+    if (d.date != null) parts.add(_formatDisplay(DateTime.parse(d.date!)));
+    if (d.time != null) parts.add(d.time!);
+    return parts.join(' · ');
+  }
 
   Future<void> _save() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
@@ -474,7 +502,22 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
                 }
                 return null;
               },
+              onChanged: (String v) => setState(() =>
+                  _detected = WhenParser.parseTaskText(v, now: DateTime.now())),
             ),
+
+            // Todoist-style suggestion: a date/time phrase spotted in the title.
+            if (_detected != null) ...[
+              const SizedBox(height: 10),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: ActionChip(
+                  avatar: const Icon(Icons.event_available_rounded, size: 18),
+                  label: Text('Set due  ${_detectedLabel()}'),
+                  onPressed: _applyDetected,
+                ),
+              ),
+            ],
 
             const SizedBox(height: 24),
 

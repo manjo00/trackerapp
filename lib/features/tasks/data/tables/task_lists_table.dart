@@ -1,5 +1,7 @@
 import 'package:drift/drift.dart';
 
+import '../../../notes/data/tables/notes_table.dart';
+
 /// A user-created container of tasks ("List" is a placeholder noun —
 /// see kListNoun). No row exists for Captured: tasks.listId NULL = captured.
 class TaskLists extends Table {
@@ -14,6 +16,12 @@ class TaskLists extends Table {
   /// recoverable from the Archived screen. NULL = active. Its tasks stay
   /// (they show as "no list"/Captured) until the list is restored.
   DateTimeColumn get archivedAt => dateTime().nullable()();
+
+  /// Set when this list was auto-created to hold a note's "@time" tasks. Points
+  /// at the owning [Notes] row; ON DELETE CASCADE removes the list when the
+  /// note is deleted. NULL = an ordinary, user-made list.
+  IntColumn get sourceNoteId =>
+      integer().nullable().references(Notes, #id, onDelete: KeyAction.cascade)();
 }
 
 /// Named group inside a list (e.g. "Planning" / "Buying" / "Doing").
