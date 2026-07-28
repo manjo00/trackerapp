@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/database/app_database.dart';
-import '../../data/models/note_block_type.dart';
+import '../../domain/note_preview.dart';
 import '../providers/notes_providers.dart';
-import '../widgets/note_tile.dart';
+import '../widgets/note_grid_card.dart';
 import '../widgets/notebook_form_dialog.dart';
 
 /// One notebook's notes (newest-edited first). [notebookId] null = Unfiled.
@@ -50,14 +50,21 @@ class NotebookDetailScreen extends ConsumerWidget {
                 style: TextStyle(color: cs.onSurface.withAlpha(140)),
               ),
             )
-          : ListView(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
-              children: notes
-                  .map((Note n) => _NoteRow(
-                        note: n,
-                        onTap: () => context.push('/notes/${n.id}'),
-                      ))
-                  .toList(),
+          : GridView.builder(
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 96),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                childAspectRatio: 0.72,
+              ),
+              itemCount: notes.length,
+              itemBuilder: (context, i) => _NoteRow(
+                note: notes[i],
+                accentColorValue:
+                    notebook?.colorValue ?? cs.primary.toARGB32(),
+                onTap: () => context.push('/notes/${notes[i].id}'),
+              ),
             ),
       floatingActionButton: FloatingActionButton(
         heroTag: 'notebook_detail_fab',
@@ -116,32 +123,29 @@ class NotebookDetailScreen extends ConsumerWidget {
   }
 }
 
-/// A note row that derives its preview + photo count from the note's blocks.
+/// A note card that derives its preview (first photo, snippet, count) from the
+/// note's blocks and renders a [NoteGridCard].
 class _NoteRow extends ConsumerWidget {
-  const _NoteRow({required this.note, required this.onTap});
+  const _NoteRow({
+    required this.note,
+    required this.onTap,
+    required this.accentColorValue,
+  });
 
   final Note note;
   final VoidCallback onTap;
+  final int accentColorValue;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final List<NoteBlock> blocks =
         ref.watch(noteBlocksProvider(note.id)).valueOrNull ?? const [];
-
-    final String preview = blocks
-        .where((b) =>
-            b.type != NoteBlockType.photo.storageKey &&
-            (b.content ?? '').trim().isNotEmpty)
-        .map((b) => b.content!.trim())
-        .join(' · ');
-    final int photoCount =
-        blocks.where((b) => b.type == NoteBlockType.photo.storageKey).length;
-
-    return NoteTile(
+    return NoteGridCard(
       note: note,
       onTap: onTap,
-      preview: preview,
-      photoCount: photoCount,
+      preview: notePreview(blocks),
+      accentColorValue: accentColorValue,
+      images: ref.watch(imageStorageServiceProvider),
     );
   }
 }
