@@ -1,11 +1,14 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import '../../../../core/database/app_database.dart';
 import '../../../../core/database/database_provider.dart';
 import '../../../../core/notifications/notification_service.dart';
+import '../../../archive/presentation/archive_providers.dart';
 import '../../../notes/presentation/providers/notes_providers.dart';
 import '../../data/dao/tasks_dao.dart';
 import '../../data/models/task_model.dart';
 import '../../data/models/task_priority.dart';
 import '../../data/repositories/tasks_repository.dart';
+import 'lists_providers.dart';
 
 part 'tasks_providers.g.dart';
 
@@ -116,6 +119,19 @@ class ToggleTask extends _$ToggleTask {
     // Marking incomplete → leave as-is; user can re-edit to set new reminders.
     if (!currentlyCompleted) {
       await NotificationService.instance.cancelTaskReminders(id);
+      await _maybeAutoArchive(id);
+    }
+  }
+
+  /// If the just-completed task belongs to a list that opted into
+  /// "auto-archive done tasks", archive it (sends it to history).
+  Future<void> _maybeAutoArchive(int id) async {
+    final TaskModel? task = await ref.read(tasksRepositoryProvider).getTask(id);
+    final int? listId = task?.listId;
+    if (listId == null) return;
+    final TaskList? list = await ref.read(listsDaoProvider).getList(listId);
+    if (list?.autoArchiveCompleted ?? false) {
+      await ref.read(archiveServiceProvider).archiveTask(id, DateTime.now());
     }
   }
 }

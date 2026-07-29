@@ -137,6 +137,12 @@ class TasksRepository {
     );
   }
 
+  /// One-shot fetch of a single task (used to read its list on completion).
+  Future<TaskModel?> getTask(int id) async {
+    final row = await _dao.getTask(id);
+    return row == null ? null : _fromRow(row);
+  }
+
   /// Returns all tasks as a one-shot list (used by rescheduleAll in app.dart).
   Future<List<TaskModel>> getAllTasks() async {
     final rows = await _dao.getAllTasks();

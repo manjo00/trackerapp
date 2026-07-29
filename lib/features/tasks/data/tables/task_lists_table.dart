@@ -22,6 +22,12 @@ class TaskLists extends Table {
   /// note is deleted. NULL = an ordinary, user-made list.
   IntColumn get sourceNoteId =>
       integer().nullable().references(Notes, #id, onDelete: KeyAction.cascade)();
+
+  /// When true, completing a task in this list auto-archives it (sends it to
+  /// history) instead of leaving it shown as a struck-through completed row.
+  /// Default false — lists keep completed tasks visible unless opted in.
+  BoolColumn get autoArchiveCompleted =>
+      boolean().withDefault(const Constant(false))();
 }
 
 /// Named group inside a list (e.g. "Planning" / "Buying" / "Doing").

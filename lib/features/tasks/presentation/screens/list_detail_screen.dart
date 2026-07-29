@@ -63,6 +63,11 @@ class ListDetailScreen extends ConsumerWidget {
             itemBuilder: (context) => [
               const PopupMenuItem(
                   value: 'rename', child: Text('Rename / recolor')),
+              CheckedPopupMenuItem(
+                value: 'auto_archive',
+                checked: list.autoArchiveCompleted,
+                child: const Text('Auto-archive done tasks'),
+              ),
               // Dev-only (7× the drawer About tile): publish this list as
               // feedback for the development workflow.
               if (ref.read(settingsProvider).devMode)
@@ -147,6 +152,16 @@ class ListDetailScreen extends ConsumerWidget {
         );
         if (result != null) {
           await repo.renameList(list.id, result.$1, result.$2);
+        }
+      case 'auto_archive':
+        final bool next = !list.autoArchiveCompleted;
+        await ref.read(listsDaoProvider).setListAutoArchive(list.id, next);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(next
+                ? 'Done tasks in "${list.name}" will auto-archive'
+                : 'Done tasks in "${list.name}" will stay visible'),
+          ));
         }
       case 'archive':
         await ref

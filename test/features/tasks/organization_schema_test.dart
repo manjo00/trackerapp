@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' hide isNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:life_tracker/core/database/app_database.dart';
+import 'package:life_tracker/features/tasks/data/dao/lists_dao.dart';
 
 void main() {
   late AppDatabase db;
@@ -16,6 +17,19 @@ void main() {
           createdAt: DateTime.now(),
           listId: Value(listId),
           sectionId: Value(sectionId)));
+
+  test('autoArchiveCompleted defaults false and round-trips via the DAO',
+      () async {
+    final dao = ListsDao(db);
+    final int l = await addList('Rounds');
+    expect((await dao.getList(l))!.autoArchiveCompleted, false);
+
+    await dao.setListAutoArchive(l, true);
+    expect((await dao.getList(l))!.autoArchiveCompleted, true);
+
+    await dao.setListAutoArchive(l, false);
+    expect((await dao.getList(l))!.autoArchiveCompleted, false);
+  });
 
   test('delete list -> tasks fall back to Captured, sections die', () async {
     final int l = await addList('Work');

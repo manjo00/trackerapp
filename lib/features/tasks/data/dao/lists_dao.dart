@@ -47,6 +47,16 @@ class ListsDao extends DatabaseAccessor<AppDatabase> with _$ListsDaoMixin {
       (select(taskLists)..where((l) => l.sourceNoteId.equals(noteId)))
           .getSingleOrNull();
 
+  /// One-shot fetch of a single list (used to read its auto-archive setting
+  /// when a task is completed).
+  Future<TaskList?> getList(int listId) =>
+      (select(taskLists)..where((l) => l.id.equals(listId))).getSingleOrNull();
+
+  /// Toggles whether completing a task in [listId] auto-archives it.
+  Future<void> setListAutoArchive(int listId, bool value) =>
+      (update(taskLists)..where((l) => l.id.equals(listId)))
+          .write(TaskListsCompanion(autoArchiveCompleted: Value(value)));
+
   Future<int> insertList(TaskListsCompanion companion) =>
       into(taskLists).insert(companion);
 
