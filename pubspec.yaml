@@ -90,6 +90,11 @@ dependencies:
   # stored in the DB (see lib/core/images/).
   image_picker: ^1.1.2
 
+  # image_cropper: native crop/rotate editor for an already-attached photo.
+  # Opens UCrop (Android); the edited image is re-saved as a new file in
+  # note_images/ so Image.file's path cache never shows the stale original.
+  image_cropper: ^8.0.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

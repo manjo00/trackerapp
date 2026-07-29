@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -38,6 +39,36 @@ class ImageStorageService {
     );
     await File(picked.path).copy(p.join(dir.path, filename));
     return filename;
+  }
+
+  /// Opens the native crop/rotate editor on an already-stored [filename].
+  ///
+  /// On success the edited image is saved under a NEW filename (returned) —
+  /// never overwriting the source — because `Image.file` caches by path, so
+  /// reusing the name would keep showing the stale original. Returns null if
+  /// the file is missing or the user cancelled.
+  Future<String?> cropExisting(String filename) async {
+    final String srcPath = await resolvePath(filename);
+    if (!await File(srcPath).exists()) return null;
+    final CroppedFile? cropped = await ImageCropper().cropImage(
+      sourcePath: srcPath,
+      uiSettings: [
+        AndroidUiSettings(
+          toolbarTitle: 'Edit photo',
+          hideBottomControls: false,
+          lockAspectRatio: false,
+        ),
+      ],
+    );
+    if (cropped == null) return null; // cancelled
+    final Directory dir = await _dir();
+    final String rawExt = p.extension(cropped.path).replaceFirst('.', '');
+    final String newName = buildImageFilename(
+      seed: DateTime.now().microsecondsSinceEpoch,
+      extension: rawExt.isEmpty ? 'jpg' : rawExt,
+    );
+    await File(cropped.path).copy(p.join(dir.path, newName));
+    return newName;
   }
 
   /// Absolute path for a stored [filename] (for `Image.file`).

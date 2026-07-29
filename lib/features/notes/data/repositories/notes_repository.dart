@@ -37,6 +37,18 @@ class NotesRepository {
     await _dao.touchNote(noteId, now);
   }
 
+  /// Opens the crop editor on a photo block. On success the block points at the
+  /// freshly cropped file and the old file is deleted. No-op if cancelled.
+  Future<void> cropPhotoBlock(NoteBlock block, {required DateTime now}) async {
+    final String? old = block.content;
+    if (old == null || old.isEmpty) return;
+    final String? newName = await _images.cropExisting(old);
+    if (newName == null) return; // cancelled or missing file
+    await _dao.updateBlockContent(block.id, newName);
+    await _images.delete(old);
+    await _dao.touchNote(block.noteId, now);
+  }
+
   /// Removes a photo block and deletes its backing file.
   Future<void> removePhotoBlock(NoteBlock block, {required DateTime now}) async {
     final String? filename = block.content;

@@ -11,10 +11,16 @@ import '../screens/photo_view_screen.dart';
 /// button, or a tidy "unavailable" placeholder when the file is gone (e.g.
 /// after a restore on a fresh device — the JSON backup carries no image bytes).
 class PhotoBlockView extends ConsumerWidget {
-  const PhotoBlockView({required this.block, required this.onRemove, super.key});
+  const PhotoBlockView({
+    required this.block,
+    required this.onRemove,
+    this.onCrop,
+    super.key,
+  });
 
   final NoteBlock block;
   final VoidCallback onRemove;
+  final VoidCallback? onCrop;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -73,23 +79,36 @@ class PhotoBlockView extends ConsumerWidget {
               ),
               Padding(
                 padding: const EdgeInsets.all(8),
-                child: Material(
-                  color: Colors.black38,
-                  shape: const CircleBorder(),
-                  child: InkWell(
-                    customBorder: const CircleBorder(),
-                    onTap: onRemove,
-                    child: const Padding(
-                      padding: EdgeInsets.all(4),
-                      child: Icon(Icons.close_rounded,
-                          size: 15, color: Colors.white),
-                    ),
-                  ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (onCrop != null && exists) ...[
+                      _circleButton(Icons.crop_rotate_rounded, onCrop!),
+                      const SizedBox(width: 6),
+                    ],
+                    _circleButton(Icons.close_rounded, onRemove),
+                  ],
                 ),
               ),
             ],
           );
         },
+      ),
+    );
+  }
+
+  /// A small translucent circular icon button for the photo overlay.
+  Widget _circleButton(IconData icon, VoidCallback onTap) {
+    return Material(
+      color: Colors.black38,
+      shape: const CircleBorder(),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(4),
+          child: Icon(icon, size: 15, color: Colors.white),
+        ),
       ),
     );
   }

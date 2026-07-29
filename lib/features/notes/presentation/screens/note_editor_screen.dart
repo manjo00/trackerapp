@@ -316,7 +316,13 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
           onDeleteEmpty: () => _deleteBlock(b),
         );
       case NoteBlockType.photo:
-        return PhotoBlockView(block: b, onRemove: () => _deleteBlock(b));
+        return PhotoBlockView(
+          block: b,
+          onRemove: () => _deleteBlock(b),
+          onCrop: () => ref
+              .read(notesRepositoryProvider)
+              .cropPhotoBlock(b, now: DateTime.now()),
+        );
     }
   }
 
