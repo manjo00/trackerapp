@@ -15,6 +15,7 @@ class CheckboxBlockView extends ConsumerStatefulWidget {
     required this.block,
     this.onSplit,
     this.onDeleteEmpty,
+    this.onFocus,
     this.autofocus = false,
     super.key,
   });
@@ -22,6 +23,10 @@ class CheckboxBlockView extends ConsumerStatefulWidget {
   final NoteBlock block;
   final void Function(String after)? onSplit;
   final VoidCallback? onDeleteEmpty;
+
+  /// Called with this block's id when it gains focus, so the editor can point
+  /// the formatting toolbar at the active line.
+  final void Function(int blockId)? onFocus;
   final bool autofocus;
 
   @override
@@ -39,7 +44,11 @@ class _CheckboxBlockViewState extends ConsumerState<CheckboxBlockView> {
     _focus = FocusNode(onKeyEvent: _onKey);
     _focus.addListener(() {
       if (mounted) setState(() {}); // toggle the focus-only hint
-      if (!_focus.hasFocus) _save();
+      if (_focus.hasFocus) {
+        widget.onFocus?.call(widget.block.id);
+      } else {
+        _save();
+      }
     });
     if (widget.autofocus) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -115,9 +124,10 @@ class _CheckboxBlockViewState extends ConsumerState<CheckboxBlockView> {
   @override
   Widget build(BuildContext context) {
     final ColorScheme cs = Theme.of(context).colorScheme;
-    final bool checked = widget.block.checked;
+    final NoteBlock b = widget.block;
+    final bool checked = b.checked;
 
-    return Row(
+    final Row row = Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         // Light circular check — recedes visually until ticked.
@@ -155,6 +165,8 @@ class _CheckboxBlockViewState extends ConsumerState<CheckboxBlockView> {
             style: TextStyle(
               fontSize: 16,
               height: 1.45,
+              fontWeight: b.bold ? FontWeight.w700 : FontWeight.w400,
+              fontStyle: b.italic ? FontStyle.italic : FontStyle.normal,
               decoration: checked ? TextDecoration.lineThrough : null,
               color: checked ? cs.onSurface.withAlpha(120) : cs.onSurface,
             ),
@@ -171,6 +183,16 @@ class _CheckboxBlockViewState extends ConsumerState<CheckboxBlockView> {
           ),
         ),
       ],
+    );
+
+    if (!b.highlighted) return row;
+    return Container(
+      decoration: BoxDecoration(
+        color: cs.tertiaryContainer.withAlpha(150),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      child: row,
     );
   }
 }

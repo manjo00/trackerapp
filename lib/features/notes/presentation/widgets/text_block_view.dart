@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/database/app_database.dart';
+import '../../domain/note_text_style.dart';
 import '../providers/notes_providers.dart';
 
 /// A borderless, transparent text line that behaves like a document paragraph:
@@ -20,6 +21,7 @@ class TextBlockView extends ConsumerStatefulWidget {
     required this.block,
     this.onSplit,
     this.onDeleteEmpty,
+    this.onFocus,
     this.autofocus = false,
     super.key,
   });
@@ -29,6 +31,10 @@ class TextBlockView extends ConsumerStatefulWidget {
   /// Enter pressed: [after] is the text that should move to a new line below.
   final void Function(String after)? onSplit;
   final VoidCallback? onDeleteEmpty;
+
+  /// Called with this block's id when it gains focus, so the editor can point
+  /// the formatting toolbar at the active line.
+  final void Function(int blockId)? onFocus;
   final bool autofocus;
 
   @override
@@ -46,7 +52,11 @@ class _TextBlockViewState extends ConsumerState<TextBlockView> {
     _focus = FocusNode(onKeyEvent: _onKey);
     _focus.addListener(() {
       if (mounted) setState(() {}); // toggle the focus-only hint
-      if (!_focus.hasFocus) _save();
+      if (_focus.hasFocus) {
+        widget.onFocus?.call(widget.block.id);
+      } else {
+        _save();
+      }
     });
     if (widget.autofocus) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -113,7 +123,17 @@ class _TextBlockViewState extends ConsumerState<TextBlockView> {
   @override
   Widget build(BuildContext context) {
     final ColorScheme cs = Theme.of(context).colorScheme;
-    return TextField(
+    final NoteBlock b = widget.block;
+    final bool heavy = b.headingLevel != 0 || b.bold;
+    final TextStyle style = TextStyle(
+      fontSize: noteHeadingFontSize(b.headingLevel),
+      height: 1.4,
+      fontWeight: heavy ? FontWeight.w700 : FontWeight.w400,
+      fontStyle: b.italic ? FontStyle.italic : FontStyle.normal,
+      color: cs.onSurface,
+    );
+
+    final Widget field = TextField(
       controller: _ctrl,
       focusNode: _focus,
       maxLines: null,
@@ -121,7 +141,7 @@ class _TextBlockViewState extends ConsumerState<TextBlockView> {
       textCapitalization: TextCapitalization.sentences,
       onChanged: _onChanged,
       onTapOutside: (_) => _focus.unfocus(),
-      style: TextStyle(fontSize: 16, height: 1.45, color: cs.onSurface),
+      style: style,
       decoration: InputDecoration(
         isDense: true,
         filled: false,
@@ -132,6 +152,16 @@ class _TextBlockViewState extends ConsumerState<TextBlockView> {
         hintStyle: TextStyle(color: cs.onSurface.withAlpha(90)),
         contentPadding: const EdgeInsets.symmetric(vertical: 8),
       ),
+    );
+
+    if (!b.highlighted) return field;
+    return Container(
+      decoration: BoxDecoration(
+        color: cs.tertiaryContainer.withAlpha(150),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      child: field,
     );
   }
 }
