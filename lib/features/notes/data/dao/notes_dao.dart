@@ -157,6 +157,33 @@ class NotesDao extends DatabaseAccessor<AppDatabase> with _$NotesDaoMixin {
         orderIndex: Value(orderIndex),
       ));
 
+  /// Inserts a new block immediately after [afterOrderIndex] within a note,
+  /// shifting every later block down by one so order stays contiguous. Used by
+  /// the editor's Enter-to-new-line flow. Returns the new block's id.
+  Future<int> insertBlockAfter({
+    required int noteId,
+    required NoteBlockType type,
+    String? content,
+    required int afterOrderIndex,
+  }) =>
+      transaction(() async {
+        final List<NoteBlock> later = await (select(noteBlocks)
+              ..where((b) =>
+                  b.noteId.equals(noteId) &
+                  b.orderIndex.isBiggerThanValue(afterOrderIndex)))
+            .get();
+        for (final NoteBlock b in later) {
+          await (update(noteBlocks)..where((r) => r.id.equals(b.id)))
+              .write(NoteBlocksCompanion(orderIndex: Value(b.orderIndex + 1)));
+        }
+        return into(noteBlocks).insert(NoteBlocksCompanion.insert(
+          noteId: noteId,
+          type: type.storageKey,
+          content: Value(content),
+          orderIndex: Value(afterOrderIndex + 1),
+        ));
+      });
+
   Future<void> updateBlockContent(int id, String content) =>
       (update(noteBlocks)..where((b) => b.id.equals(id)))
           .write(NoteBlocksCompanion(content: Value(content)));

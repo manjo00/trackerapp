@@ -78,6 +78,28 @@ void main() {
     expect(ordered.map((x) => x.content), ['c', 'a', 'b']);
   });
 
+  test('insertBlockAfter drops a block in the middle and shifts the rest',
+      () async {
+    final note = await dao.createNote(now: now);
+    await dao.addBlock(
+        noteId: note, type: NoteBlockType.text, content: 'a', orderIndex: 0);
+    final b = await dao.addBlock(
+        noteId: note, type: NoteBlockType.text, content: 'b', orderIndex: 1);
+    await dao.addBlock(
+        noteId: note, type: NoteBlockType.text, content: 'c', orderIndex: 2);
+
+    // Enter pressed on "b" → a new "b2" line appears right after it.
+    final bBlock = (await dao.watchBlocks(note).first).firstWhere((x) => x.id == b);
+    await dao.insertBlockAfter(
+        noteId: note,
+        type: NoteBlockType.text,
+        content: 'b2',
+        afterOrderIndex: bBlock.orderIndex);
+
+    final ordered = await dao.watchBlocks(note).first;
+    expect(ordered.map((x) => x.content), ['a', 'b', 'b2', 'c']);
+  });
+
   test('deleting a notebook moves its notes to Unfiled (notebookId NULL)',
       () async {
     final nb = await dao.createNotebook(

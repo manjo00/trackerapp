@@ -5,15 +5,24 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/database/app_database.dart';
 import '../providers/notes_providers.dart';
 
-/// A checklist line: a light circular checkbox + inline text. Ticking strikes
-/// through and dims the text. Text saves on focus-loss; the tick saves
-/// immediately. Backspace on an empty line asks the parent to delete this block
-/// (best-effort; "Edit lines" mode is the guaranteed delete path).
+/// A checklist line: a light circular checkbox + inline text. The "List item"
+/// hint shows ONLY while focused, so empty unfocused items read as blank lines.
+/// Ticking strikes through + dims. Text saves on focus-loss; the tick saves
+/// immediately. Enter starts a new checklist item below ([onSplit]); backspace
+/// on an empty line asks the parent to delete it ([onDeleteEmpty]).
 class CheckboxBlockView extends ConsumerStatefulWidget {
-  const CheckboxBlockView({required this.block, this.onDeleteEmpty, super.key});
+  const CheckboxBlockView({
+    required this.block,
+    this.onSplit,
+    this.onDeleteEmpty,
+    this.autofocus = false,
+    super.key,
+  });
 
   final NoteBlock block;
+  final void Function(String after)? onSplit;
   final VoidCallback? onDeleteEmpty;
+  final bool autofocus;
 
   @override
   ConsumerState<CheckboxBlockView> createState() => _CheckboxBlockViewState();
@@ -29,8 +38,14 @@ class _CheckboxBlockViewState extends ConsumerState<CheckboxBlockView> {
     _ctrl = TextEditingController(text: widget.block.content ?? '');
     _focus = FocusNode(onKeyEvent: _onKey);
     _focus.addListener(() {
+      if (mounted) setState(() {}); // toggle the focus-only hint
       if (!_focus.hasFocus) _save();
     });
+    if (widget.autofocus) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _focus.requestFocus();
+      });
+    }
   }
 
   KeyEventResult _onKey(FocusNode node, KeyEvent event) {
@@ -42,6 +57,19 @@ class _CheckboxBlockViewState extends ConsumerState<CheckboxBlockView> {
       return KeyEventResult.handled;
     }
     return KeyEventResult.ignored;
+  }
+
+  void _onChanged(String value) {
+    final int nl = value.indexOf('\n');
+    if (nl < 0 || widget.onSplit == null) return;
+    final String before = value.substring(0, nl);
+    final String after = value.substring(nl + 1);
+    _ctrl.value = TextEditingValue(
+      text: before,
+      selection: TextSelection.collapsed(offset: before.length),
+    );
+    _save();
+    widget.onSplit!(after);
   }
 
   @override
@@ -122,6 +150,7 @@ class _CheckboxBlockViewState extends ConsumerState<CheckboxBlockView> {
             focusNode: _focus,
             maxLines: null,
             textCapitalization: TextCapitalization.sentences,
+            onChanged: _onChanged,
             onTapOutside: (_) => _focus.unfocus(),
             style: TextStyle(
               fontSize: 16,
@@ -135,7 +164,7 @@ class _CheckboxBlockViewState extends ConsumerState<CheckboxBlockView> {
               border: InputBorder.none,
               enabledBorder: InputBorder.none,
               focusedBorder: InputBorder.none,
-              hintText: 'List item',
+              hintText: _focus.hasFocus ? 'List item' : null,
               hintStyle: TextStyle(color: cs.onSurface.withAlpha(90)),
               contentPadding: const EdgeInsets.symmetric(vertical: 8),
             ),

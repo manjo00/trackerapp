@@ -33,6 +33,10 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
   bool _deleted = false;
   bool _editingLines = false;
 
+  /// The block id that should grab focus on the next build — set when a line is
+  /// freshly created (toolbar add or Enter-split) so the caret follows it.
+  int? _focusRequestId;
+
   @override
   void initState() {
     super.initState();
@@ -73,9 +77,24 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
 
   Future<void> _addBlock(NoteBlockType type) async {
     final dao = ref.read(notesDaoProvider);
-    await dao.addBlock(
+    final int id = await dao.addBlock(
         noteId: widget.noteId, type: type, content: '', orderIndex: _nextOrder);
     await dao.touchNote(widget.noteId, DateTime.now());
+    if (mounted) setState(() => _focusRequestId = id);
+  }
+
+  /// Enter pressed inside [current]: start a new line of the same type below,
+  /// carrying [after] (text past the caret), and move focus to it.
+  Future<void> _splitBlock(NoteBlock current, String after) async {
+    final dao = ref.read(notesDaoProvider);
+    final int id = await dao.insertBlockAfter(
+      noteId: widget.noteId,
+      type: NoteBlockType.parse(current.type),
+      content: after,
+      afterOrderIndex: current.orderIndex,
+    );
+    await dao.touchNote(widget.noteId, DateTime.now());
+    if (mounted) setState(() => _focusRequestId = id);
   }
 
   Future<void> _addPhoto() async {
@@ -153,15 +172,25 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     ref.read(notesDaoProvider).reorderBlocks(ids);
   }
 
-  /// Saves the title and deletes the note if it ended up completely empty.
+  /// On leaving: save the title, prune phantom empty text lines (so blank
+  /// fields never accumulate), then delete the note if nothing is left.
   Future<void> _onLeave() async {
     if (_deleted) return;
     _saveTitle();
     final dao = ref.read(notesDaoProvider);
     final repo = ref.read(notesRepositoryProvider);
+
+    final List<NoteBlock> blocks = await dao.getBlocks(widget.noteId);
+    for (final NoteBlock b in blocks) {
+      if (NoteBlockType.parse(b.type) == NoteBlockType.text &&
+          (b.content ?? '').trim().isEmpty) {
+        await dao.deleteBlock(b.id);
+      }
+    }
+
     if (_titleCtrl.text.trim().isEmpty) {
-      final List<NoteBlock> blocks = await dao.getBlocks(widget.noteId);
-      if (blocks.isEmpty) await repo.deleteNoteWithPhotos(widget.noteId);
+      final List<NoteBlock> remaining = await dao.getBlocks(widget.noteId);
+      if (remaining.isEmpty) await repo.deleteNoteWithPhotos(widget.noteId);
     }
   }
 
@@ -247,11 +276,15 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
         Divider(height: 1, thickness: 1, color: cs.outlineVariant),
         const SizedBox(height: 8),
         if (blocks.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 20),
-            child: Text(
-              'Start writing — or add a checkbox or photo below.',
-              style: TextStyle(color: cs.onSurface.withAlpha(110)),
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => _addBlock(NoteBlockType.text),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: Text(
+                'Tap here to start writing…',
+                style: TextStyle(color: cs.onSurface.withAlpha(110)),
+              ),
             ),
           )
         else
@@ -266,12 +299,22 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
   }
 
   Widget _blockWidget(NoteBlock b) {
+    final bool focusMe = b.id == _focusRequestId;
     switch (NoteBlockType.parse(b.type)) {
       case NoteBlockType.text:
-        return TextBlockView(block: b, onDeleteEmpty: () => _deleteBlock(b));
+        return TextBlockView(
+          block: b,
+          autofocus: focusMe,
+          onSplit: (after) => _splitBlock(b, after),
+          onDeleteEmpty: () => _deleteBlock(b),
+        );
       case NoteBlockType.checkbox:
         return CheckboxBlockView(
-            block: b, onDeleteEmpty: () => _deleteBlock(b));
+          block: b,
+          autofocus: focusMe,
+          onSplit: (after) => _splitBlock(b, after),
+          onDeleteEmpty: () => _deleteBlock(b),
+        );
       case NoteBlockType.photo:
         return PhotoBlockView(block: b, onRemove: () => _deleteBlock(b));
     }
