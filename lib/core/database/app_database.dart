@@ -118,7 +118,7 @@ class AppDatabase extends _$AppDatabase {
   ///        tasks it holds). Both CASCADE, so deleting a note/line deletes its
   ///        auto-created task and list.
   @override
-  int get schemaVersion => 16;
+  int get schemaVersion => 17;
 
   /// The old vs. new default rotation-label colour (see v8 migration).
   static const int _oldRotationColor = 0xFFFFB347;
@@ -237,6 +237,14 @@ class AppDatabase extends _$AppDatabase {
             // Per-list "auto-archive done tasks" toggle. Defaults false, so
             // existing lists keep showing completed tasks — nothing to backfill.
             await m.addColumn(taskLists, taskLists.autoArchiveCompleted);
+          }
+          if (from < 17) {
+            // Block-level rich text: whole-line formatting flags. Defaults
+            // (0 / false) mean existing blocks stay plain body — no backfill.
+            await m.addColumn(noteBlocks, noteBlocks.headingLevel);
+            await m.addColumn(noteBlocks, noteBlocks.highlighted);
+            await m.addColumn(noteBlocks, noteBlocks.bold);
+            await m.addColumn(noteBlocks, noteBlocks.italic);
           }
         },
         beforeOpen: (details) async {

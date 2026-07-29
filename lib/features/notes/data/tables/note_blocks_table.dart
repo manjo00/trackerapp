@@ -16,4 +16,12 @@ class NoteBlocks extends Table {
   TextColumn get content => text().nullable()();
   BoolColumn get checked => boolean().withDefault(const Constant(false))();
   IntColumn get orderIndex => integer().withDefault(const Constant(0))();
+
+  /// Whole-block formatting (Phase-1 rich text). Defaults = unformatted body.
+  /// [headingLevel] 0 = body, 1/2/3 = H1/H2/H3 (text blocks only). The three
+  /// flags apply to the whole line. `content` is never changed by formatting.
+  IntColumn get headingLevel => integer().withDefault(const Constant(0))();
+  BoolColumn get highlighted => boolean().withDefault(const Constant(false))();
+  BoolColumn get bold => boolean().withDefault(const Constant(false))();
+  BoolColumn get italic => boolean().withDefault(const Constant(false))();
 }
