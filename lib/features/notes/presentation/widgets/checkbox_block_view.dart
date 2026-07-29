@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../providers/notes_providers.dart';
 
-/// A checklist line: a checkbox + inline text. Ticking strikes through and
-/// dims the text. Text saves on focus-loss; the tick saves immediately.
+/// A checklist line: a light circular checkbox + inline text. Ticking strikes
+/// through and dims the text. Text saves on focus-loss; the tick saves
+/// immediately. Backspace on an empty line asks the parent to delete this block
+/// (best-effort; "Edit lines" mode is the guaranteed delete path).
 class CheckboxBlockView extends ConsumerStatefulWidget {
-  const CheckboxBlockView({required this.block, super.key});
+  const CheckboxBlockView({required this.block, this.onDeleteEmpty, super.key});
 
   final NoteBlock block;
+  final VoidCallback? onDeleteEmpty;
 
   @override
   ConsumerState<CheckboxBlockView> createState() => _CheckboxBlockViewState();
@@ -23,10 +27,21 @@ class _CheckboxBlockViewState extends ConsumerState<CheckboxBlockView> {
   void initState() {
     super.initState();
     _ctrl = TextEditingController(text: widget.block.content ?? '');
-    _focus = FocusNode();
+    _focus = FocusNode(onKeyEvent: _onKey);
     _focus.addListener(() {
       if (!_focus.hasFocus) _save();
     });
+  }
+
+  KeyEventResult _onKey(FocusNode node, KeyEvent event) {
+    if (widget.onDeleteEmpty != null &&
+        event is KeyDownEvent &&
+        event.logicalKey == LogicalKeyboardKey.backspace &&
+        _ctrl.text.isEmpty) {
+      widget.onDeleteEmpty!();
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
   }
 
   @override
@@ -51,8 +66,8 @@ class _CheckboxBlockViewState extends ConsumerState<CheckboxBlockView> {
         .reconcileBlock(block: widget.block, content: text, now: now);
   }
 
-  Future<void> _toggle(bool? v) async {
-    final bool checked = v ?? false;
+  Future<void> _toggle() async {
+    final bool checked = !widget.block.checked;
     final dao = ref.read(notesDaoProvider);
     await dao.setBlockChecked(widget.block.id, checked);
     await dao.touchNote(widget.block.noteId, DateTime.now());
@@ -77,13 +92,28 @@ class _CheckboxBlockViewState extends ConsumerState<CheckboxBlockView> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        SizedBox(
-          width: 32,
-          height: 32,
-          child: Checkbox(
-            value: checked,
-            visualDensity: VisualDensity.compact,
-            onChanged: _toggle,
+        // Light circular check — recedes visually until ticked.
+        Padding(
+          padding: const EdgeInsets.only(right: 10, top: 2, bottom: 2),
+          child: InkResponse(
+            onTap: _toggle,
+            radius: 20,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 120),
+              width: 22,
+              height: 22,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: checked ? cs.primary : Colors.transparent,
+                border: Border.all(
+                  color: checked ? cs.primary : cs.onSurface.withAlpha(90),
+                  width: 2,
+                ),
+              ),
+              child: checked
+                  ? Icon(Icons.check_rounded, size: 15, color: cs.onPrimary)
+                  : null,
+            ),
           ),
         ),
         Expanded(
@@ -94,14 +124,17 @@ class _CheckboxBlockViewState extends ConsumerState<CheckboxBlockView> {
             textCapitalization: TextCapitalization.sentences,
             onTapOutside: (_) => _focus.unfocus(),
             style: TextStyle(
+              fontSize: 16,
+              height: 1.45,
               decoration: checked ? TextDecoration.lineThrough : null,
               color: checked ? cs.onSurface.withAlpha(120) : cs.onSurface,
             ),
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               isDense: true,
               border: InputBorder.none,
               hintText: 'List item',
-              contentPadding: EdgeInsets.symmetric(vertical: 6),
+              hintStyle: TextStyle(color: cs.onSurface.withAlpha(90)),
+              contentPadding: const EdgeInsets.symmetric(vertical: 8),
             ),
           ),
         ),

@@ -4,15 +4,19 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../data/models/note_block_type.dart';
+import '../../domain/block_label.dart';
 import '../providers/notes_providers.dart';
 import '../widgets/checkbox_block_view.dart';
 import '../widgets/photo_block_view.dart';
 import '../widgets/text_block_view.dart';
 
-/// The block editor for one note: a title plus a reorderable stack of text /
-/// checkbox / photo blocks. Auto-saves (blocks save on focus-loss; the title
-/// on focus-loss and on leaving). A note left completely empty is deleted on
-/// exit. AppBar ⋮ deletes the whole note (cascading its tasks + auto-list).
+/// The block editor for one note. The resting view is a clean, open page: a
+/// title over a flowing stack of text / checkbox / photo blocks with no
+/// per-line chrome. Reordering and deleting whole lines happen in "Edit lines"
+/// mode (AppBar ⋮). A text/checkbox line can also be removed by backspacing on
+/// an empty line. Auto-saves (blocks on focus-loss, title on focus-loss + on
+/// leaving); an empty note is deleted on exit; ⋮ → Delete note removes it
+/// (cascading its tasks + auto-list).
 class NoteEditorScreen extends ConsumerStatefulWidget {
   const NoteEditorScreen({required this.noteId, super.key});
 
@@ -27,6 +31,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
   final FocusNode _titleFocus = FocusNode();
   String _savedTitle = '';
   bool _deleted = false;
+  bool _editingLines = false;
 
   @override
   void initState() {
@@ -162,132 +167,216 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final ColorScheme cs = Theme.of(context).colorScheme;
     final List<NoteBlock> blocks =
         ref.watch(noteBlocksProvider(widget.noteId)).valueOrNull ?? const [];
 
+    // Nothing left to manage → drop back to the clean editor.
+    if (_editingLines && blocks.isEmpty) _editingLines = false;
+
     return PopScope(
-      canPop: true,
+      canPop: !_editingLines,
       onPopInvokedWithResult: (didPop, _) {
-        if (didPop) _onLeave();
+        if (_editingLines) {
+          setState(() => _editingLines = false);
+        } else if (didPop) {
+          _onLeave();
+        }
       },
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Note'),
-          actions: [
-            PopupMenuButton<String>(
-              onSelected: (v) {
-                if (v == 'delete') _deleteNote();
-              },
-              itemBuilder: (context) => const [
-                PopupMenuItem(value: 'delete', child: Text('Delete note')),
-              ],
-            ),
-          ],
-        ),
-        body: ReorderableListView(
-          padding: const EdgeInsets.fromLTRB(8, 8, 8, 96),
-          buildDefaultDragHandles: false,
-          onReorderItem: (o, n) => _onReorder(blocks, o, n),
-          header: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                TextField(
-                  controller: _titleCtrl,
-                  focusNode: _titleFocus,
-                  textCapitalization: TextCapitalization.sentences,
-                  onTapOutside: (_) => _titleFocus.unfocus(),
-                  style: Theme.of(context)
-                      .textTheme
-                      .headlineSmall
-                      ?.copyWith(fontWeight: FontWeight.w600),
-                  decoration: const InputDecoration(
-                    border: InputBorder.none,
-                    hintText: 'Title',
-                  ),
-                ),
-                if (blocks.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 24),
-                    child: Text(
-                      'Add a text line, a checkbox, or a photo below.',
-                      style: TextStyle(color: cs.onSurface.withAlpha(120)),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          children: [
-            for (int i = 0; i < blocks.length; i++)
-              _BlockRow(
-                key: ValueKey(blocks[i].id),
-                index: i,
-                child: _blockWidget(blocks[i]),
-                onDelete: () => _deleteBlock(blocks[i]),
+        appBar: _editingLines ? _editAppBar() : _normalAppBar(blocks),
+        body: _editingLines ? _editLinesBody(blocks) : _editorBody(blocks),
+        bottomNavigationBar: _editingLines
+            ? null
+            : _BlockToolbar(
+                onText: () => _addBlock(NoteBlockType.text),
+                onCheckbox: () => _addBlock(NoteBlockType.checkbox),
+                onPhoto: _addPhoto,
               ),
+      ),
+    );
+  }
+
+  // ---- Normal (clean) editor ------------------------------------------------
+
+  AppBar _normalAppBar(List<NoteBlock> blocks) {
+    return AppBar(
+      title: const Text('Note'),
+      actions: [
+        PopupMenuButton<String>(
+          onSelected: (v) {
+            if (v == 'reorder') {
+              setState(() => _editingLines = true);
+            } else if (v == 'delete') {
+              _deleteNote();
+            }
+          },
+          itemBuilder: (context) => [
+            if (blocks.isNotEmpty)
+              const PopupMenuItem(value: 'reorder', child: Text('Edit lines')),
+            const PopupMenuItem(value: 'delete', child: Text('Delete note')),
           ],
         ),
-        bottomNavigationBar: _BlockToolbar(
-          onText: () => _addBlock(NoteBlockType.text),
-          onCheckbox: () => _addBlock(NoteBlockType.checkbox),
-          onPhoto: _addPhoto,
+      ],
+    );
+  }
+
+  Widget _editorBody(List<NoteBlock> blocks) {
+    final ColorScheme cs = Theme.of(context).colorScheme;
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
+      children: [
+        TextField(
+          controller: _titleCtrl,
+          focusNode: _titleFocus,
+          textCapitalization: TextCapitalization.sentences,
+          onTapOutside: (_) => _titleFocus.unfocus(),
+          style: Theme.of(context)
+              .textTheme
+              .headlineSmall
+              ?.copyWith(fontWeight: FontWeight.w700, height: 1.25),
+          decoration: InputDecoration(
+            border: InputBorder.none,
+            hintText: 'Title',
+            hintStyle: TextStyle(color: cs.onSurface.withAlpha(80)),
+            contentPadding: const EdgeInsets.symmetric(vertical: 10),
+          ),
         ),
-      ),
+        Divider(height: 1, thickness: 1, color: cs.outlineVariant),
+        const SizedBox(height: 8),
+        if (blocks.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            child: Text(
+              'Start writing — or add a checkbox or photo below.',
+              style: TextStyle(color: cs.onSurface.withAlpha(110)),
+            ),
+          )
+        else
+          for (final NoteBlock b in blocks)
+            Padding(
+              key: ValueKey(b.id),
+              padding: const EdgeInsets.symmetric(vertical: 1),
+              child: _blockWidget(b),
+            ),
+      ],
     );
   }
 
   Widget _blockWidget(NoteBlock b) {
     switch (NoteBlockType.parse(b.type)) {
       case NoteBlockType.text:
-        return TextBlockView(block: b);
+        return TextBlockView(block: b, onDeleteEmpty: () => _deleteBlock(b));
       case NoteBlockType.checkbox:
-        return CheckboxBlockView(block: b);
+        return CheckboxBlockView(
+            block: b, onDeleteEmpty: () => _deleteBlock(b));
       case NoteBlockType.photo:
         return PhotoBlockView(block: b, onRemove: () => _deleteBlock(b));
     }
   }
+
+  // ---- "Edit lines" mode (reorder + delete) ---------------------------------
+
+  AppBar _editAppBar() {
+    return AppBar(
+      leading: IconButton(
+        icon: const Icon(Icons.check_rounded),
+        tooltip: 'Done',
+        onPressed: () => setState(() => _editingLines = false),
+      ),
+      title: const Text('Edit lines'),
+    );
+  }
+
+  Widget _editLinesBody(List<NoteBlock> blocks) {
+    final ColorScheme cs = Theme.of(context).colorScheme;
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
+          child: Row(
+            children: [
+              Icon(Icons.drag_indicator_rounded,
+                  size: 16, color: cs.onSurface.withAlpha(120)),
+              const SizedBox(width: 6),
+              Text('Drag to reorder · tap the bin to delete',
+                  style:
+                      TextStyle(fontSize: 12, color: cs.onSurface.withAlpha(140))),
+            ],
+          ),
+        ),
+        Expanded(
+          child: ReorderableListView.builder(
+            padding: const EdgeInsets.fromLTRB(8, 4, 8, 24),
+            itemCount: blocks.length,
+            // onReorderItem gives newIndex already adjusted for the removed item.
+            onReorderItem: (o, n) => _onReorder(blocks, o, n),
+            itemBuilder: (context, i) {
+              final NoteBlock b = blocks[i];
+              return _ManageRow(
+                key: ValueKey(b.id),
+                index: i,
+                block: b,
+                onDelete: () => _deleteBlock(b),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
 }
 
-/// One reorderable block row: drag handle · block content · delete.
-class _BlockRow extends StatelessWidget {
-  const _BlockRow({
+/// A compact, non-editable row for "Edit lines" mode: type icon · one-line
+/// label · delete, with the whole tile draggable (long-press) to reorder.
+class _ManageRow extends StatelessWidget {
+  const _ManageRow({
     required this.index,
-    required this.child,
+    required this.block,
     required this.onDelete,
     super.key,
   });
 
   final int index;
-  final Widget child;
+  final NoteBlock block;
   final VoidCallback onDelete;
+
+  IconData get _icon => switch (NoteBlockType.parse(block.type)) {
+        NoteBlockType.checkbox => Icons.check_box_outlined,
+        NoteBlockType.photo => Icons.photo_outlined,
+        NoteBlockType.text => Icons.notes_rounded,
+      };
 
   @override
   Widget build(BuildContext context) {
     final ColorScheme cs = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ReorderableDragStartListener(
-            index: index,
-            child: Padding(
-              padding: const EdgeInsets.only(top: 8, right: 4),
-              child: Icon(Icons.drag_indicator_rounded,
-                  size: 20, color: cs.onSurface.withAlpha(90)),
+    return Card(
+      key: key,
+      margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+      child: ListTile(
+        dense: true,
+        leading: Icon(_icon, size: 20, color: cs.onSurface.withAlpha(150)),
+        title: Text(
+          blockLabel(block),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              visualDensity: VisualDensity.compact,
+              icon: Icon(Icons.delete_outline_rounded,
+                  size: 20, color: cs.onSurface.withAlpha(150)),
+              tooltip: 'Delete line',
+              onPressed: onDelete,
             ),
-          ),
-          Expanded(child: child),
-          IconButton(
-            visualDensity: VisualDensity.compact,
-            icon: Icon(Icons.close_rounded,
-                size: 18, color: cs.onSurface.withAlpha(110)),
-            tooltip: 'Delete line',
-            onPressed: onDelete,
-          ),
-        ],
+            ReorderableDragStartListener(
+              index: index,
+              child: Icon(Icons.drag_handle_rounded,
+                  size: 22, color: cs.onSurface.withAlpha(120)),
+            ),
+          ],
+        ),
       ),
     );
   }

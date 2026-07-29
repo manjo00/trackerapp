@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../providers/notes_providers.dart';
 
 /// A borderless, auto-growing text block. Saves on focus-loss (never per
-/// keystroke) and bumps the note's updatedAt.
+/// keystroke) and bumps the note's updatedAt. Pressing Backspace on an already
+/// empty line asks the parent to delete this block (best-effort — some soft
+/// keyboards swallow the key; "Edit lines" mode is the guaranteed delete path).
 class TextBlockView extends ConsumerStatefulWidget {
-  const TextBlockView({required this.block, super.key});
+  const TextBlockView({required this.block, this.onDeleteEmpty, super.key});
 
   final NoteBlock block;
+  final VoidCallback? onDeleteEmpty;
 
   @override
   ConsumerState<TextBlockView> createState() => _TextBlockViewState();
@@ -23,10 +27,21 @@ class _TextBlockViewState extends ConsumerState<TextBlockView> {
   void initState() {
     super.initState();
     _ctrl = TextEditingController(text: widget.block.content ?? '');
-    _focus = FocusNode();
+    _focus = FocusNode(onKeyEvent: _onKey);
     _focus.addListener(() {
       if (!_focus.hasFocus) _save();
     });
+  }
+
+  KeyEventResult _onKey(FocusNode node, KeyEvent event) {
+    if (widget.onDeleteEmpty != null &&
+        event is KeyDownEvent &&
+        event.logicalKey == LogicalKeyboardKey.backspace &&
+        _ctrl.text.isEmpty) {
+      widget.onDeleteEmpty!();
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
   }
 
   @override
@@ -60,6 +75,7 @@ class _TextBlockViewState extends ConsumerState<TextBlockView> {
 
   @override
   Widget build(BuildContext context) {
+    final ColorScheme cs = Theme.of(context).colorScheme;
     return TextField(
       controller: _ctrl,
       focusNode: _focus,
@@ -67,11 +83,13 @@ class _TextBlockViewState extends ConsumerState<TextBlockView> {
       keyboardType: TextInputType.multiline,
       textCapitalization: TextCapitalization.sentences,
       onTapOutside: (_) => _focus.unfocus(),
-      decoration: const InputDecoration(
+      style: TextStyle(fontSize: 16, height: 1.45, color: cs.onSurface),
+      decoration: InputDecoration(
         isDense: true,
         border: InputBorder.none,
         hintText: 'Write…',
-        contentPadding: EdgeInsets.symmetric(vertical: 6),
+        hintStyle: TextStyle(color: cs.onSurface.withAlpha(90)),
+        contentPadding: const EdgeInsets.symmetric(vertical: 8),
       ),
     );
   }

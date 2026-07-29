@@ -72,9 +72,9 @@ class PhotoBlockView extends ConsumerWidget {
                       ),
               ),
               Padding(
-                padding: const EdgeInsets.all(6),
+                padding: const EdgeInsets.all(8),
                 child: Material(
-                  color: Colors.black54,
+                  color: Colors.black38,
                   shape: const CircleBorder(),
                   child: InkWell(
                     customBorder: const CircleBorder(),
@@ -82,7 +82,7 @@ class PhotoBlockView extends ConsumerWidget {
                     child: const Padding(
                       padding: EdgeInsets.all(4),
                       child: Icon(Icons.close_rounded,
-                          size: 18, color: Colors.white),
+                          size: 15, color: Colors.white),
                     ),
                   ),
                 ),
