@@ -188,6 +188,26 @@ class NotesDao extends DatabaseAccessor<AppDatabase> with _$NotesDaoMixin {
       (update(noteBlocks)..where((b) => b.id.equals(id)))
           .write(NoteBlocksCompanion(content: Value(content)));
 
+  /// Updates a block's whole-line formatting flags. Only non-null args change;
+  /// omitted ones are left as-is (`Value.absent()`). `content` is never touched.
+  Future<void> setBlockFormat(
+    int id, {
+    int? headingLevel,
+    bool? highlighted,
+    bool? bold,
+    bool? italic,
+  }) =>
+      (update(noteBlocks)..where((b) => b.id.equals(id))).write(
+        NoteBlocksCompanion(
+          headingLevel:
+              headingLevel == null ? const Value.absent() : Value(headingLevel),
+          highlighted:
+              highlighted == null ? const Value.absent() : Value(highlighted),
+          bold: bold == null ? const Value.absent() : Value(bold),
+          italic: italic == null ? const Value.absent() : Value(italic),
+        ),
+      );
+
   Future<void> setBlockChecked(int id, bool checked) =>
       (update(noteBlocks)..where((b) => b.id.equals(id)))
           .write(NoteBlocksCompanion(checked: Value(checked)));

@@ -100,6 +100,25 @@ void main() {
     expect(ordered.map((x) => x.content), ['a', 'b', 'b2', 'c']);
   });
 
+  test('setBlockFormat updates only the given flags', () async {
+    final note = await dao.createNote(now: now);
+    final id = await dao.addBlock(
+        noteId: note, type: NoteBlockType.text, content: 'x', orderIndex: 0);
+
+    await dao.setBlockFormat(id, headingLevel: 2, bold: true);
+    var b = (await dao.watchBlocks(note).first).firstWhere((x) => x.id == id);
+    expect(b.headingLevel, 2);
+    expect(b.bold, true);
+    expect(b.highlighted, false); // untouched
+    expect(b.italic, false); // untouched
+
+    await dao.setBlockFormat(id, highlighted: true);
+    b = (await dao.watchBlocks(note).first).firstWhere((x) => x.id == id);
+    expect(b.highlighted, true);
+    expect(b.headingLevel, 2); // still set
+    expect(b.content, 'x'); // content never touched
+  });
+
   test('deleting a notebook moves its notes to Unfiled (notebookId NULL)',
       () async {
     final nb = await dao.createNotebook(
