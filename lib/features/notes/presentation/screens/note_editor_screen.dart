@@ -38,12 +38,21 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
   /// freshly created (toolbar add or Enter-split) so the caret follows it.
   int? _focusRequestId;
 
+  /// The block currently being edited — drives the formatting toolbar. Null
+  /// when no text/checkbox line is focused (→ the add-block bar shows).
+  int? _focusedBlockId;
+
   @override
   void initState() {
     super.initState();
     _loadTitle();
     _titleFocus.addListener(() {
-      if (!_titleFocus.hasFocus) _saveTitle();
+      if (_titleFocus.hasFocus) {
+        // Editing the title → no formattable line; show the add-block bar.
+        if (mounted) setState(() => _focusedBlockId = null);
+      } else {
+        _saveTitle();
+      }
     });
   }
 
@@ -215,15 +224,51 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
       child: Scaffold(
         appBar: _editingLines ? _editAppBar() : _normalAppBar(blocks),
         body: _editingLines ? _editLinesBody(blocks) : _editorBody(blocks),
-        bottomNavigationBar: _editingLines
-            ? null
-            : _BlockToolbar(
-                onText: () => _addBlock(NoteBlockType.text),
-                onCheckbox: () => _addBlock(NoteBlockType.checkbox),
-                onPhoto: _addPhoto,
-              ),
+        bottomNavigationBar: _editingLines ? null : _bottomBar(blocks),
       ),
     );
+  }
+
+  /// The formatting bar when a text/checkbox line is focused, else the
+  /// add-block bar. Wrapped so a live but deleted focused id falls back safely.
+  Widget _bottomBar(List<NoteBlock> blocks) {
+    final NoteBlock? focused = _focusedBlockId == null
+        ? null
+        : blocks.where((b) => b.id == _focusedBlockId).firstOrNull;
+    final NoteBlockType? kind =
+        focused == null ? null : NoteBlockType.parse(focused.type);
+    final bool formattable =
+        kind == NoteBlockType.text || kind == NoteBlockType.checkbox;
+
+    if (!formattable) {
+      return _BlockToolbar(
+        onText: () => _addBlock(NoteBlockType.text),
+        onCheckbox: () => _addBlock(NoteBlockType.checkbox),
+        onPhoto: _addPhoto,
+        onDivider: _addDividerBlock,
+      );
+    }
+
+    final dao = ref.read(notesDaoProvider);
+    return _FormatBar(
+      block: focused!,
+      isText: kind == NoteBlockType.text,
+      onHeading: (level) => dao.setBlockFormat(focused.id, headingLevel: level),
+      onBold: () => dao.setBlockFormat(focused.id, bold: !focused.bold),
+      onItalic: () => dao.setBlockFormat(focused.id, italic: !focused.italic),
+      onHighlight: () =>
+          dao.setBlockFormat(focused.id, highlighted: !focused.highlighted),
+    );
+  }
+
+  Future<void> _addDividerBlock() async {
+    final dao = ref.read(notesDaoProvider);
+    await dao.addBlock(
+        noteId: widget.noteId,
+        type: NoteBlockType.divider,
+        content: null,
+        orderIndex: _nextOrder);
+    await dao.touchNote(widget.noteId, DateTime.now());
   }
 
   // ---- Normal (clean) editor ------------------------------------------------
@@ -308,6 +353,8 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
           autofocus: focusMe,
           onSplit: (after) => _splitBlock(b, after),
           onDeleteEmpty: () => _deleteBlock(b),
+          onFocus: (id) => setState(() => _focusedBlockId = id),
+          onBlur: () => setState(() => _focusedBlockId = null),
         );
       case NoteBlockType.checkbox:
         return CheckboxBlockView(
@@ -315,6 +362,8 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
           autofocus: focusMe,
           onSplit: (after) => _splitBlock(b, after),
           onDeleteEmpty: () => _deleteBlock(b),
+          onFocus: (id) => setState(() => _focusedBlockId = id),
+          onBlur: () => setState(() => _focusedBlockId = null),
         );
       case NoteBlockType.photo:
         return PhotoBlockView(
@@ -443,11 +492,13 @@ class _BlockToolbar extends StatelessWidget {
     required this.onText,
     required this.onCheckbox,
     required this.onPhoto,
+    required this.onDivider,
   });
 
   final VoidCallback onText;
   final VoidCallback onCheckbox;
   final VoidCallback onPhoto;
+  final VoidCallback onDivider;
 
   @override
   Widget build(BuildContext context) {
@@ -456,22 +507,86 @@ class _BlockToolbar extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          TextButton.icon(
-            onPressed: onText,
-            icon: const Icon(Icons.notes_rounded, size: 20),
-            label: const Text('Text'),
-          ),
-          TextButton.icon(
-            onPressed: onCheckbox,
-            icon: const Icon(Icons.check_box_outlined, size: 20),
-            label: const Text('Checkbox'),
-          ),
-          TextButton.icon(
-            onPressed: onPhoto,
-            icon: const Icon(Icons.photo_camera_rounded, size: 20),
-            label: const Text('Photo'),
-          ),
+          IconButton(
+              tooltip: 'Text',
+              onPressed: onText,
+              icon: const Icon(Icons.notes_rounded)),
+          IconButton(
+              tooltip: 'Checkbox',
+              onPressed: onCheckbox,
+              icon: const Icon(Icons.check_box_outlined)),
+          IconButton(
+              tooltip: 'Photo',
+              onPressed: onPhoto,
+              icon: const Icon(Icons.photo_camera_rounded)),
+          IconButton(
+              tooltip: 'Divider',
+              onPressed: onDivider,
+              icon: const Icon(Icons.horizontal_rule_rounded)),
         ],
+      ),
+    );
+  }
+}
+
+/// The formatting bar shown while a text/checkbox line is focused. Wrapped in a
+/// [TextFieldTapRegion] so tapping a button does NOT unfocus the line — the bar
+/// stays put and formatting applies to the still-active line.
+class _FormatBar extends StatelessWidget {
+  const _FormatBar({
+    required this.block,
+    required this.isText,
+    required this.onHeading,
+    required this.onBold,
+    required this.onItalic,
+    required this.onHighlight,
+  });
+
+  final NoteBlock block;
+  final bool isText;
+  final void Function(int level) onHeading;
+  final VoidCallback onBold;
+  final VoidCallback onItalic;
+  final VoidCallback onHighlight;
+
+  static String _headingLabel(int l) =>
+      switch (l) { 1 => 'H1', 2 => 'H2', 3 => 'H3', _ => 'Body' };
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme cs = Theme.of(context).colorScheme;
+
+    Widget toggle(IconData icon, bool on, VoidCallback onTap, String tip) =>
+        IconButton(
+          tooltip: tip,
+          onPressed: onTap,
+          icon: Icon(icon),
+          style: IconButton.styleFrom(
+            backgroundColor: on ? cs.secondaryContainer : null,
+            foregroundColor:
+                on ? cs.onSecondaryContainer : cs.onSurfaceVariant,
+          ),
+        );
+
+    return TextFieldTapRegion(
+      child: BottomAppBar(
+        height: 60,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            if (isText)
+              TextButton.icon(
+                onPressed: () => onHeading((block.headingLevel + 1) % 4),
+                icon: const Icon(Icons.title_rounded, size: 20),
+                label: Text(_headingLabel(block.headingLevel)),
+              ),
+            toggle(Icons.format_bold_rounded, block.bold, onBold, 'Bold'),
+            toggle(
+                Icons.format_italic_rounded, block.italic, onItalic, 'Italic'),
+            toggle(Icons.highlight_rounded, block.highlighted, onHighlight,
+                'Highlight'),
+          ],
+        ),
       ),
     );
   }

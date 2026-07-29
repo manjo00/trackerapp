@@ -22,6 +22,7 @@ class TextBlockView extends ConsumerStatefulWidget {
     this.onSplit,
     this.onDeleteEmpty,
     this.onFocus,
+    this.onBlur,
     this.autofocus = false,
     super.key,
   });
@@ -35,6 +36,10 @@ class TextBlockView extends ConsumerStatefulWidget {
   /// Called with this block's id when it gains focus, so the editor can point
   /// the formatting toolbar at the active line.
   final void Function(int blockId)? onFocus;
+
+  /// Called when this block loses focus, so the editor can drop back to the
+  /// add-block bar when nothing is being edited.
+  final VoidCallback? onBlur;
   final bool autofocus;
 
   @override
@@ -55,6 +60,7 @@ class _TextBlockViewState extends ConsumerState<TextBlockView> {
       if (_focus.hasFocus) {
         widget.onFocus?.call(widget.block.id);
       } else {
+        widget.onBlur?.call();
         _save();
       }
     });
