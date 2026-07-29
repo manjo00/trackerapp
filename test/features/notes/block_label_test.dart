@@ -39,6 +39,11 @@ void main() {
     expect(blockLabel(b), 'Photo');
   });
 
+  test('divider block is labelled "Divider"', () async {
+    final b = await makeBlock(NoteBlockType.divider, null);
+    expect(blockLabel(b), 'Divider');
+  });
+
   test('empty text and checkbox get muted placeholders', () async {
     final t = await makeBlock(NoteBlockType.text, '   ');
     final c = await makeBlock(NoteBlockType.checkbox, '');

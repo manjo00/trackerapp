@@ -22,15 +22,14 @@ class NotePreview {
 /// - firstPhotoFilename = the first photo block's stored filename (or null).
 /// - photoCount = number of photo blocks.
 NotePreview notePreview(List<NoteBlock> blocks) {
-  final String photoKey = NoteBlockType.photo.storageKey;
-
   String? firstPhoto;
   String snippet = '';
   int photoCount = 0;
 
   for (final NoteBlock b in blocks) {
-    final bool isPhoto = b.type == photoKey;
-    if (isPhoto) {
+    final NoteBlockType kind = NoteBlockType.parse(b.type);
+    if (kind == NoteBlockType.divider) continue; // no content, not a photo
+    if (kind == NoteBlockType.photo) {
       photoCount++;
       firstPhoto ??= b.content;
     } else if (snippet.isEmpty) {

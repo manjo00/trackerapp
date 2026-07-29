@@ -59,6 +59,20 @@ void main() {
     expect(p.photoCount, 1);
   });
 
+  test('divider blocks are ignored in the preview', () async {
+    final note = await dao.createNote(now: now);
+    await dao.addBlock(
+        noteId: note,
+        type: NoteBlockType.divider,
+        content: null,
+        orderIndex: 0);
+    await dao.addBlock(
+        noteId: note, type: NoteBlockType.text, content: 'after', orderIndex: 1);
+    final p = notePreview(await blocksFor(note));
+    expect(p.snippet, 'after');
+    expect(p.photoCount, 0);
+  });
+
   test('empty note → all defaults', () async {
     final note = await dao.createNote(now: now);
     final p = notePreview(await blocksFor(note));
