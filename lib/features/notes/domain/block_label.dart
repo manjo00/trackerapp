@@ -8,6 +8,8 @@ import '../data/models/note_block_type.dart';
 /// - photo → the word "Photo" (the thumbnail carries the visual).
 String blockLabel(NoteBlock block) {
   switch (NoteBlockType.parse(block.type)) {
+    case NoteBlockType.divider:
+      return 'Divider';
     case NoteBlockType.photo:
       return 'Photo';
     case NoteBlockType.checkbox:

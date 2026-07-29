@@ -7,6 +7,7 @@ import '../../data/models/note_block_type.dart';
 import '../../domain/block_label.dart';
 import '../providers/notes_providers.dart';
 import '../widgets/checkbox_block_view.dart';
+import '../widgets/divider_block_view.dart';
 import '../widgets/photo_block_view.dart';
 import '../widgets/text_block_view.dart';
 
@@ -323,6 +324,8 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
               .read(notesRepositoryProvider)
               .cropPhotoBlock(b, now: DateTime.now()),
         );
+      case NoteBlockType.divider:
+        return const DividerBlockView();
     }
   }
 
@@ -395,6 +398,7 @@ class _ManageRow extends StatelessWidget {
   IconData get _icon => switch (NoteBlockType.parse(block.type)) {
         NoteBlockType.checkbox => Icons.check_box_outlined,
         NoteBlockType.photo => Icons.photo_outlined,
+        NoteBlockType.divider => Icons.horizontal_rule_rounded,
         NoteBlockType.text => Icons.notes_rounded,
       };
 
