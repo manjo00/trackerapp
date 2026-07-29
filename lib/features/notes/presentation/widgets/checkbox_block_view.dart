@@ -131,7 +131,10 @@ class _CheckboxBlockViewState extends ConsumerState<CheckboxBlockView> {
             ),
             decoration: InputDecoration(
               isDense: true,
+              filled: false,
               border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
               hintText: 'List item',
               hintStyle: TextStyle(color: cs.onSurface.withAlpha(90)),
               contentPadding: const EdgeInsets.symmetric(vertical: 8),

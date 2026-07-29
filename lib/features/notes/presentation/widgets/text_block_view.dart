@@ -86,7 +86,10 @@ class _TextBlockViewState extends ConsumerState<TextBlockView> {
       style: TextStyle(fontSize: 16, height: 1.45, color: cs.onSurface),
       decoration: InputDecoration(
         isDense: true,
+        filled: false,
         border: InputBorder.none,
+        enabledBorder: InputBorder.none,
+        focusedBorder: InputBorder.none,
         hintText: 'Write…',
         hintStyle: TextStyle(color: cs.onSurface.withAlpha(90)),
         contentPadding: const EdgeInsets.symmetric(vertical: 8),

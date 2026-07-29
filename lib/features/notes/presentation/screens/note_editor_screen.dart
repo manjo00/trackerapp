@@ -235,7 +235,10 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
               .headlineSmall
               ?.copyWith(fontWeight: FontWeight.w700, height: 1.25),
           decoration: InputDecoration(
+            filled: false,
             border: InputBorder.none,
+            enabledBorder: InputBorder.none,
+            focusedBorder: InputBorder.none,
             hintText: 'Title',
             hintStyle: TextStyle(color: cs.onSurface.withAlpha(80)),
             contentPadding: const EdgeInsets.symmetric(vertical: 10),
