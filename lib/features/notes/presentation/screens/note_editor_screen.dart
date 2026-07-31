@@ -327,9 +327,55 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     await dao.touchNote(widget.noteId, DateTime.now());
   }
 
-  /// Insert a chosen template's blocks after the focused line (or at the end).
-  /// Filled in by the templates-UI task; a no-op until then.
-  Future<void> _pickTemplateToInsert() async {}
+  /// Pick a template and splice its blocks in after the focused line (or at the
+  /// end of the note when nothing is focused).
+  Future<void> _pickTemplateToInsert() async {
+    final List<Note> templates =
+        ref.read(templatesProvider).valueOrNull ?? const [];
+    if (templates.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('No templates yet — make one in Notes → Templates')));
+      }
+      return;
+    }
+    final Note? chosen = await showModalBottomSheet<Note>(
+      context: context,
+      builder: (c) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          children: [
+            for (final Note t in templates)
+              ListTile(
+                leading: const Icon(Icons.dashboard_customize_rounded),
+                title: Text(
+                    t.title.trim().isEmpty ? 'Untitled template' : t.title),
+                onTap: () => Navigator.of(c).pop(t),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (chosen == null) return;
+    final NoteBlock? anchor = _addAnchor();
+    final List<NoteBlock> blocks =
+        ref.read(noteBlocksProvider(widget.noteId)).valueOrNull ?? const [];
+    final int after = anchor?.orderIndex ?? (blocks.length - 1);
+    await ref.read(notesRepositoryProvider).insertTemplateInto(
+        chosen.id, widget.noteId, after,
+        now: DateTime.now());
+  }
+
+  /// Save the current note as a reusable template.
+  Future<void> _saveAsTemplate() async {
+    await ref
+        .read(notesRepositoryProvider)
+        .saveAsTemplate(widget.noteId, now: DateTime.now());
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Saved to Templates')));
+    }
+  }
 
   // ---- Normal (clean) editor ------------------------------------------------
 
@@ -339,15 +385,24 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
       actions: [
         PopupMenuButton<String>(
           onSelected: (v) {
-            if (v == 'reorder') {
-              setState(() => _editingLines = true);
-            } else if (v == 'delete') {
-              _deleteNote();
+            switch (v) {
+              case 'reorder':
+                setState(() => _editingLines = true);
+              case 'insert_template':
+                _pickTemplateToInsert();
+              case 'save_template':
+                _saveAsTemplate();
+              case 'delete':
+                _deleteNote();
             }
           },
           itemBuilder: (context) => [
             if (blocks.isNotEmpty)
               const PopupMenuItem(value: 'reorder', child: Text('Edit lines')),
+            const PopupMenuItem(
+                value: 'insert_template', child: Text('Insert template')),
+            const PopupMenuItem(
+                value: 'save_template', child: Text('Save as template')),
             const PopupMenuItem(value: 'delete', child: Text('Delete note')),
           ],
         ),

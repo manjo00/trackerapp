@@ -39,6 +39,10 @@ final notesForNotebookProvider =
     StreamProvider.family<List<Note>, int?>((ref, notebookId) =>
         ref.watch(notesDaoProvider).watchNotes(notebookId));
 
+/// All reusable templates (notes with isTemplate = true), newest-edited first.
+final templatesProvider = StreamProvider<List<Note>>(
+    (ref) => ref.watch(notesDaoProvider).watchTemplates());
+
 /// The blocks of one note, in order.
 final noteBlocksProvider = StreamProvider.family<List<NoteBlock>, int>(
     (ref, noteId) => ref.watch(notesDaoProvider).watchBlocks(noteId));

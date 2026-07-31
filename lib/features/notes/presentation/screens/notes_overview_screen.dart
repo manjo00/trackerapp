@@ -31,6 +31,14 @@ class NotesOverviewScreen extends ConsumerWidget {
             onTap: () => context.push('/notes/notebook/unfiled'),
           ),
           const SizedBox(height: 4),
+          // Reusable templates.
+          NotebookTile(
+            icon: '📄',
+            name: 'Templates',
+            color: cs.tertiary,
+            onTap: () => context.push('/notes/templates'),
+          ),
+          const SizedBox(height: 4),
           Padding(
             padding: const EdgeInsets.fromLTRB(4, 16, 0, 6),
             child: Text(

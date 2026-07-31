@@ -75,9 +75,48 @@ class NotebookDetailScreen extends ConsumerWidget {
   }
 
   Future<void> _createNote(BuildContext context, WidgetRef ref) async {
-    final int id = await ref
-        .read(notesDaoProvider)
-        .createNote(notebookId: notebookId, now: DateTime.now());
+    final dao = ref.read(notesDaoProvider);
+    final List<Note> templates =
+        ref.read(templatesProvider).valueOrNull ?? const [];
+
+    // No templates → straight to a blank note (original behaviour).
+    if (templates.isEmpty) {
+      final int id =
+          await dao.createNote(notebookId: notebookId, now: DateTime.now());
+      if (context.mounted) context.push('/notes/$id');
+      return;
+    }
+
+    // Otherwise offer Blank or a template. -1 = blank.
+    final int? pick = await showModalBottomSheet<int>(
+      context: context,
+      builder: (c) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.note_add_rounded),
+              title: const Text('Blank note'),
+              onTap: () => Navigator.of(c).pop(-1),
+            ),
+            const Divider(height: 1),
+            for (final Note t in templates)
+              ListTile(
+                leading: const Icon(Icons.dashboard_customize_rounded),
+                title: Text(
+                    t.title.trim().isEmpty ? 'Untitled template' : t.title),
+                onTap: () => Navigator.of(c).pop(t.id),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (pick == null) return; // cancelled
+
+    final int id = pick == -1
+        ? await dao.createNote(notebookId: notebookId, now: DateTime.now())
+        : await ref.read(notesRepositoryProvider).newNoteFromTemplate(pick,
+            notebookId: notebookId, now: DateTime.now());
     if (context.mounted) context.push('/notes/$id');
   }
 
