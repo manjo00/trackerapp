@@ -71,6 +71,22 @@ class ImageStorageService {
     return newName;
   }
 
+  /// Copies the file backing [filename] to a fresh filename (returned), so a
+  /// copied photo block owns its own file (never shares one with its template
+  /// or source). Returns [filename] unchanged if the source is missing.
+  Future<String> duplicate(String filename) async {
+    final Directory dir = await _dir();
+    final File src = File(p.join(dir.path, filename));
+    if (!await src.exists()) return filename;
+    final String ext = p.extension(filename).replaceFirst('.', '');
+    final String newName = buildImageFilename(
+      seed: DateTime.now().microsecondsSinceEpoch,
+      extension: ext.isEmpty ? 'jpg' : ext,
+    );
+    await src.copy(p.join(dir.path, newName));
+    return newName;
+  }
+
   /// Absolute path for a stored [filename] (for `Image.file`).
   Future<String> resolvePath(String filename) async {
     final Directory dir = await _dir();

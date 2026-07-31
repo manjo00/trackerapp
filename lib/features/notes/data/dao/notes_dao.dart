@@ -71,7 +71,8 @@ class NotesDao extends DatabaseAccessor<AppDatabase> with _$NotesDaoMixin {
   /// Active notes in a notebook (or Unfiled when [notebookId] is null),
   /// most-recently-edited first.
   Stream<List<Note>> watchNotes(int? notebookId) {
-    final query = select(notes)..where((n) => n.archivedAt.isNull());
+    final query = select(notes)
+      ..where((n) => n.archivedAt.isNull() & n.isTemplate.equals(false));
     if (notebookId == null) {
       query.where((n) => n.notebookId.isNull());
     } else {
@@ -81,15 +82,25 @@ class NotesDao extends DatabaseAccessor<AppDatabase> with _$NotesDaoMixin {
     return query.watch();
   }
 
+  /// Active templates (isTemplate = true), most-recently-edited first.
+  Stream<List<Note>> watchTemplates() => (select(notes)
+        ..where((n) => n.archivedAt.isNull() & n.isTemplate.equals(true))
+        ..orderBy([(n) => OrderingTerm.desc(n.updatedAt)]))
+      .watch();
+
   /// One-shot fetch of a single note (used to seed the editor's title field).
   Future<Note?> getNote(int id) =>
       (select(notes)..where((n) => n.id.equals(id))).getSingleOrNull();
 
-  Future<int> createNote({int? notebookId, required DateTime now}) =>
+  Future<int> createNote(
+          {int? notebookId,
+          bool isTemplate = false,
+          required DateTime now}) =>
       into(notes).insert(NotesCompanion.insert(
         notebookId: Value(notebookId),
         createdAt: now,
         updatedAt: now,
+        isTemplate: Value(isTemplate),
       ));
 
   Future<void> updateNoteTitle(int id, String title, DateTime now) =>
@@ -114,7 +125,9 @@ class NotesDao extends DatabaseAccessor<AppDatabase> with _$NotesDaoMixin {
     final maxUpdated = notes.updatedAt.max();
     final query = selectOnly(notes)
       ..addColumns([notes.notebookId, maxUpdated])
-      ..where(notes.archivedAt.isNull() & notes.notebookId.isNotNull())
+      ..where(notes.archivedAt.isNull() &
+          notes.notebookId.isNotNull() &
+          notes.isTemplate.equals(false))
       ..groupBy([notes.notebookId]);
     return query.watch().map((rows) {
       final Map<int, DateTime> out = {};
@@ -182,6 +195,35 @@ class NotesDao extends DatabaseAccessor<AppDatabase> with _$NotesDaoMixin {
           content: Value(content),
           orderIndex: Value(afterOrderIndex + 1),
         ));
+      });
+
+  /// Inserts [companions] (each already carrying every field) starting at
+  /// [atOrderIndex], shifting existing blocks at/after that index down by the
+  /// batch size — one transaction. Used to instantiate / insert a template.
+  /// The noteId and orderIndex of each companion are overwritten here.
+  Future<void> insertBlocksAt(
+    int noteId,
+    int atOrderIndex,
+    List<NoteBlocksCompanion> companions,
+  ) =>
+      transaction(() async {
+        final int n = companions.length;
+        if (n == 0) return;
+        final List<NoteBlock> after = await (select(noteBlocks)
+              ..where((b) =>
+                  b.noteId.equals(noteId) &
+                  b.orderIndex.isBiggerOrEqualValue(atOrderIndex)))
+            .get();
+        for (final NoteBlock b in after) {
+          await (update(noteBlocks)..where((r) => r.id.equals(b.id)))
+              .write(NoteBlocksCompanion(orderIndex: Value(b.orderIndex + n)));
+        }
+        for (int i = 0; i < n; i++) {
+          await into(noteBlocks).insert(companions[i].copyWith(
+            noteId: Value(noteId),
+            orderIndex: Value(atOrderIndex + i),
+          ));
+        }
       });
 
   Future<void> updateBlockContent(int id, String content) =>

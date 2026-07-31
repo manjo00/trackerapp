@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:image_picker/image_picker.dart';
 
 import '../../../../core/database/app_database.dart';
@@ -57,6 +58,72 @@ class NotesRepository {
     }
     await _dao.deleteBlock(block.id);
     await _dao.touchNote(block.noteId, now);
+  }
+
+  // ── Templates ─────────────────────────────────────────────────────────────
+
+  /// Builds companions for every block of [fromNoteId] in order, duplicating
+  /// photo files so a copy never shares an image with its source. noteId /
+  /// orderIndex are placeholders — [NotesDao.insertBlocksAt] overwrites them.
+  Future<List<NoteBlocksCompanion>> _copyCompanions(int fromNoteId) async {
+    final List<NoteBlock> src = await _dao.getBlocks(fromNoteId)
+      ..sort((a, b) => a.orderIndex.compareTo(b.orderIndex));
+    final List<NoteBlocksCompanion> out = [];
+    for (final NoteBlock b in src) {
+      String? content = b.content;
+      if (b.type == NoteBlockType.photo.storageKey &&
+          content != null &&
+          content.isNotEmpty) {
+        content = await _images.duplicate(content);
+      }
+      out.add(NoteBlocksCompanion.insert(
+        noteId: 0,
+        type: b.type,
+        content: Value(content),
+        checked: Value(b.checked),
+        orderIndex: const Value(0),
+        headingLevel: Value(b.headingLevel),
+        highlighted: Value(b.highlighted),
+        bold: Value(b.bold),
+        italic: Value(b.italic),
+      ));
+    }
+    return out;
+  }
+
+  /// Saves an existing note as a new template (title + all blocks, photos
+  /// duplicated). Returns the new template's id.
+  Future<int> saveAsTemplate(int noteId, {required DateTime now}) async {
+    final Note? src = await _dao.getNote(noteId);
+    final int tmpl = await _dao.createNote(now: now, isTemplate: true);
+    if (src != null && src.title.isNotEmpty) {
+      await _dao.updateNoteTitle(tmpl, src.title, now);
+    }
+    await _dao.insertBlocksAt(tmpl, 0, await _copyCompanions(noteId));
+    return tmpl;
+  }
+
+  /// Creates a new ordinary note in [notebookId] from a template (title +
+  /// blocks, photos duplicated). Returns the new note's id.
+  Future<int> newNoteFromTemplate(int templateId,
+      {int? notebookId, required DateTime now}) async {
+    final Note? t = await _dao.getNote(templateId);
+    final int note = await _dao.createNote(notebookId: notebookId, now: now);
+    if (t != null && t.title.isNotEmpty) {
+      await _dao.updateNoteTitle(note, t.title, now);
+    }
+    await _dao.insertBlocksAt(note, 0, await _copyCompanions(templateId));
+    return note;
+  }
+
+  /// Inserts a template's blocks into an existing note, after [afterOrderIndex]
+  /// (photos duplicated). Pass -1 to insert at the very top.
+  Future<void> insertTemplateInto(
+      int templateId, int targetNoteId, int afterOrderIndex,
+      {required DateTime now}) async {
+    await _dao.insertBlocksAt(
+        targetNoteId, afterOrderIndex + 1, await _copyCompanions(templateId));
+    await _dao.touchNote(targetNoteId, now);
   }
 
   /// Deletes a note and every image file its photo blocks referenced (gather

@@ -22,4 +22,9 @@ class Notes extends Table {
 
   /// NULL = active; non-null = archived.
   DateTimeColumn get archivedAt => dateTime().nullable()();
+
+  /// True = a reusable template (hidden from notebooks; lives in the Templates
+  /// area). Its blocks are copied into a new/target note when "used". Templates
+  /// carry notebookId NULL. Default false = an ordinary note.
+  BoolColumn get isTemplate => boolean().withDefault(const Constant(false))();
 }
