@@ -80,6 +80,29 @@ persistent tiny grip that doesn't clutter.
   move its whole collapsed section (pairs with A7). Prototype (a) or (c).
   Reuse `reorderBlocks` / `insertBlocksAt`.
 
+### A9. Side-by-side blocks (columns), not only stacked  ·  L
+Let blocks sit **next to each other**, not just under each other — e.g. two bed
+cards in a row, a photo beside its notes, or two checklists side by side. Big
+layout upgrade for dense clinical notes.
+- The block model is 1-D today (`orderIndex` only). Two shapes to consider:
+  - **(a) Row container**: a `row`/`columns` container block holding N child
+    blocks rendered in a `Row`, each child a mini vertical stack. Cleanest
+    mental model; biggest change (nested blocks → the editor, reorder, copy,
+    backup all learn about children).
+  - **(b) Column index on blocks**: add `columnIndex` (+ a `rowGroup` id) to
+    `note_blocks`; consecutive blocks sharing a rowGroup render in a `Row`,
+    laid out by `columnIndex`. Less nesting, but ordering/reorder logic gets
+    fiddly (2-D within a group).
+  - MVP could cap it at **2 columns** and a "split this line into two columns"
+    action, expanding later.
+- Responsive: on a narrow phone, wide rows may need to **wrap/stack** (a Wrap or
+  a breakpoint) so nothing overflows. Pairs with **D1 (photo gallery)** — a row
+  of photos is a special case of this.
+- Interaction: drag a block **onto the side** of another to pair them; drag out
+  to unpair. Needs a clear affordance.
+- Sizeable (schema + editor + rendering + reorder + backup + copy-for-templates
+  all touched) — its own brainstorm → spec → plan when picked.
+
 ---
 
 ## B. Brainstormed — findability & organisation
