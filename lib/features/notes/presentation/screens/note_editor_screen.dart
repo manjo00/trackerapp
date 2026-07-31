@@ -85,10 +85,29 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
   int get _nextOrder =>
       ref.read(noteBlocksProvider(widget.noteId)).valueOrNull?.length ?? 0;
 
+  /// The block the toolbar's add actions should insert after (the focused
+  /// line), or null to append at the end.
+  NoteBlock? _addAnchor() {
+    if (_focusedBlockId == null) return null;
+    final List<NoteBlock> blocks =
+        ref.read(noteBlocksProvider(widget.noteId)).valueOrNull ?? const [];
+    return blocks.where((b) => b.id == _focusedBlockId).firstOrNull;
+  }
+
   Future<void> _addBlock(NoteBlockType type) async {
     final dao = ref.read(notesDaoProvider);
-    final int id = await dao.addBlock(
-        noteId: widget.noteId, type: type, content: '', orderIndex: _nextOrder);
+    final NoteBlock? anchor = _addAnchor();
+    final int id = anchor != null
+        ? await dao.insertBlockAfter(
+            noteId: widget.noteId,
+            type: type,
+            content: '',
+            afterOrderIndex: anchor.orderIndex)
+        : await dao.addBlock(
+            noteId: widget.noteId,
+            type: type,
+            content: '',
+            orderIndex: _nextOrder);
     await dao.touchNote(widget.noteId, DateTime.now());
     if (mounted) setState(() => _focusRequestId = id);
   }
@@ -223,14 +242,23 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
       },
       child: Scaffold(
         appBar: _editingLines ? _editAppBar() : _normalAppBar(blocks),
-        body: _editingLines ? _editLinesBody(blocks) : _editorBody(blocks),
-        bottomNavigationBar: _editingLines ? null : _bottomBar(blocks),
+        // Toolbar lives at the bottom of the BODY (not bottomNavigationBar) so
+        // it rides directly on top of the keyboard and is never hidden by it.
+        body: _editingLines
+            ? _editLinesBody(blocks)
+            : Column(
+                children: [
+                  Expanded(child: _editorBody(blocks)),
+                  _bottomBar(blocks),
+                ],
+              ),
       ),
     );
   }
 
-  /// The formatting bar when a text/checkbox line is focused, else the
-  /// add-block bar. Wrapped so a live but deleted focused id falls back safely.
+  /// The keyboard-accessory toolbar: a format row (only while a text/checkbox
+  /// line is focused) stacked over an always-present add row. Wrapped in a
+  /// [TextFieldTapRegion] so tapping it never unfocuses the active line.
   Widget _bottomBar(List<NoteBlock> blocks) {
     final NoteBlock? focused = _focusedBlockId == null
         ? null
@@ -239,37 +267,69 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
         focused == null ? null : NoteBlockType.parse(focused.type);
     final bool formattable =
         kind == NoteBlockType.text || kind == NoteBlockType.checkbox;
-
-    if (!formattable) {
-      return _BlockToolbar(
-        onText: () => _addBlock(NoteBlockType.text),
-        onCheckbox: () => _addBlock(NoteBlockType.checkbox),
-        onPhoto: _addPhoto,
-        onDivider: _addDividerBlock,
-      );
-    }
-
     final dao = ref.read(notesDaoProvider);
-    return _FormatBar(
-      block: focused!,
-      isText: kind == NoteBlockType.text,
-      onHeading: (level) => dao.setBlockFormat(focused.id, headingLevel: level),
-      onBold: () => dao.setBlockFormat(focused.id, bold: !focused.bold),
-      onItalic: () => dao.setBlockFormat(focused.id, italic: !focused.italic),
-      onHighlight: () =>
-          dao.setBlockFormat(focused.id, highlighted: !focused.highlighted),
+    final ColorScheme cs = Theme.of(context).colorScheme;
+
+    return TextFieldTapRegion(
+      child: Material(
+        elevation: 8,
+        color: Theme.of(context).colorScheme.surface,
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (formattable) ...[
+                _FormatRow(
+                  block: focused!,
+                  isText: kind == NoteBlockType.text,
+                  onHeading: (level) =>
+                      dao.setBlockFormat(focused.id, headingLevel: level),
+                  onBold: () =>
+                      dao.setBlockFormat(focused.id, bold: !focused.bold),
+                  onItalic: () =>
+                      dao.setBlockFormat(focused.id, italic: !focused.italic),
+                  onHighlight: () => dao.setBlockFormat(focused.id,
+                      highlighted: !focused.highlighted),
+                ),
+                Divider(height: 1, thickness: 1, color: cs.outlineVariant),
+              ],
+              _AddRow(
+                onText: () => _addBlock(NoteBlockType.text),
+                onCheckbox: () => _addBlock(NoteBlockType.checkbox),
+                onPhoto: _addPhoto,
+                onDivider: _addDividerBlock,
+                onTemplate: _pickTemplateToInsert,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
   Future<void> _addDividerBlock() async {
     final dao = ref.read(notesDaoProvider);
-    await dao.addBlock(
-        noteId: widget.noteId,
-        type: NoteBlockType.divider,
-        content: null,
-        orderIndex: _nextOrder);
+    final NoteBlock? anchor = _addAnchor();
+    if (anchor != null) {
+      await dao.insertBlockAfter(
+          noteId: widget.noteId,
+          type: NoteBlockType.divider,
+          content: null,
+          afterOrderIndex: anchor.orderIndex);
+    } else {
+      await dao.addBlock(
+          noteId: widget.noteId,
+          type: NoteBlockType.divider,
+          content: null,
+          orderIndex: _nextOrder);
+    }
     await dao.touchNote(widget.noteId, DateTime.now());
   }
+
+  /// Insert a chosen template's blocks after the focused line (or at the end).
+  /// Filled in by the templates-UI task; a no-op until then.
+  Future<void> _pickTemplateToInsert() async {}
 
   // ---- Normal (clean) editor ------------------------------------------------
 
@@ -487,23 +547,27 @@ class _ManageRow extends StatelessWidget {
   }
 }
 
-class _BlockToolbar extends StatelessWidget {
-  const _BlockToolbar({
+/// The always-present add row: insert a Text / Checkbox / Photo / Divider block
+/// (after the focused line), or open the template picker.
+class _AddRow extends StatelessWidget {
+  const _AddRow({
     required this.onText,
     required this.onCheckbox,
     required this.onPhoto,
     required this.onDivider,
+    required this.onTemplate,
   });
 
   final VoidCallback onText;
   final VoidCallback onCheckbox;
   final VoidCallback onPhoto;
   final VoidCallback onDivider;
+  final VoidCallback onTemplate;
 
   @override
   Widget build(BuildContext context) {
-    return BottomAppBar(
-      height: 60,
+    return SizedBox(
+      height: 52,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
@@ -523,17 +587,20 @@ class _BlockToolbar extends StatelessWidget {
               tooltip: 'Divider',
               onPressed: onDivider,
               icon: const Icon(Icons.horizontal_rule_rounded)),
+          IconButton(
+              tooltip: 'Insert template',
+              onPressed: onTemplate,
+              icon: const Icon(Icons.dashboard_customize_rounded)),
         ],
       ),
     );
   }
 }
 
-/// The formatting bar shown while a text/checkbox line is focused. Wrapped in a
-/// [TextFieldTapRegion] so tapping a button does NOT unfocus the line — the bar
-/// stays put and formatting applies to the still-active line.
-class _FormatBar extends StatelessWidget {
-  const _FormatBar({
+/// The format row, shown above the add row while a text/checkbox line is
+/// focused. Cycles heading level (text only) and toggles bold/italic/highlight.
+class _FormatRow extends StatelessWidget {
+  const _FormatRow({
     required this.block,
     required this.isText,
     required this.onHeading,
@@ -568,25 +635,22 @@ class _FormatBar extends StatelessWidget {
           ),
         );
 
-    return TextFieldTapRegion(
-      child: BottomAppBar(
-        height: 60,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            if (isText)
-              TextButton.icon(
-                onPressed: () => onHeading((block.headingLevel + 1) % 4),
-                icon: const Icon(Icons.title_rounded, size: 20),
-                label: Text(_headingLabel(block.headingLevel)),
-              ),
-            toggle(Icons.format_bold_rounded, block.bold, onBold, 'Bold'),
-            toggle(
-                Icons.format_italic_rounded, block.italic, onItalic, 'Italic'),
-            toggle(Icons.highlight_rounded, block.highlighted, onHighlight,
-                'Highlight'),
-          ],
-        ),
+    return SizedBox(
+      height: 52,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          if (isText)
+            TextButton.icon(
+              onPressed: () => onHeading((block.headingLevel + 1) % 4),
+              icon: const Icon(Icons.title_rounded, size: 20),
+              label: Text(_headingLabel(block.headingLevel)),
+            ),
+          toggle(Icons.format_bold_rounded, block.bold, onBold, 'Bold'),
+          toggle(Icons.format_italic_rounded, block.italic, onItalic, 'Italic'),
+          toggle(Icons.highlight_rounded, block.highlighted, onHighlight,
+              'Highlight'),
+        ],
       ),
     );
   }
