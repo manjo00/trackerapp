@@ -127,6 +127,10 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
   }
 
   Future<void> _addPhoto() async {
+    // Capture the insert position NOW — the picker steals focus, which would
+    // otherwise clear _focusedBlockId before the photo comes back.
+    final NoteBlock? anchor = _addAnchor();
+    final int end = _nextOrder;
     final ImageSource? source = await showModalBottomSheet<ImageSource>(
       context: context,
       builder: (ctx) => SafeArea(
@@ -148,9 +152,13 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
       ),
     );
     if (source == null) return;
-    await ref
-        .read(notesRepositoryProvider)
-        .addPhotoBlock(widget.noteId, source, _nextOrder, now: DateTime.now());
+    await ref.read(notesRepositoryProvider).addPhotoBlock(
+          widget.noteId,
+          source,
+          afterOrderIndex: anchor?.orderIndex,
+          endOrderIndex: end,
+          now: DateTime.now(),
+        );
   }
 
   /// Deletes a single block (photo file cleaned up); its linked task, if any,
@@ -299,7 +307,6 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
                 onCheckbox: () => _addBlock(NoteBlockType.checkbox),
                 onPhoto: _addPhoto,
                 onDivider: _addDividerBlock,
-                onTemplate: _pickTemplateToInsert,
               ),
             ],
           ),
@@ -610,14 +617,12 @@ class _AddRow extends StatelessWidget {
     required this.onCheckbox,
     required this.onPhoto,
     required this.onDivider,
-    required this.onTemplate,
   });
 
   final VoidCallback onText;
   final VoidCallback onCheckbox;
   final VoidCallback onPhoto;
   final VoidCallback onDivider;
-  final VoidCallback onTemplate;
 
   @override
   Widget build(BuildContext context) {
@@ -642,10 +647,6 @@ class _AddRow extends StatelessWidget {
               tooltip: 'Divider',
               onPressed: onDivider,
               icon: const Icon(Icons.horizontal_rule_rounded)),
-          IconButton(
-              tooltip: 'Insert template',
-              onPressed: onTemplate,
-              icon: const Icon(Icons.dashboard_customize_rounded)),
         ],
       ),
     );

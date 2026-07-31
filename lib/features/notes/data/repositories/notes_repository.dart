@@ -19,22 +19,34 @@ class NotesRepository {
 
   NotesDao get dao => _dao;
 
-  /// Picks a photo and, if one was chosen, appends a photo block + bumps the
-  /// note's updatedAt. No-op when the user cancels the picker.
+  /// Picks a photo and, if one was chosen, inserts a photo block. When
+  /// [afterOrderIndex] is given the photo lands right after that block
+  /// (matching text/checkbox insert-after-cursor); otherwise it appends at
+  /// [endOrderIndex]. No-op when the user cancels the picker.
   Future<void> addPhotoBlock(
     int noteId,
-    ImageSource source,
-    int orderIndex, {
+    ImageSource source, {
+    int? afterOrderIndex,
+    required int endOrderIndex,
     required DateTime now,
   }) async {
     final String? filename = await _images.pickAndStore(source);
     if (filename == null) return; // cancelled
-    await _dao.addBlock(
-      noteId: noteId,
-      type: NoteBlockType.photo,
-      content: filename,
-      orderIndex: orderIndex,
-    );
+    if (afterOrderIndex != null) {
+      await _dao.insertBlockAfter(
+        noteId: noteId,
+        type: NoteBlockType.photo,
+        content: filename,
+        afterOrderIndex: afterOrderIndex,
+      );
+    } else {
+      await _dao.addBlock(
+        noteId: noteId,
+        type: NoteBlockType.photo,
+        content: filename,
+        orderIndex: endOrderIndex,
+      );
+    }
     await _dao.touchNote(noteId, now);
   }
 
