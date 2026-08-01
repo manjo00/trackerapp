@@ -24,4 +24,10 @@ class NoteBlocks extends Table {
   BoolColumn get highlighted => boolean().withDefault(const Constant(false))();
   BoolColumn get bold => boolean().withDefault(const Constant(false))();
   BoolColumn get italic => boolean().withDefault(const Constant(false))();
+
+  /// A7 (collapse under headings): true = this HEADING block's section is
+  /// folded in the editor. Meaningful only on heading text blocks
+  /// (headingLevel != 0); other block types ignore it. Default false → existing
+  /// notes open fully expanded (no backfill).
+  BoolColumn get collapsed => boolean().withDefault(const Constant(false))();
 }

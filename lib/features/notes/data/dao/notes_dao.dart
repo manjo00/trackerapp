@@ -254,6 +254,19 @@ class NotesDao extends DatabaseAccessor<AppDatabase> with _$NotesDaoMixin {
       (update(noteBlocks)..where((b) => b.id.equals(id)))
           .write(NoteBlocksCompanion(checked: Value(checked)));
 
+  /// A7: fold/unfold a single heading's section (persisted per block).
+  Future<void> setBlockCollapsed(int id, bool collapsed) =>
+      (update(noteBlocks)..where((b) => b.id.equals(id)))
+          .write(NoteBlocksCompanion(collapsed: Value(collapsed)));
+
+  /// A7 Collapse-all / Expand-all: flips every heading block in the note
+  /// (headingLevel != 0), leaving body / checkbox / photo / divider untouched.
+  Future<void> setAllHeadingsCollapsed(int noteId, bool collapsed) =>
+      (update(noteBlocks)
+            ..where((b) =>
+                b.noteId.equals(noteId) & b.headingLevel.isBiggerThanValue(0)))
+          .write(NoteBlocksCompanion(collapsed: Value(collapsed)));
+
   Future<void> deleteBlock(int id) =>
       (delete(noteBlocks)..where((b) => b.id.equals(id))).go();
 

@@ -156,4 +156,34 @@ void main() {
     expect(await dao.watchNotebooks().first, isEmpty);
     expect(await dao.watchNotes(nb).first, isEmpty);
   });
+
+  test('new blocks default to collapsed = false', () async {
+    final note = await dao.createNote(now: now);
+    final id = await dao.addBlock(
+        noteId: note, type: NoteBlockType.text, content: 'Bed 1', orderIndex: 0);
+    expect((await dao.getBlock(id))!.collapsed, isFalse);
+  });
+
+  test('setBlockCollapsed persists both ways', () async {
+    final note = await dao.createNote(now: now);
+    final id = await dao.addBlock(
+        noteId: note, type: NoteBlockType.text, content: 'Bed 1', orderIndex: 0);
+    await dao.setBlockCollapsed(id, true);
+    expect((await dao.getBlock(id))!.collapsed, isTrue);
+    await dao.setBlockCollapsed(id, false);
+    expect((await dao.getBlock(id))!.collapsed, isFalse);
+  });
+
+  test('setAllHeadingsCollapsed flips only heading blocks', () async {
+    final note = await dao.createNote(now: now);
+    final h = await dao.addBlock(
+        noteId: note, type: NoteBlockType.text, content: 'H', orderIndex: 0);
+    await dao.setBlockFormat(h, headingLevel: 1);
+    final body = await dao.addBlock(
+        noteId: note, type: NoteBlockType.text, content: 'x', orderIndex: 1);
+
+    await dao.setAllHeadingsCollapsed(note, true);
+    expect((await dao.getBlock(h))!.collapsed, isTrue);
+    expect((await dao.getBlock(body))!.collapsed, isFalse); // body untouched
+  });
 }

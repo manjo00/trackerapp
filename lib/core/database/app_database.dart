@@ -118,7 +118,7 @@ class AppDatabase extends _$AppDatabase {
   ///        tasks it holds). Both CASCADE, so deleting a note/line deletes its
   ///        auto-created task and list.
   @override
-  int get schemaVersion => 18;
+  int get schemaVersion => 19;
 
   /// The old vs. new default rotation-label colour (see v8 migration).
   static const int _oldRotationColor = 0xFFFFB347;
@@ -250,6 +250,11 @@ class AppDatabase extends _$AppDatabase {
             // Note templates: a flag on notes. Existing notes stay isTemplate
             // = false (ordinary notes) — nothing to backfill.
             await m.addColumn(notes, notes.isTemplate);
+          }
+          if (from < 19) {
+            // A7 (collapse under headings): per-heading fold state. Default
+            // false → existing notes open fully expanded, nothing to backfill.
+            await m.addColumn(noteBlocks, noteBlocks.collapsed);
           }
         },
         beforeOpen: (details) async {
