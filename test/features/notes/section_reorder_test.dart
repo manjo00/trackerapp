@@ -16,6 +16,7 @@ NoteBlock _b(int id,
       bold: false,
       italic: false,
       collapsed: collapsed,
+      indent: 0,
     );
 
 void main() {

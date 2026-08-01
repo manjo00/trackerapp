@@ -15,6 +15,7 @@ NoteBlock _b(int id, {String type = 'text', int heading = 0, String content = 't
       bold: false,
       italic: false,
       collapsed: false,
+      indent: 0,
     );
 
 void main() {

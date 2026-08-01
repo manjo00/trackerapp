@@ -118,7 +118,7 @@ class AppDatabase extends _$AppDatabase {
   ///        tasks it holds). Both CASCADE, so deleting a note/line deletes its
   ///        auto-created task and list.
   @override
-  int get schemaVersion => 19;
+  int get schemaVersion => 20;
 
   /// The old vs. new default rotation-label colour (see v8 migration).
   static const int _oldRotationColor = 0xFFFFB347;
@@ -255,6 +255,45 @@ class AppDatabase extends _$AppDatabase {
             // A7 (collapse under headings): per-heading fold state. Default
             // false → existing notes open fully expanded, nothing to backfill.
             await m.addColumn(noteBlocks, noteBlocks.collapsed);
+          }
+          if (from < 20) {
+            // Drag engine: store each block's outline depth explicitly. Backfill
+            // from the OLD derived rule (a heading sits at its ancestors' depth;
+            // a line sits under all open headings) so existing notes look the
+            // same after upgrade.
+            await m.addColumn(noteBlocks, noteBlocks.indent);
+            final rows = await customSelect(
+              'SELECT id, note_id, type, heading_level FROM note_blocks '
+              'ORDER BY note_id, order_index',
+            ).get();
+            int? currentNote;
+            final List<int> stack = [];
+            for (final row in rows) {
+              final int note = row.read<int>('note_id');
+              if (note != currentNote) {
+                currentNote = note;
+                stack.clear();
+              }
+              final String type = row.read<String>('type');
+              final int level = row.read<int>('heading_level');
+              final bool isHeading = type == 'text' && level != 0;
+              int depth;
+              if (isHeading) {
+                while (stack.isNotEmpty && stack.last >= level) {
+                  stack.removeLast();
+                }
+                depth = stack.length;
+                stack.add(level);
+              } else {
+                depth = stack.length;
+              }
+              if (depth != 0) {
+                await customStatement(
+                  'UPDATE note_blocks SET indent = ? WHERE id = ?',
+                  [depth, row.read<int>('id')],
+                );
+              }
+            }
           }
         },
         beforeOpen: (details) async {

@@ -23,6 +23,7 @@ NoteBlock _b(
       bold: false,
       italic: false,
       collapsed: collapsed,
+      indent: 0,
     );
 
 void main() {

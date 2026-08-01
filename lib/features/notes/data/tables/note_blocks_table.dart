@@ -30,4 +30,11 @@ class NoteBlocks extends Table {
   /// (headingLevel != 0); other block types ignore it. Default false → existing
   /// notes open fully expanded (no backfill).
   BoolColumn get collapsed => boolean().withDefault(const Constant(false))();
+
+  /// Outline depth (drag engine): 0 = top-level, +1 per bed it's nested in.
+  /// The single source of truth for indentation AND section membership (a
+  /// heading at indent d owns following blocks with indent > d until a block
+  /// with indent <= d). Backfilled from the old derived depth on upgrade, so
+  /// existing notes look unchanged. Independent of headingLevel (font size).
+  IntColumn get indent => integer().withDefault(const Constant(0))();
 }
