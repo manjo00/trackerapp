@@ -7,6 +7,11 @@ import '../../../../core/database/app_database.dart';
 import '../providers/notes_providers.dart';
 import '../screens/photo_view_screen.dart';
 
+/// Max inline height for a note photo (A1). Taller images are scaled down
+/// (aspect kept, no crop) so no single photo dominates the scroll; tapping
+/// opens the full-resolution image full-screen. Tunable on device.
+const double kNotePhotoMaxHeight = 220;
+
 /// Renders a photo block inline: the image (tap → full-screen) with a remove
 /// button, or a tidy "unavailable" placeholder when the file is gone (e.g.
 /// after a restore on a fresh device — the JSON backup carries no image bytes).
@@ -53,10 +58,14 @@ class PhotoBlockView extends ConsumerWidget {
                             builder: (_) => PhotoViewScreen(path: path),
                           ),
                         ),
-                        child: Image.file(
-                          File(path),
-                          width: double.infinity,
-                          fit: BoxFit.fitWidth,
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(
+                              maxHeight: kNotePhotoMaxHeight),
+                          child: Image.file(
+                            File(path),
+                            width: double.infinity,
+                            fit: BoxFit.contain,
+                          ),
                         ),
                       )
                     : Container(
