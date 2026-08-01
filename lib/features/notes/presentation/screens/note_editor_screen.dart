@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../../core/database/app_database.dart';
 import '../../data/models/note_block_type.dart';
 import '../../domain/block_label.dart';
+import '../../domain/section_fold.dart';
 import '../providers/notes_providers.dart';
 import '../widgets/checkbox_block_view.dart';
 import '../widgets/divider_block_view.dart';
@@ -387,12 +388,22 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
   // ---- Normal (clean) editor ------------------------------------------------
 
   AppBar _normalAppBar(List<NoteBlock> blocks) {
+    final bool hasHeading = blocks.any((b) =>
+        NoteBlockType.parse(b.type) == NoteBlockType.text &&
+        b.headingLevel != 0);
     return AppBar(
       title: const Text('Note'),
       actions: [
         PopupMenuButton<String>(
-          onSelected: (v) {
+          onSelected: (v) async {
+            final dao = ref.read(notesDaoProvider);
             switch (v) {
+              case 'collapse_all':
+                await dao.setAllHeadingsCollapsed(widget.noteId, true);
+                await dao.touchNote(widget.noteId, DateTime.now());
+              case 'expand_all':
+                await dao.setAllHeadingsCollapsed(widget.noteId, false);
+                await dao.touchNote(widget.noteId, DateTime.now());
               case 'reorder':
                 setState(() => _editingLines = true);
               case 'insert_template':
@@ -404,6 +415,12 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
             }
           },
           itemBuilder: (context) => [
+            if (hasHeading) ...[
+              const PopupMenuItem(
+                  value: 'collapse_all', child: Text('Collapse all')),
+              const PopupMenuItem(
+                  value: 'expand_all', child: Text('Expand all')),
+            ],
             if (blocks.isNotEmpty)
               const PopupMenuItem(value: 'reorder', child: Text('Edit lines')),
             const PopupMenuItem(
@@ -419,6 +436,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
 
   Widget _editorBody(List<NoteBlock> blocks) {
     final ColorScheme cs = Theme.of(context).colorScheme;
+    final SectionFold fold = computeSectionFold(blocks);
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
       children: [
@@ -457,19 +475,36 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
           )
         else
           for (final NoteBlock b in blocks)
-            Padding(
-              key: ValueKey(b.id),
-              padding: const EdgeInsets.symmetric(vertical: 1),
-              child: _blockWidget(b),
-            ),
+            if (!fold.hiddenIds.contains(b.id))
+              Padding(
+                key: ValueKey(b.id),
+                padding: const EdgeInsets.symmetric(vertical: 1),
+                child: _blockWidget(b, fold),
+              ),
       ],
     );
   }
 
-  Widget _blockWidget(NoteBlock b) {
+  Widget _blockWidget(NoteBlock b, SectionFold fold) {
     final bool focusMe = b.id == _focusRequestId;
     switch (NoteBlockType.parse(b.type)) {
       case NoteBlockType.text:
+        if (b.headingLevel != 0) {
+          return _HeadingLine(
+            block: b,
+            hiddenCount: fold.hiddenCountByHeadingId[b.id] ?? 0,
+            autofocus: focusMe,
+            onToggle: () async {
+              final dao = ref.read(notesDaoProvider);
+              await dao.setBlockCollapsed(b.id, !b.collapsed);
+              await dao.touchNote(b.noteId, DateTime.now());
+            },
+            onSplit: (after) => _splitBlock(b, after),
+            onDeleteEmpty: () => _deleteBlock(b),
+            onFocus: (id) => setState(() => _focusedBlockId = id),
+            onBlur: () => setState(() => _focusedBlockId = null),
+          );
+        }
         return TextBlockView(
           block: b,
           autofocus: focusMe,
@@ -708,6 +743,74 @@ class _FormatRow extends StatelessWidget {
               'Highlight'),
         ],
       ),
+    );
+  }
+}
+
+/// A heading row: a fold caret in the left gutter + the editable heading field,
+/// with a muted "· N hidden" when the section is folded. Tapping the caret
+/// folds/unfolds; tapping the text edits it (the caret avoids the tap conflict
+/// between "toggle fold" and "place the caret to edit").
+class _HeadingLine extends StatelessWidget {
+  const _HeadingLine({
+    required this.block,
+    required this.hiddenCount,
+    required this.onToggle,
+    this.autofocus = false,
+    this.onSplit,
+    this.onDeleteEmpty,
+    this.onFocus,
+    this.onBlur,
+  });
+
+  final NoteBlock block;
+  final int hiddenCount;
+  final VoidCallback onToggle;
+  final bool autofocus;
+  final void Function(String after)? onSplit;
+  final VoidCallback? onDeleteEmpty;
+  final void Function(int blockId)? onFocus;
+  final VoidCallback? onBlur;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme cs = Theme.of(context).colorScheme;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 6, right: 2),
+          child: InkResponse(
+            onTap: onToggle,
+            radius: 20,
+            child: Icon(
+              block.collapsed
+                  ? Icons.chevron_right_rounded
+                  : Icons.expand_more_rounded,
+              color: cs.onSurface.withAlpha(140),
+            ),
+          ),
+        ),
+        Expanded(
+          child: TextBlockView(
+            block: block,
+            autofocus: autofocus,
+            onSplit: onSplit,
+            onDeleteEmpty: onDeleteEmpty,
+            onFocus: onFocus,
+            onBlur: onBlur,
+          ),
+        ),
+        if (block.collapsed && hiddenCount > 0)
+          Padding(
+            padding: const EdgeInsets.only(top: 10, left: 4),
+            child: Text(
+              '· $hiddenCount hidden',
+              style:
+                  TextStyle(fontSize: 12, color: cs.onSurface.withAlpha(130)),
+            ),
+          ),
+      ],
     );
   }
 }
