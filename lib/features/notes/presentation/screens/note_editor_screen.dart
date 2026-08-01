@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../data/models/note_block_type.dart';
+import '../../domain/note_outline.dart';
 import '../../domain/note_text_style.dart';
 import '../../domain/section_fold.dart';
 import '../../domain/section_reorder.dart';
@@ -204,11 +205,11 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     if (mounted) Navigator.of(context).pop();
   }
 
-  void _onArrangeReorder(List<NoteBlock> blocks, int oldIndex, int newIndex) {
-    // onReorderItem gives newIndex already adjusted for the removed item. When a
-    // heading is dragged its whole section travels with it (reorderWithSections);
-    // a line dropped elsewhere is re-parented by where it lands.
-    final List<int> ids = reorderWithSections(blocks, oldIndex, newIndex);
+  void _onArrangeReorder(
+      List<NoteBlock> blocks, Set<int> hiddenIds, int oldIndex, int newIndex) {
+    // Move within the VISIBLE tiles: a folded heading carries its hidden section,
+    // and a line dropped elsewhere is re-parented by where it lands.
+    final List<int> ids = reorderVisible(blocks, hiddenIds, oldIndex, newIndex);
     ref.read(notesDaoProvider).reorderBlocks(ids);
   }
 
@@ -444,6 +445,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
   Widget _editorBody(List<NoteBlock> blocks) {
     final ColorScheme cs = Theme.of(context).colorScheme;
     final SectionFold fold = computeSectionFold(blocks);
+    final Map<int, int> depths = blockDepths(blocks);
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
       children: [
@@ -483,10 +485,19 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
         else
           for (final NoteBlock b in blocks)
             if (!fold.hiddenIds.contains(b.id))
-              Padding(
+              Directionality(
                 key: ValueKey(b.id),
-                padding: const EdgeInsets.symmetric(vertical: 1),
-                child: _blockWidget(b, fold),
+                textDirection: lineStartsRtl(b.content ?? '')
+                    ? TextDirection.rtl
+                    : TextDirection.ltr,
+                child: Padding(
+                  padding: EdgeInsetsDirectional.only(
+                    start: (depths[b.id] ?? 0) * kNoteIndentStep,
+                    top: 1,
+                    bottom: 1,
+                  ),
+                  child: _blockWidget(b, fold),
+                ),
               ),
       ],
     );
@@ -559,6 +570,12 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
 
   Widget _arrangeBody(List<NoteBlock> blocks) {
     final ColorScheme cs = Theme.of(context).colorScheme;
+    final SectionFold fold = computeSectionFold(blocks);
+    final Map<int, int> depths = blockDepths(blocks);
+    final List<NoteBlock> visible = [
+      for (final NoteBlock b in blocks)
+        if (!fold.hiddenIds.contains(b.id)) b
+    ];
     return Column(
       children: [
         Padding(
@@ -570,8 +587,8 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  'Hold a line to drag · grab a heading to move its whole '
-                  'section · ⊖ to delete',
+                  'Hold a line to drag · fold a heading (▸) to move its whole '
+                  'bed · ⊖ to delete',
                   style:
                       TextStyle(fontSize: 12, color: cs.onSurface.withAlpha(140)),
                 ),
@@ -582,10 +599,18 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
         Expanded(
           child: ReorderableListView.builder(
             padding: const EdgeInsets.fromLTRB(16, 4, 8, 120),
-            itemCount: blocks.length,
+            itemCount: visible.length,
             // onReorderItem gives newIndex already adjusted for the removed item.
-            onReorderItem: (o, n) => _onArrangeReorder(blocks, o, n),
-            itemBuilder: (context, i) => _arrangeTile(blocks[i]),
+            onReorderItem: (o, n) =>
+                _onArrangeReorder(blocks, fold.hiddenIds, o, n),
+            itemBuilder: (context, i) {
+              final NoteBlock b = visible[i];
+              return _arrangeTile(
+                b,
+                depths[b.id] ?? 0,
+                fold.hiddenCountByHeadingId[b.id] ?? 0,
+              );
+            },
           ),
         ),
       ],
@@ -595,25 +620,54 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
   /// One arrange-mode row: the block rendered read-only (so it looks like the
   /// note, not a boxy list) plus a delete badge. The list handles hold-to-drag;
   /// a dragged heading carries its whole section (see [reorderWithSections]).
-  Widget _arrangeTile(NoteBlock b) {
+  Widget _arrangeTile(NoteBlock b, int depth, int hiddenCount) {
     final ColorScheme cs = Theme.of(context).colorScheme;
-    return Padding(
+    final bool isHeading =
+        NoteBlockType.parse(b.type) == NoteBlockType.text && b.headingLevel != 0;
+    return Directionality(
       key: ValueKey(b.id),
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 40),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Expanded(child: _arrangePreview(b)),
-            IconButton(
-              visualDensity: VisualDensity.compact,
-              icon: Icon(Icons.remove_circle_rounded,
-                  size: 22, color: cs.error.withAlpha(210)),
-              tooltip: 'Delete line',
-              onPressed: () => _deleteBlock(b),
-            ),
-          ],
+      textDirection:
+          lineStartsRtl(b.content ?? '') ? TextDirection.rtl : TextDirection.ltr,
+      child: Padding(
+        padding: EdgeInsetsDirectional.only(
+            start: depth * kNoteIndentStep, top: 2, bottom: 2),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              if (isHeading)
+                InkResponse(
+                  onTap: () async {
+                    final dao = ref.read(notesDaoProvider);
+                    await dao.setBlockCollapsed(b.id, !b.collapsed);
+                    await dao.touchNote(b.noteId, DateTime.now());
+                  },
+                  radius: 20,
+                  child: Icon(
+                    b.collapsed
+                        ? Icons.chevron_right_rounded
+                        : Icons.expand_more_rounded,
+                    color: cs.onSurface.withAlpha(140),
+                  ),
+                ),
+              Expanded(child: _arrangePreview(b)),
+              if (b.collapsed && hiddenCount > 0)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Text('· $hiddenCount',
+                      style: TextStyle(
+                          fontSize: 12, color: cs.onSurface.withAlpha(130))),
+                ),
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                icon: Icon(Icons.remove_circle_rounded,
+                    size: 22, color: cs.error.withAlpha(210)),
+                tooltip: 'Delete line',
+                onPressed: () => _deleteBlock(b),
+              ),
+            ],
+          ),
         ),
       ),
     );
