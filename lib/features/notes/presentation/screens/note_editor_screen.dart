@@ -1,11 +1,14 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../data/models/note_block_type.dart';
-import '../../domain/block_label.dart';
+import '../../domain/note_text_style.dart';
 import '../../domain/section_fold.dart';
+import '../../domain/section_reorder.dart';
 import '../providers/notes_providers.dart';
 import '../widgets/checkbox_block_view.dart';
 import '../widgets/divider_block_view.dart';
@@ -201,12 +204,11 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     if (mounted) Navigator.of(context).pop();
   }
 
-  void _onReorder(List<NoteBlock> blocks, int oldIndex, int newIndex) {
-    // onReorderItem gives newIndex already adjusted for the removed item.
-    if (oldIndex == newIndex) return;
-    final List<int> ids = blocks.map((b) => b.id).toList();
-    final int moved = ids.removeAt(oldIndex);
-    ids.insert(newIndex, moved);
+  void _onArrangeReorder(List<NoteBlock> blocks, int oldIndex, int newIndex) {
+    // onReorderItem gives newIndex already adjusted for the removed item. When a
+    // heading is dragged its whole section travels with it (reorderWithSections);
+    // a line dropped elsewhere is re-parented by where it lands.
+    final List<int> ids = reorderWithSections(blocks, oldIndex, newIndex);
     ref.read(notesDaoProvider).reorderBlocks(ids);
   }
 
@@ -250,11 +252,11 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
         }
       },
       child: Scaffold(
-        appBar: _editingLines ? _editAppBar() : _normalAppBar(blocks),
+        appBar: _editingLines ? _arrangeAppBar() : _normalAppBar(blocks),
         // Toolbar lives at the bottom of the BODY (not bottomNavigationBar) so
         // it rides directly on top of the keyboard and is never hidden by it.
         body: _editingLines
-            ? _editLinesBody(blocks)
+            ? _arrangeBody(blocks)
             : Column(
                 children: [
                   Expanded(child: _editorBody(blocks)),
@@ -394,6 +396,15 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     return AppBar(
       title: const Text('Note'),
       actions: [
+        if (blocks.isNotEmpty)
+          IconButton(
+            icon: const Icon(Icons.swap_vert_rounded),
+            tooltip: 'Rearrange',
+            onPressed: () {
+              FocusScope.of(context).unfocus();
+              setState(() => _editingLines = true);
+            },
+          ),
         PopupMenuButton<String>(
           onSelected: (v) async {
             final dao = ref.read(notesDaoProvider);
@@ -404,8 +415,6 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
               case 'expand_all':
                 await dao.setAllHeadingsCollapsed(widget.noteId, false);
                 await dao.touchNote(widget.noteId, DateTime.now());
-              case 'reorder':
-                setState(() => _editingLines = true);
               case 'insert_template':
                 _pickTemplateToInsert();
               case 'save_template':
@@ -421,8 +430,6 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
               const PopupMenuItem(
                   value: 'expand_all', child: Text('Expand all')),
             ],
-            if (blocks.isNotEmpty)
-              const PopupMenuItem(value: 'reorder', child: Text('Edit lines')),
             const PopupMenuItem(
                 value: 'insert_template', child: Text('Insert template')),
             const PopupMenuItem(
@@ -537,109 +544,187 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
 
   // ---- "Edit lines" mode (reorder + delete) ---------------------------------
 
-  AppBar _editAppBar() {
+  AppBar _arrangeAppBar() {
     return AppBar(
       leading: IconButton(
         icon: const Icon(Icons.check_rounded),
         tooltip: 'Done',
         onPressed: () => setState(() => _editingLines = false),
       ),
-      title: const Text('Edit lines'),
+      title: const Text('Arrange'),
     );
   }
 
-  Widget _editLinesBody(List<NoteBlock> blocks) {
+  // ---- In-place "Arrange" mode (clean-lift reorder + delete) ----------------
+
+  Widget _arrangeBody(List<NoteBlock> blocks) {
     final ColorScheme cs = Theme.of(context).colorScheme;
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
+          padding: const EdgeInsets.fromLTRB(20, 10, 20, 2),
           child: Row(
             children: [
-              Icon(Icons.drag_indicator_rounded,
-                  size: 16, color: cs.onSurface.withAlpha(120)),
+              Icon(Icons.open_with_rounded,
+                  size: 15, color: cs.onSurface.withAlpha(120)),
               const SizedBox(width: 6),
-              Text('Drag to reorder · tap the bin to delete',
+              Expanded(
+                child: Text(
+                  'Hold a line to drag · grab a heading to move its whole '
+                  'section · ⊖ to delete',
                   style:
-                      TextStyle(fontSize: 12, color: cs.onSurface.withAlpha(140))),
+                      TextStyle(fontSize: 12, color: cs.onSurface.withAlpha(140)),
+                ),
+              ),
             ],
           ),
         ),
         Expanded(
           child: ReorderableListView.builder(
-            padding: const EdgeInsets.fromLTRB(8, 4, 8, 24),
+            padding: const EdgeInsets.fromLTRB(16, 4, 8, 120),
             itemCount: blocks.length,
             // onReorderItem gives newIndex already adjusted for the removed item.
-            onReorderItem: (o, n) => _onReorder(blocks, o, n),
-            itemBuilder: (context, i) {
-              final NoteBlock b = blocks[i];
-              return _ManageRow(
-                key: ValueKey(b.id),
-                index: i,
-                block: b,
-                onDelete: () => _deleteBlock(b),
-              );
-            },
+            onReorderItem: (o, n) => _onArrangeReorder(blocks, o, n),
+            itemBuilder: (context, i) => _arrangeTile(blocks[i]),
           ),
         ),
       ],
     );
   }
-}
 
-/// A compact, non-editable row for "Edit lines" mode: type icon · one-line
-/// label · delete, with the whole tile draggable (long-press) to reorder.
-class _ManageRow extends StatelessWidget {
-  const _ManageRow({
-    required this.index,
-    required this.block,
-    required this.onDelete,
-    super.key,
-  });
-
-  final int index;
-  final NoteBlock block;
-  final VoidCallback onDelete;
-
-  IconData get _icon => switch (NoteBlockType.parse(block.type)) {
-        NoteBlockType.checkbox => Icons.check_box_outlined,
-        NoteBlockType.photo => Icons.photo_outlined,
-        NoteBlockType.divider => Icons.horizontal_rule_rounded,
-        NoteBlockType.text => Icons.notes_rounded,
-      };
-
-  @override
-  Widget build(BuildContext context) {
+  /// One arrange-mode row: the block rendered read-only (so it looks like the
+  /// note, not a boxy list) plus a delete badge. The list handles hold-to-drag;
+  /// a dragged heading carries its whole section (see [reorderWithSections]).
+  Widget _arrangeTile(NoteBlock b) {
     final ColorScheme cs = Theme.of(context).colorScheme;
-    return Card(
-      key: key,
-      margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
-      child: ListTile(
-        dense: true,
-        leading: Icon(_icon, size: 20, color: cs.onSurface.withAlpha(150)),
-        title: Text(
-          blockLabel(block),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
+    return Padding(
+      key: ValueKey(b.id),
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 40),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
+            Expanded(child: _arrangePreview(b)),
             IconButton(
               visualDensity: VisualDensity.compact,
-              icon: Icon(Icons.delete_outline_rounded,
-                  size: 20, color: cs.onSurface.withAlpha(150)),
+              icon: Icon(Icons.remove_circle_rounded,
+                  size: 22, color: cs.error.withAlpha(210)),
               tooltip: 'Delete line',
-              onPressed: onDelete,
-            ),
-            ReorderableDragStartListener(
-              index: index,
-              child: Icon(Icons.drag_handle_rounded,
-                  size: 22, color: cs.onSurface.withAlpha(120)),
+              onPressed: () => _deleteBlock(b),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  /// A read-only rendering of a block for arrange mode — same fonts/weights as
+  /// the live editor, but inert plain widgets, so a long-press starts a drag
+  /// instead of editing text.
+  Widget _arrangePreview(NoteBlock b) {
+    final ColorScheme cs = Theme.of(context).colorScheme;
+    switch (NoteBlockType.parse(b.type)) {
+      case NoteBlockType.divider:
+        return const DividerBlockView();
+      case NoteBlockType.photo:
+        return _arrangePhoto(b.content ?? '');
+      case NoteBlockType.checkbox:
+        final bool checked = b.checked;
+        final Widget row = Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(right: 10, top: 2, bottom: 2),
+              child: Container(
+                width: 22,
+                height: 22,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: checked ? cs.primary : Colors.transparent,
+                  border: Border.all(
+                    color: checked ? cs.primary : cs.onSurface.withAlpha(90),
+                    width: 2,
+                  ),
+                ),
+                child: checked
+                    ? Icon(Icons.check_rounded, size: 15, color: cs.onPrimary)
+                    : null,
+              ),
+            ),
+            Expanded(
+              child: Text(
+                b.content ?? '',
+                style: TextStyle(
+                  fontSize: 16,
+                  height: 1.45,
+                  fontWeight: b.bold ? FontWeight.w700 : FontWeight.w400,
+                  fontStyle: b.italic ? FontStyle.italic : FontStyle.normal,
+                  decoration: checked ? TextDecoration.lineThrough : null,
+                  color: checked ? cs.onSurface.withAlpha(120) : cs.onSurface,
+                ),
+              ),
+            ),
+          ],
+        );
+        return b.highlighted ? _highlightWrap(row, cs) : row;
+      case NoteBlockType.text:
+        final Widget t = Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Text(
+            b.content ?? '',
+            style: TextStyle(
+              fontSize: noteHeadingFontSize(b.headingLevel),
+              height: 1.4,
+              fontWeight: (b.headingLevel != 0 || b.bold)
+                  ? FontWeight.w700
+                  : FontWeight.w400,
+              fontStyle: b.italic ? FontStyle.italic : FontStyle.normal,
+              color: cs.onSurface,
+            ),
+          ),
+        );
+        return b.highlighted ? _highlightWrap(t, cs) : t;
+    }
+  }
+
+  Widget _highlightWrap(Widget child, ColorScheme cs) => Container(
+        decoration: BoxDecoration(
+          color: cs.tertiaryContainer.withAlpha(150),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 6),
+        child: child,
+      );
+
+  /// A compact, tap-inert photo thumbnail for arrange mode.
+  Widget _arrangePhoto(String filename) {
+    final ColorScheme cs = Theme.of(context).colorScheme;
+    final images = ref.read(imageStorageServiceProvider);
+    return FutureBuilder<String>(
+      future: images.resolvePath(filename),
+      builder: (context, snap) {
+        final String? path = snap.data;
+        if (path == null) return const SizedBox(height: 60);
+        final bool exists = filename.isNotEmpty && File(path).existsSync();
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: exists
+              ? ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 140),
+                  child: Image.file(File(path),
+                      width: double.infinity, fit: BoxFit.cover),
+                )
+              : Container(
+                  height: 60,
+                  width: double.infinity,
+                  color: cs.surfaceContainerHighest,
+                  alignment: Alignment.center,
+                  child: Icon(Icons.broken_image_outlined,
+                      color: cs.onSurface.withAlpha(120)),
+                ),
+        );
+      },
     );
   }
 }
