@@ -1,17 +1,20 @@
 import '../../../core/database/app_database.dart';
 import '../data/models/note_block_type.dart';
 
-bool _isCollapsedHeading(NoteBlock b) =>
-    NoteBlockType.parse(b.type) == NoteBlockType.text &&
-    b.headingLevel != 0 &&
-    b.collapsed;
+int _level(NoteBlock b) =>
+    NoteBlockType.parse(b.type) == NoteBlockType.text ? b.headingLevel : 0;
 
-/// The new full top-to-bottom block-id order after arrange-mode moves a VISIBLE
-/// tile from [visOld] to [visNew] (this project's `onReorderItem` pre-adjusted
-/// convention — removeAt then insert). Blocks hidden under a collapsed heading
-/// aren't shown as tiles; they travel with their heading, so folding a section
-/// and dragging its heading moves the whole thing. Expanded lines move alone and
-/// are re-parented by where they land (position decides the owning heading).
+bool _isCollapsedHeading(NoteBlock b) => _level(b) != 0 && b.collapsed;
+
+/// New full top-to-bottom block-id order after an arrange-mode move of the
+/// VISIBLE tile at [visOld] to [visNew] (this project's `onReorderItem`
+/// pre-adjusted convention — removeAt then insert).
+///
+/// A dragged heading carries its **whole bed**: an expanded heading takes the
+/// visible lines under it (until the next heading of the same or higher level);
+/// a collapsed heading takes its hidden lines. Dropping a heading inside its own
+/// section is a no-op (so it can't split). A plain line moves alone and is
+/// re-parented by where it lands.
 List<int> reorderVisible(
   List<NoteBlock> blocks,
   Set<int> hiddenIds,
@@ -29,23 +32,49 @@ List<int> reorderVisible(
     }
   }
 
-  final List<int> visible = [
+  final List<NoteBlock> visible = [
     for (final NoteBlock b in blocks)
-      if (!hiddenIds.contains(b.id)) b.id
+      if (!hiddenIds.contains(b.id)) b
   ];
-  if (visOld < 0 || visOld >= visible.length) {
-    return [for (final NoteBlock b in blocks) b.id];
+  final int n = visible.length;
+
+  // Re-expand a visible order back to the full order (hidden children follow
+  // their collapsed heading).
+  List<int> expand(List<int> order) {
+    final List<int> full = [];
+    for (final int id in order) {
+      full.add(id);
+      final List<int>? kids = childrenOf[id];
+      if (kids != null) full.addAll(kids);
+    }
+    return full;
   }
 
-  final int moved = visible.removeAt(visOld);
-  visible.insert(visNew.clamp(0, visible.length), moved);
+  final List<int> visIds = [for (final NoteBlock b in visible) b.id];
+  if (visOld < 0 || visOld >= n) return expand(visIds);
 
-  // Re-expand: each visible id, followed by its hidden children (if any).
-  final List<int> full = [];
-  for (final int id in visible) {
-    full.add(id);
-    final List<int>? kids = childrenOf[id];
-    if (kids != null) full.addAll(kids);
+  // Moving group in visible space: a heading takes its visible section; anything
+  // else is a single tile.
+  int g = 1;
+  final int lvl = _level(visible[visOld]);
+  if (lvl != 0) {
+    for (int j = visOld + 1; j < n; j++) {
+      final int jl = _level(visible[j]);
+      if (jl != 0 && jl <= lvl) break;
+      g++;
+    }
   }
-  return full;
+
+  // Dropping a group inside its own run is a no-op (prevents a heading splitting
+  // across its own lines).
+  if (visNew > visOld && visNew <= visOld + g - 1) return expand(visIds);
+
+  final List<int> group = visIds.sublist(visOld, visOld + g);
+  final List<int> rest = [...visIds]..removeRange(visOld, visOld + g);
+  // The framework computed visNew as if ONE tile moved; we moved g, so targets
+  // below the group shift left by (g-1).
+  int insert = visNew <= visOld ? visNew : visNew - (g - 1);
+  insert = insert.clamp(0, rest.length);
+  rest.insertAll(insert, group);
+  return expand(rest);
 }

@@ -54,4 +54,20 @@ void main() {
     // visible = [1,4]; move id4 above the collapsed bed (slot 0)
     expect(reorderVisible(blocks, hidden, 1, 0), [4, 1, 2, 3]);
   });
+
+  test('dragging an OPEN heading carries its whole bed (no split)', () {
+    final blocks = [
+      _b(1, heading: 1), _b(2), _b(3), // bed 1 (open)
+      _b(4, heading: 1), _b(5), // bed 2
+    ];
+    // move bed 1's heading (visible 0) to the end
+    expect(reorderVisible(blocks, {}, 0, 4), [4, 5, 1, 2, 3]);
+  });
+
+  test('dropping a heading inside its own bed is a no-op', () {
+    final blocks = [_b(1, heading: 1), _b(2), _b(3), _b(4, heading: 1)];
+    // try to drop the heading between its own lines → unchanged
+    expect(reorderVisible(blocks, {}, 0, 1), [1, 2, 3, 4]);
+    expect(reorderVisible(blocks, {}, 0, 2), [1, 2, 3, 4]);
+  });
 }
