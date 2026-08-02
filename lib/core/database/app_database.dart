@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import '../../features/habits/data/dao/habits_dao.dart';
 import '../../features/habits/data/tables/habit_completions_table.dart';
 import '../../features/habits/data/tables/habits_table.dart';
+import '../../features/home/data/tables/home_blocks_table.dart';
 import '../../features/notes/data/tables/note_blocks_table.dart';
 import '../../features/notes/data/tables/notebooks_table.dart';
 import '../../features/notes/data/tables/notes_table.dart';
@@ -77,6 +78,8 @@ part 'app_database.g.dart';
     Notebooks,
     Notes,
     NoteBlocks,
+    // ── Home dashboard blocks (v21) ──────────────────────────────────────────
+    HomeBlocks,
   ],
   daos: [HabitsDao, TasksDao, TrackersDao, WorkoutDao, ProgramDao, ShiftsDao],
 )
@@ -117,8 +120,17 @@ class AppDatabase extends _$AppDatabase {
   ///        that spawned it) + sourceNoteId on task_lists (the note whose "@time"
   ///        tasks it holds). Both CASCADE, so deleting a note/line deletes its
   ///        auto-created task and list.
+  /// v16 → per-list "auto-archive done tasks" flag on task_lists
+  /// v17 → block-level rich text: headingLevel/highlighted/bold/italic on
+  ///        note_blocks + the contentless 'divider' block type
+  /// v18 → note templates: isTemplate flag on notes
+  /// v19 → collapsible note sections: collapsed flag on note_blocks (A7)
+  /// v20 → stored outline depth: indent on note_blocks (drag engine), backfilled
+  ///        from the old derived depth
+  /// v21 → home_blocks table — the Home dashboard layout moves from prefs into
+  ///        the DB (per-block config + rides in backups)
   @override
-  int get schemaVersion => 20;
+  int get schemaVersion => 21;
 
   /// The old vs. new default rotation-label colour (see v8 migration).
   static const int _oldRotationColor = 0xFFFFB347;
@@ -294,6 +306,12 @@ class AppDatabase extends _$AppDatabase {
                 );
               }
             }
+          }
+          if (from < 21) {
+            // Home dashboard layout moves into the DB. The table starts empty;
+            // the provider layer seeds it once from the legacy prefs layout
+            // (prefs aren't reachable from inside a migration).
+            await m.createTable(homeBlocks);
           }
         },
         beforeOpen: (details) async {

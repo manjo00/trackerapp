@@ -116,6 +116,9 @@ class BackupService {
             rowsFor('shift_rotations').map(ShiftRotation.fromJson));
         b.insertAll(_db.muscleTargets,
             rowsFor('muscle_targets').map(MuscleTarget.fromJson));
+        // Home dashboard layout (v21) — FK-free, order doesn't matter.
+        b.insertAll(
+            _db.homeBlocks, rowsFor('home_blocks').map(HomeBlock.fromJson));
       });
     });
   }
@@ -148,5 +151,6 @@ class BackupService {
         _db.workShifts,
         _db.shiftRotations,
         _db.muscleTargets,
+        _db.homeBlocks,
       ];
 }

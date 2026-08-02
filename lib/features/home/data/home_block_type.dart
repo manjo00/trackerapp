@@ -11,7 +11,12 @@ enum HomeBlockType {
   captured,
   thisWeek,
   workout,
-  notes;
+  notes,
+
+  /// Renders one chosen note's content inline (v21). The only type that may
+  /// appear multiple times (different notes) and the first to carry per-block
+  /// config (`{"noteId": …}` in home_blocks.configJson).
+  pinnedNote;
 
   String get label => switch (this) {
         urgent => 'Urgent',
@@ -20,6 +25,7 @@ enum HomeBlockType {
         thisWeek => 'This week',
         workout => 'Workout',
         notes => 'Notes',
+        pinnedNote => 'Pinned note',
       };
 
   IconData get icon => switch (this) {
@@ -29,6 +35,7 @@ enum HomeBlockType {
         thisWeek => Icons.view_week_rounded,
         workout => Icons.fitness_center_rounded,
         notes => Icons.sticky_note_2_rounded,
+        pinnedNote => Icons.push_pin_rounded,
       };
 
   /// Shipped layout — the original blocks with workout then notes appended, so
