@@ -92,6 +92,18 @@ class NotesDao extends DatabaseAccessor<AppDatabase> with _$NotesDaoMixin {
   Future<Note?> getNote(int id) =>
       (select(notes)..where((n) => n.id.equals(id))).getSingleOrNull();
 
+  /// Live view of one note — null once it's deleted. Drives the Home
+  /// pinned-note block's title + "note gone" placeholder.
+  Stream<Note?> watchNote(int id) =>
+      (select(notes)..where((n) => n.id.equals(id))).watchSingleOrNull();
+
+  /// Every active, non-template note across all notebooks (newest-edited
+  /// first) — the pinned-note picker.
+  Stream<List<Note>> watchAllNotes() => (select(notes)
+        ..where((n) => n.archivedAt.isNull() & n.isTemplate.equals(false))
+        ..orderBy([(n) => OrderingTerm.desc(n.updatedAt)]))
+      .watch();
+
   Future<int> createNote(
           {int? notebookId,
           bool isTemplate = false,

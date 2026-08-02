@@ -2,21 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/settings/settings_provider.dart';
+import '../../../../core/database/app_database.dart';
 import '../../../tasks/data/models/task_model.dart';
 import '../../../tasks/presentation/providers/lists_providers.dart';
 import '../../../tasks/presentation/providers/tasks_providers.dart';
 import '../../../tasks/presentation/widgets/task_tile.dart';
+import '../../data/home_block_config.dart';
 import '../../data/home_block_type.dart';
+import '../providers/home_blocks_providers.dart';
 import '../widgets/notes_block.dart';
+import '../widgets/pinned_note_block.dart';
 import '../widgets/workout_block.dart';
 import 'edit_home_screen.dart';
 
 /// The app's landing dashboard.
 ///
-/// Renders the user's blocks in their chosen order (settings.homeBlocks).
-/// Long-press a block header to drag it into a new position; the ✎ button
-/// opens the Edit Home screen for add/remove/reorder with full controls.
+/// Renders the user's blocks in their chosen order (home_blocks rows, v21 —
+/// seeded once from the legacy prefs layout). Long-press a block header to
+/// drag it into a new position; the ✎ button opens the Edit Home screen for
+/// add/remove/reorder with full controls.
 ///
 /// Task de-dupe follows the USER'S order: walking the blocks top-down, a
 /// task appears only in the first block that claims it.
@@ -26,8 +30,14 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ColorScheme cs = Theme.of(context).colorScheme;
-    final List<HomeBlockType> layout =
-        ref.watch(settingsProvider.select((s) => s.homeBlocks));
+    // Rows whose type this build understands (unknown names from a newer
+    // build are skipped, never crashed on).
+    final List<(HomeBlock, HomeBlockType)> layout = [
+      for (final HomeBlock row
+          in ref.watch(homeBlockRowsProvider).valueOrNull ?? const <HomeBlock>[])
+        for (final HomeBlockType type in HomeBlockType.values)
+          if (type.name == row.type) (row, type)
+    ];
 
     // Task sources (watched up-front; cheap streams already running).
     final List<TaskModel> urgentAll = ref.watch(urgentTasksProvider);
@@ -51,7 +61,7 @@ class HomeScreen extends ConsumerWidget {
     // placeholder instead of vanishing (user feedback: the dashboard's
     // structure should stay put even on an empty day).
     final List<Widget> children = [];
-    for (final HomeBlockType type in layout) {
+    for (final (HomeBlock row, HomeBlockType type) in layout) {
       final Widget content = switch (type) {
         HomeBlockType.urgent =>
           _tasksOrEmpty(claim(urgentAll), 'Nothing urgent 🎉', cs),
@@ -62,16 +72,32 @@ class HomeScreen extends ConsumerWidget {
         HomeBlockType.thisWeek => _WeekCard(tasks: week),
         HomeBlockType.workout => const WorkoutBlock(),
         HomeBlockType.notes => const NotesBlock(),
+        HomeBlockType.pinnedNote => PinnedNoteBlock(row: row),
       };
 
+      // A pinned note's header shows the NOTE'S title, not the type label.
+      String? titleOverride;
+      if (type == HomeBlockType.pinnedNote) {
+        final int? noteId = pinnedNoteIdFromConfig(row.configJson);
+        final Note? note = noteId == null
+            ? null
+            : ref.watch(watchNoteProvider(noteId)).valueOrNull;
+        final String t = note?.title.trim() ?? '';
+        if (t.isNotEmpty) titleOverride = t;
+      }
+
       children.add(Column(
-        key: ValueKey(type),
+        key: ValueKey(row.id),
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Long-press the header to drag the whole block.
           ReorderableDelayedDragStartListener(
             index: children.length,
-            child: _BlockHeader(type: type, color: _headerColor(type, cs)),
+            child: _BlockHeader(
+              type: type,
+              color: _headerColor(type, cs),
+              titleOverride: titleOverride,
+            ),
           ),
           content,
         ],
@@ -88,10 +114,10 @@ class HomeScreen extends ConsumerWidget {
         // straight list move.
         onReorderItem: (int oldIndex, int newIndex) {
           if (oldIndex == newIndex) return;
-          final List<HomeBlockType> next = List.of(layout);
-          final HomeBlockType moved = next.removeAt(oldIndex);
-          next.insert(newIndex, moved);
-          ref.read(settingsProvider.notifier).setHomeBlocks(next);
+          final List<int> ids = [for (final (row, _) in layout) row.id];
+          final int moved = ids.removeAt(oldIndex);
+          ids.insert(newIndex, moved);
+          ref.read(homeBlocksDaoProvider).reorderBlocks(ids);
         },
         header: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -146,6 +172,7 @@ class HomeScreen extends ConsumerWidget {
         HomeBlockType.thisWeek => cs.secondary,
         HomeBlockType.workout => cs.primary,
         HomeBlockType.notes => cs.tertiary,
+        HomeBlockType.pinnedNote => cs.secondary,
       };
 
   /// Task tiles, or a quiet placeholder card when the block is empty.
@@ -174,10 +201,14 @@ class HomeScreen extends ConsumerWidget {
 // ── Block header (also the drag handle) ───────────────────────────────────
 
 class _BlockHeader extends StatelessWidget {
-  const _BlockHeader({required this.type, required this.color});
+  const _BlockHeader(
+      {required this.type, required this.color, this.titleOverride});
 
   final HomeBlockType type;
   final Color color;
+
+  /// Custom header text (a pinned note shows its note's title).
+  final String? titleOverride;
 
   @override
   Widget build(BuildContext context) {
@@ -187,13 +218,17 @@ class _BlockHeader extends StatelessWidget {
         children: [
           Icon(type.icon, size: 16, color: color),
           const SizedBox(width: 6),
-          Text(
-            type.label.toUpperCase(),
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: color,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1,
-                ),
+          Expanded(
+            child: Text(
+              (titleOverride ?? type.label).toUpperCase(),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1,
+                  ),
+            ),
           ),
         ],
       ),
