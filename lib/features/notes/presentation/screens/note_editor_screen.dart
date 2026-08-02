@@ -6,13 +6,14 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../data/models/note_block_type.dart';
+import '../../domain/drag_drop.dart';
 import '../../domain/note_outline.dart';
 import '../../domain/note_text_style.dart';
 import '../../domain/section_fold.dart';
-import '../../domain/section_reorder.dart';
 import '../providers/notes_providers.dart';
 import '../widgets/checkbox_block_view.dart';
 import '../widgets/divider_block_view.dart';
+import '../widgets/note_arrange_view.dart';
 import '../widgets/photo_block_view.dart';
 import '../widgets/text_block_view.dart';
 
@@ -99,20 +100,36 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     return blocks.where((b) => b.id == _focusedBlockId).firstOrNull;
   }
 
+  /// Depth for a line inserted after [anchor]: one level in when it follows a
+  /// heading (so a bed's lines nest automatically), otherwise the same depth.
+  int _indentAfter(NoteBlock? anchor) {
+    if (anchor == null) return 0;
+    return isHeadingBlock(anchor) ? anchor.indent + 1 : anchor.indent;
+  }
+
+  NoteBlock? _lastBlock() {
+    final List<NoteBlock> list =
+        ref.read(noteBlocksProvider(widget.noteId)).valueOrNull ?? const [];
+    return list.isEmpty ? null : list.last;
+  }
+
   Future<void> _addBlock(NoteBlockType type) async {
     final dao = ref.read(notesDaoProvider);
     final NoteBlock? anchor = _addAnchor();
+    final int indent = _indentAfter(anchor ?? _lastBlock());
     final int id = anchor != null
         ? await dao.insertBlockAfter(
             noteId: widget.noteId,
             type: type,
             content: '',
-            afterOrderIndex: anchor.orderIndex)
+            afterOrderIndex: anchor.orderIndex,
+            indent: indent)
         : await dao.addBlock(
             noteId: widget.noteId,
             type: type,
             content: '',
-            orderIndex: _nextOrder);
+            orderIndex: _nextOrder,
+            indent: indent);
     await dao.touchNote(widget.noteId, DateTime.now());
     if (mounted) setState(() => _focusRequestId = id);
   }
@@ -126,6 +143,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
       type: NoteBlockType.parse(current.type),
       content: after,
       afterOrderIndex: current.orderIndex,
+      indent: _indentAfter(current),
     );
     await dao.touchNote(widget.noteId, DateTime.now());
     if (mounted) setState(() => _focusRequestId = id);
@@ -136,6 +154,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     // otherwise clear _focusedBlockId before the photo comes back.
     final NoteBlock? anchor = _addAnchor();
     final int end = _nextOrder;
+    final int indent = _indentAfter(anchor ?? _lastBlock());
     final ImageSource? source = await showModalBottomSheet<ImageSource>(
       context: context,
       builder: (ctx) => SafeArea(
@@ -162,6 +181,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
           source,
           afterOrderIndex: anchor?.orderIndex,
           endOrderIndex: end,
+          indent: indent,
           now: DateTime.now(),
         );
   }
@@ -205,12 +225,12 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     if (mounted) Navigator.of(context).pop();
   }
 
-  void _onArrangeReorder(
-      List<NoteBlock> blocks, Set<int> hiddenIds, int oldIndex, int newIndex) {
-    // Move within the VISIBLE tiles: a folded heading carries its hidden section,
-    // and a line dropped elsewhere is re-parented by where it lands.
-    final List<int> ids = reorderVisible(blocks, hiddenIds, oldIndex, newIndex);
-    ref.read(notesDaoProvider).reorderBlocks(ids);
+  /// Commits an arrange-mode drop (new order + new depths) in one write.
+  Future<void> _applyArrangement(
+      List<int> orderedIds, Map<int, int> indentById) async {
+    final dao = ref.read(notesDaoProvider);
+    await dao.applyArrangement(orderedIds, indentById);
+    await dao.touchNote(widget.noteId, DateTime.now());
   }
 
   /// On leaving: save the title, prune phantom empty text lines (so blank
@@ -295,8 +315,13 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
                 _FormatRow(
                   block: focused!,
                   isText: kind == NoteBlockType.text,
-                  onHeading: (level) =>
-                      dao.setBlockFormat(focused.id, headingLevel: level),
+                  onHeading: (level) async {
+                    await dao.setBlockFormat(focused.id, headingLevel: level);
+                    // Becoming a heading adopts the lines below it; dropping
+                    // back to body releases them one level.
+                    await dao.reflowAfterHeadingChange(
+                        widget.noteId, focused.id);
+                  },
                   onBold: () =>
                       dao.setBlockFormat(focused.id, bold: !focused.bold),
                   onItalic: () =>
@@ -322,18 +347,21 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
   Future<void> _addDividerBlock() async {
     final dao = ref.read(notesDaoProvider);
     final NoteBlock? anchor = _addAnchor();
+    final int indent = _indentAfter(anchor ?? _lastBlock());
     if (anchor != null) {
       await dao.insertBlockAfter(
           noteId: widget.noteId,
           type: NoteBlockType.divider,
           content: null,
-          afterOrderIndex: anchor.orderIndex);
+          afterOrderIndex: anchor.orderIndex,
+          indent: indent);
     } else {
       await dao.addBlock(
           noteId: widget.noteId,
           type: NoteBlockType.divider,
           content: null,
-          orderIndex: _nextOrder);
+          orderIndex: _nextOrder,
+          indent: indent);
     }
     await dao.touchNote(widget.noteId, DateTime.now());
   }
@@ -445,7 +473,6 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
   Widget _editorBody(List<NoteBlock> blocks) {
     final ColorScheme cs = Theme.of(context).colorScheme;
     final SectionFold fold = computeSectionFold(blocks);
-    final Map<int, int> depths = blockDepths(blocks);
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
       children: [
@@ -492,7 +519,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
                     : TextDirection.ltr,
                 child: Padding(
                   padding: EdgeInsetsDirectional.only(
-                    start: (depths[b.id] ?? 0) * kNoteIndentStep,
+                    start: b.indent * kNoteIndentStep,
                     top: 1,
                     bottom: 1,
                   ),
@@ -570,12 +597,6 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
 
   Widget _arrangeBody(List<NoteBlock> blocks) {
     final ColorScheme cs = Theme.of(context).colorScheme;
-    final SectionFold fold = computeSectionFold(blocks);
-    final Map<int, int> depths = blockDepths(blocks);
-    final List<NoteBlock> visible = [
-      for (final NoteBlock b in blocks)
-        if (!fold.hiddenIds.contains(b.id)) b
-    ];
     return Column(
       children: [
         Padding(
@@ -587,30 +608,22 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  'Hold a line to drag · fold a heading (▸) to move its whole '
-                  'bed · ⊖ to delete',
-                  style:
-                      TextStyle(fontSize: 12, color: cs.onSurface.withAlpha(140)),
+                  'Hold to drag · drop in a gap to move it out · hold over a '
+                  'heading to put it inside',
+                  style: TextStyle(
+                      fontSize: 12, color: cs.onSurface.withAlpha(140)),
                 ),
               ),
             ],
           ),
         ),
         Expanded(
-          child: ReorderableListView.builder(
-            padding: const EdgeInsets.fromLTRB(16, 4, 8, 120),
-            itemCount: visible.length,
-            // onReorderItem gives newIndex already adjusted for the removed item.
-            onReorderItem: (o, n) =>
-                _onArrangeReorder(blocks, fold.hiddenIds, o, n),
-            itemBuilder: (context, i) {
-              final NoteBlock b = visible[i];
-              return _arrangeTile(
-                b,
-                depths[b.id] ?? 0,
-                fold.hiddenCountByHeadingId[b.id] ?? 0,
-              );
-            },
+          child: NoteArrangeView(
+            blocks: blocks,
+            onApply: _applyArrangement,
+            onEnterBed: (id) =>
+                ref.read(notesDaoProvider).setBlockCollapsed(id, false),
+            tileBuilder: _arrangeTile,
           ),
         ),
       ],
@@ -618,19 +631,24 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
   }
 
   /// One arrange-mode row: the block rendered read-only (so it looks like the
-  /// note, not a boxy list) plus a delete badge. The list handles hold-to-drag;
-  /// a dragged heading carries its whole section (see [reorderWithSections]).
-  Widget _arrangeTile(NoteBlock b, int depth, int hiddenCount) {
+  /// note, not a boxy list) plus a delete badge, indented to its outline depth.
+  /// [highlighted] tints the bed you just entered by holding over its header.
+  Widget _arrangeTile(NoteBlock b, int hiddenCount, bool highlighted) {
     final ColorScheme cs = Theme.of(context).colorScheme;
-    final bool isHeading =
-        NoteBlockType.parse(b.type) == NoteBlockType.text && b.headingLevel != 0;
+    final bool isHeading = isHeadingBlock(b);
     return Directionality(
-      key: ValueKey(b.id),
       textDirection:
           lineStartsRtl(b.content ?? '') ? TextDirection.rtl : TextDirection.ltr,
-      child: Padding(
-        padding: EdgeInsetsDirectional.only(
-            start: depth * kNoteIndentStep, top: 2, bottom: 2),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        margin: EdgeInsetsDirectional.only(
+            start: b.indent * kNoteIndentStep, top: 2, bottom: 2),
+        decoration: BoxDecoration(
+          color: highlighted
+              ? cs.primaryContainer.withAlpha(90)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+        ),
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 44),
           child: Row(

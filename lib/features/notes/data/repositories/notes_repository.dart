@@ -28,6 +28,7 @@ class NotesRepository {
     ImageSource source, {
     int? afterOrderIndex,
     required int endOrderIndex,
+    int indent = 0,
     required DateTime now,
   }) async {
     final String? filename = await _images.pickAndStore(source);
@@ -38,6 +39,7 @@ class NotesRepository {
         type: NoteBlockType.photo,
         content: filename,
         afterOrderIndex: afterOrderIndex,
+        indent: indent,
       );
     } else {
       await _dao.addBlock(
@@ -45,6 +47,7 @@ class NotesRepository {
         type: NoteBlockType.photo,
         content: filename,
         orderIndex: endOrderIndex,
+        indent: indent,
       );
     }
     await _dao.touchNote(noteId, now);

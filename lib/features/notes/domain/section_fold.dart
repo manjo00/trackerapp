@@ -1,5 +1,5 @@
 import '../../../core/database/app_database.dart';
-import '../data/models/note_block_type.dart';
+import 'drag_drop.dart';
 
 /// Which blocks are hidden by collapsed headings, and how many blocks are
 /// folded under each visible collapsed heading (for a "· N hidden" label).
@@ -11,39 +11,26 @@ class SectionFold {
   final Map<int, int> hiddenCountByHeadingId;
 }
 
-bool _isHeading(NoteBlock b) =>
-    NoteBlockType.parse(b.type) == NoteBlockType.text && b.headingLevel != 0;
-
-/// A collapsed, visible heading hides every following block until the next
-/// heading whose level is the same or higher (a smaller/equal level number), or
-/// the end of the note. Headings nested inside a hidden run stay hidden, and
-/// their fold count rolls up to the outermost visible collapsed heading.
+/// A collapsed, visible heading at indent `d` hides every following block whose
+/// indent is greater than `d`, until a block with indent `<= d` (or the end of
+/// the note). Membership is by [NoteBlock.indent], so a top-level line after a
+/// bed ends that bed — which is what lets blocks live outside a heading.
+/// Nested headings inside a hidden run stay hidden and their count rolls up to
+/// the outermost visible collapsed heading.
 SectionFold computeSectionFold(List<NoteBlock> blocks) {
   final Set<int> hidden = <int>{};
   final Map<int, int> counts = <int, int>{};
-  // Open collapsed sections, innermost last. In practice at most one is ever
-  // open (a deeper heading inside a collapsed run is itself hidden and never
-  // pushed), but a stack keeps the rule obviously correct.
-  final List<({int id, int level})> open = [];
-
-  void hide(int id) {
-    hidden.add(id);
-    final int owner = open.last.id;
-    counts[owner] = (counts[owner] ?? 0) + 1;
-  }
+  // The open collapsed section, if any (a deeper collapsed heading inside it is
+  // itself hidden, so one entry is enough).
+  ({int id, int indent})? open;
 
   for (final NoteBlock b in blocks) {
-    if (_isHeading(b)) {
-      while (open.isNotEmpty && open.last.level >= b.headingLevel) {
-        open.removeLast();
-      }
-      final bool hiddenHere = open.isNotEmpty;
-      if (hiddenHere) hide(b.id);
-      if (b.collapsed && !hiddenHere) {
-        open.add((id: b.id, level: b.headingLevel));
-      }
-    } else if (open.isNotEmpty) {
-      hide(b.id);
+    if (open != null && b.indent <= open.indent) open = null;
+    if (open != null) {
+      hidden.add(b.id);
+      counts[open.id] = (counts[open.id] ?? 0) + 1;
+    } else if (isHeadingBlock(b) && b.collapsed) {
+      open = (id: b.id, indent: b.indent);
     }
   }
   return SectionFold(hidden, counts);

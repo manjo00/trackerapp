@@ -115,9 +115,14 @@ class NotesDao extends DatabaseAccessor<AppDatabase> with _$NotesDaoMixin {
       (update(notes)..where((n) => n.id.equals(id)))
           .write(NotesCompanion(archivedAt: Value(at)));
 
-  /// One-shot fetch of a note's blocks (pre-delete photo-file cleanup).
-  Future<List<NoteBlock>> getBlocks(int noteId) =>
-      (select(noteBlocks)..where((b) => b.noteId.equals(noteId))).get();
+  /// One-shot fetch of a note's blocks, in order.
+  Future<List<NoteBlock>> getBlocks(int noteId) => (select(noteBlocks)
+        ..where((b) => b.noteId.equals(noteId))
+        ..orderBy([
+          (b) => OrderingTerm.asc(b.orderIndex),
+          (b) => OrderingTerm.asc(b.id),
+        ]))
+      .get();
 
   /// Latest note-edit time per notebook (notebookId → max updatedAt), for the
   /// Home "recent notebooks" block. Notebooks with no active notes are absent.
@@ -162,12 +167,14 @@ class NotesDao extends DatabaseAccessor<AppDatabase> with _$NotesDaoMixin {
     required NoteBlockType type,
     String? content,
     required int orderIndex,
+    int indent = 0,
   }) =>
       into(noteBlocks).insert(NoteBlocksCompanion.insert(
         noteId: noteId,
         type: type.storageKey,
         content: Value(content),
         orderIndex: Value(orderIndex),
+        indent: Value(indent),
       ));
 
   /// Inserts a new block immediately after [afterOrderIndex] within a note,
@@ -178,6 +185,7 @@ class NotesDao extends DatabaseAccessor<AppDatabase> with _$NotesDaoMixin {
     required NoteBlockType type,
     String? content,
     required int afterOrderIndex,
+    int indent = 0,
   }) =>
       transaction(() async {
         final List<NoteBlock> later = await (select(noteBlocks)
@@ -194,6 +202,7 @@ class NotesDao extends DatabaseAccessor<AppDatabase> with _$NotesDaoMixin {
           type: type.storageKey,
           content: Value(content),
           orderIndex: Value(afterOrderIndex + 1),
+          indent: Value(indent),
         ));
       });
 
@@ -276,6 +285,57 @@ class NotesDao extends DatabaseAccessor<AppDatabase> with _$NotesDaoMixin {
         for (int i = 0; i < orderedIds.length; i++) {
           await (update(noteBlocks)..where((b) => b.id.equals(orderedIds[i])))
               .write(NoteBlocksCompanion(orderIndex: Value(i)));
+        }
+      });
+
+  /// Commits an arrange-mode drop: new order AND new outline depth in one
+  /// transaction, so a block never renders at the wrong indent mid-write.
+  Future<void> applyArrangement(
+    List<int> orderedIds,
+    Map<int, int> indentById,
+  ) =>
+      transaction(() async {
+        for (int i = 0; i < orderedIds.length; i++) {
+          final int id = orderedIds[i];
+          await (update(noteBlocks)..where((b) => b.id.equals(id))).write(
+            NoteBlocksCompanion(
+              orderIndex: Value(i),
+              indent: Value(indentById[id] ?? 0),
+            ),
+          );
+        }
+      });
+
+  /// Keeps the outline sane when a line's heading level changes: a line that
+  /// BECOMES a heading adopts the plain lines that follow it at its own depth
+  /// (they become its children); a heading that becomes a plain line releases
+  /// its children back up one level.
+  Future<void> reflowAfterHeadingChange(int noteId, int blockId) =>
+      transaction(() async {
+        final List<NoteBlock> list = await getBlocks(noteId);
+        final int i = list.indexWhere((b) => b.id == blockId);
+        if (i < 0) return;
+        final NoteBlock me = list[i];
+        final int d = me.indent;
+        final bool nowHeading =
+            me.type == NoteBlockType.text.storageKey && me.headingLevel != 0;
+
+        Future<void> setIndent(NoteBlock b, int v) =>
+            (update(noteBlocks)..where((r) => r.id.equals(b.id)))
+                .write(NoteBlocksCompanion(indent: Value(v)));
+
+        for (int j = i + 1; j < list.length; j++) {
+          final NoteBlock b = list[j];
+          final bool isHeading =
+              b.type == NoteBlockType.text.storageKey && b.headingLevel != 0;
+          if (nowHeading) {
+            if (b.indent < d) break;
+            if (b.indent == d && isHeading) break; // the next bed starts here
+            await setIndent(b, b.indent + 1);
+          } else {
+            if (b.indent <= d) break;
+            await setIndent(b, b.indent - 1);
+          }
         }
       });
 }
