@@ -207,5 +207,6 @@ class TasksRepository {
         listId: row.listId,
         sectionId: row.sectionId,
         durationMinutes: row.durationMinutes,
+        sourceNoteBlockId: row.sourceNoteBlockId,
       );
 }

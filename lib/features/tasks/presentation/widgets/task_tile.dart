@@ -7,13 +7,17 @@ import '../../data/models/task_model.dart';
 import '../providers/lists_providers.dart';
 import '../providers/tasks_providers.dart';
 import 'priority_badge.dart';
+import 'task_detail_sheet.dart';
 
 /// A card representing one task in the list.
 ///
 /// Interactions:
-///   • Tap anywhere   → toggle completion
+///   • Tap the circle → toggle completion (the ONLY completion tap — a tap
+///     elsewhere must never complete a task by accident)
+///   • Tap anywhere else → task detail sheet (full note, due, labels, links
+///     to its list / source note, Edit)
 ///   • Long-press     → open edit screen (pre-filled)
-///   • Swipe left     → delete with undo snackbar
+///   • Swipe left     → archive with undo snackbar
 class TaskTile extends ConsumerWidget {
   const TaskTile({required this.task, this.showListName = false, super.key});
 
@@ -47,7 +51,9 @@ class TaskTile extends ConsumerWidget {
       child: Card(
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
-          onTap: () => _toggle(ref),
+          // Look, don't complete: the body opens the detail sheet; only the
+          // check circle (below) marks a task done.
+          onTap: () => showTaskDetailSheet(context, task),
           onLongPress: () => context.push('/tasks/edit', extra: task),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),

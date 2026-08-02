@@ -32,6 +32,11 @@ abstract class TaskModel with _$TaskModel {
     int? sectionId,
     /// Optional time-block length in minutes (start = [dueTime]).
     int? durationMinutes,
+
+    /// The note line (note_blocks.id) that spawned this task via an "@time"
+    /// token — null for ordinary tasks. Lets the detail sheet link back to
+    /// the source note.
+    int? sourceNoteBlockId,
   }) = _TaskModel;
 
   // Private constructor required for custom getters in freezed classes.
