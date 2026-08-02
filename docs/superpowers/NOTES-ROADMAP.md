@@ -16,6 +16,14 @@ lives in `<appDocs>/note_images/`. The grid card (NoteGridCard) uses
 
 ## A. User-requested (this session)
 
+### A1. Minimize / collapse inline photos  ·  ✅ SHIPPED 2026-08-01
+Shipped as a **bounded photo height** (`kNotePhotoMaxHeight`, ~220dp, aspect
+kept, tap → full-screen) rather than a per-photo or per-note toggle: the user
+asked for the smoothest, least-configurable option, and a good default beats a
+switch. Per-photo sizing and multi-photo layout remain open as **D1 (gallery)**.
+
+<details><summary>original entry</summary>
+
 ### A1. Minimize / collapse inline photos  ·  M
 Photo-heavy clinical notes get very tall. Let a photo block **shrink to a small
 thumbnail** (tap to expand full-width; tap again to shrink). Optionally a
@@ -25,6 +33,7 @@ per-note or global "compact photos" default.
   Persisted is nicer (remembers). PhotoBlockView renders a ~72px thumb when
   collapsed.
 - Pairs well with **A2** and **D (gallery block)**.
+</details>
 
 ### A2. Choose the grid-card cover photo (not just the first)  ·  S–M
 Today the notebook grid card always shows the note's **first** photo. Let the
@@ -60,6 +69,14 @@ Find notes by **title + block content**; ideally in-note find-and-highlight too.
   Templates excluded (or a separate scope). Consider a global Notes search vs
   per-notebook.
 
+### A7. Collapse sections under a heading  ·  ✅ SHIPPED 2026-08-01
+Fold caret on every heading (persisted, schema v19 `note_blocks.collapsed`),
+"· N hidden" label, ⋮ Collapse all / Expand all, and folds carry into arrange
+mode. Membership is now by stored `indent` (schema v20), not heading level.
+**Still open from this cluster:** C1 outline/jump-to-heading, C2 sticky heading.
+
+<details><summary>original entry</summary>
+
 ### A7. Collapse sections under a heading  ·  M
 Tapping a **heading** collapses everything beneath it up to the next heading —
 like Notion toggles. Huge for long rounds notes.
@@ -69,6 +86,18 @@ like Notion toggles. Huge for long rounds notes.
   heading ids (persist via a `note_blocks.collapsed` bool for durability); the
   list skips rendering blocks inside a collapsed range and shows a "▸ n hidden"
   affordance on the heading. Unit-test `sectionRanges`.
+</details>
+
+### A8. Fast reordering inside a note  ·  ✅ SHIPPED 2026-08-01
+Became a full **custom drag engine** (spec:
+`specs/2026-08-01-notes-drag-engine-design.md`). In-place arrange mode (⇅ next
+to ⋮) with clean-lift drag, RTL-aware outline indentation, fold-on-grab so a
+heading carries its whole bed, easy-out (drop in any gap → top level, never
+splits a bed) and deliberate-in (hold over a header ~500ms → the bed expands +
+highlights). Depth is stored per block (schema v20). See
+`domain/drag_drop.dart` + `widgets/note_arrange_view.dart`.
+
+<details><summary>original entry</summary>
 
 ### A8. Fast reordering inside a note  ·  M
 The current reorder lives in a separate "Edit lines" mode. Make reordering
@@ -79,6 +108,7 @@ persistent tiny grip that doesn't clutter.
   toggle that's one tap away and shows inline handles; (c) drag a **heading** to
   move its whole collapsed section (pairs with A7). Prototype (a) or (c).
   Reuse `reorderBlocks` / `insertBlocksAt`.
+</details>
 
 ### A9. Side-by-side blocks (columns), not only stacked  ·  L
 Let blocks sit **next to each other**, not just under each other — e.g. two bed
@@ -159,6 +189,27 @@ Template **categories/folders**, **variables/placeholders** (auto-number beds,
 is the cheap first step.
 
 ---
+
+## Known issues / polish owed (arrange mode, 2026-08-01)
+User verified the drag engine on device: *"its good and working, need little
+tweaks."* Outstanding:
+
+- **A block can only leave a bed by dragging UP (most obvious with photos)** ·
+  S–M · *the one real bug.* Dropping at the **end of** a bed is the same gap as
+  "just after the bed", and `resolveDrop` currently resolves that tie by keeping
+  you inside (the "reordering within your own bed" rule wins). So dragging down
+  past the last line keeps you in the bed; only dragging above the heading gets
+  you out. It bites hardest with **photos** because they're tall, so dragging
+  downward is the natural gesture.
+  - Likely fix: break the tie toward **out** when the drop is below the bed's
+    last child *and* the pointer sits past that child's bottom edge — with
+    "append to the end of this bed" reachable by holding over its header (which
+    already nests). Guard with a case in `drag_drop_test.dart` + a gesture test
+    in `note_arrange_view_test.dart` (drag a tall row downward out of a bed).
+- **Animation polish** · S · user called these "not important": no reflow
+  animation as rows part around the drop point, the lifted tile doesn't
+  scale/tilt, and the bed's expand-on-enter is an instant rebuild rather than an
+  eased reveal. Consider `AnimatedSize`/implicit motion on the row list.
 
 ## Suggested next pick (opinion)
 If resuming notes work, the highest value-to-effort cluster for the user's
