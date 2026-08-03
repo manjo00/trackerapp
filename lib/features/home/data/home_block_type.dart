@@ -29,7 +29,11 @@ enum HomeBlockType {
   habits,
 
   /// Today's shift + the next upcoming one, at a glance.
-  shift;
+  shift,
+
+  /// Completed (not yet archived) tasks — see what got done, un-tick
+  /// mistakes. The check circle on a tile un-completes as usual.
+  done;
 
   String get title => switch (this) {
         urgent => 'Urgent',
@@ -43,6 +47,7 @@ enum HomeBlockType {
         label => 'Label',
         habits => 'Habits',
         shift => 'Shift',
+        done => 'Done',
       };
 
   IconData get icon => switch (this) {
@@ -57,6 +62,7 @@ enum HomeBlockType {
         label => Icons.label_rounded,
         habits => Icons.repeat_rounded,
         shift => Icons.work_history_rounded,
+        done => Icons.task_alt_rounded,
       };
 
   /// Types that may appear on Home more than once (each instance pointing at

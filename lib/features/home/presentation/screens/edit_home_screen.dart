@@ -253,6 +253,8 @@ class EditHomeScreen extends ConsumerWidget {
                 HomeBlockType.habits => const Text('Today\'s check-offs'),
                 HomeBlockType.shift =>
                   const Text('Today + next shift at a glance'),
+                HomeBlockType.done =>
+                  const Text('What you\'ve completed — un-tick mistakes'),
                 _ => null,
               },
               trailing:

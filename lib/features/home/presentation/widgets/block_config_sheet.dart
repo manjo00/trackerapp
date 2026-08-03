@@ -13,6 +13,7 @@ const Set<HomeBlockType> kLimitableTypes = {
   HomeBlockType.captured,
   HomeBlockType.list,
   HomeBlockType.label,
+  HomeBlockType.done,
 };
 
 /// Block types that may auto-hide while they have nothing to show.
@@ -23,6 +24,7 @@ const Set<HomeBlockType> kHideableTypes = {
   HomeBlockType.list,
   HomeBlockType.label,
   HomeBlockType.shift,
+  HomeBlockType.done,
 };
 
 /// Whether Edit Home should offer a ⚙ options sheet for [type].

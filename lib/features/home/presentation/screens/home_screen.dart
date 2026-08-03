@@ -146,6 +146,18 @@ class HomeScreen extends ConsumerWidget {
               ref.watch(shiftGlanceEmptyProvider).valueOrNull ?? false;
           isEmpty = byDate;
           content = const ShiftBlock();
+        case HomeBlockType.done:
+          // Completed-but-not-archived tasks, freshest due date first (there
+          // is no completedAt column to sort by).
+          final List<TaskModel> source =
+              allTasks.where((t) => t.isCompleted).toList()
+                ..sort((a, b) {
+                  final int d = (b.dueDate ?? '').compareTo(a.dueDate ?? '');
+                  return d != 0 ? d : b.createdAt.compareTo(a.createdAt);
+                });
+          final (shown, more) = claim(source, limit);
+          isEmpty = shown.isEmpty && more == 0;
+          content = _tasksOrEmpty(shown, more, 'Nothing completed yet', cs);
       }
 
       // "Hide when empty" removes the whole block, header included.
@@ -294,6 +306,7 @@ class HomeScreen extends ConsumerWidget {
         HomeBlockType.label => cs.tertiary,
         HomeBlockType.habits => cs.secondary,
         HomeBlockType.shift => cs.primary,
+        HomeBlockType.done => cs.secondary,
       };
 
   /// Task tiles (+ a muted "+N more"), or a quiet placeholder when empty.
