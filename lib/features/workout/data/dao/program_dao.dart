@@ -36,6 +36,13 @@ class ProgramDao extends DatabaseAccessor<AppDatabase>
   Future<Program?> getProgramById(int id) =>
       (select(programs)..where((p) => p.id.equals(id))).getSingleOrNull();
 
+  /// Finds a template row by exact name — used to locate the hidden
+  /// "My workouts" container.
+  Future<Program?> findTemplateByName(String name) => (select(programs)
+        ..where((p) => p.isTemplate.equals(true) & p.name.equals(name))
+        ..limit(1))
+      .getSingleOrNull();
+
   /// Inserts a program and returns its id.
   Future<int> insertProgram(ProgramsCompanion companion) =>
       into(programs).insert(companion);

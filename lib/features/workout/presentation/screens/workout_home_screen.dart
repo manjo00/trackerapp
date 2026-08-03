@@ -103,6 +103,19 @@ class WorkoutHomeScreen extends ConsumerWidget {
                 ),
             ],
 
+            // ── My workouts: personal one-tap templates ───────────────────
+            SliverToBoxAdapter(
+              child: _MyWorkoutsSection(
+                workouts: ref.watch(myWorkoutsProvider).valueOrNull ??
+                    const <ProgramSessionModel>[],
+                onStart: (s) => _startWorkout(context, ref, session: s),
+                onEdit: (s) => context.push(
+                    '/workout/programs/${s.programId}/session/${s.id}'),
+                onDelete: (s) => _deleteMyWorkout(context, ref, s),
+                onCreate: () => _createMyWorkout(context, ref),
+              ),
+            ),
+
             // ── History header ────────────────────────────────────────────
             const SliverToBoxAdapter(
               child: Padding(
@@ -179,6 +192,179 @@ class WorkoutHomeScreen extends ConsumerWidget {
     QuickStartTemplate template,
   ) =>
       startQuickTemplate(context, ref, template);
+
+  /// Name a new personal workout, then open the exercise editor on it.
+  Future<void> _createMyWorkout(BuildContext context, WidgetRef ref) async {
+    final TextEditingController ctrl = TextEditingController();
+    final String? name = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('New workout'),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          textCapitalization: TextCapitalization.sentences,
+          decoration:
+              const InputDecoration(hintText: 'e.g. Chest & arms'),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Cancel')),
+          FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(ctrl.text.trim()),
+              child: const Text('Create')),
+        ],
+      ),
+    );
+    ctrl.dispose();
+    if (name == null || name.isEmpty) return;
+    final (int pid, int sid) =
+        await ref.read(programRepositoryProvider).createMyWorkout(name);
+    if (context.mounted) {
+      context.push('/workout/programs/$pid/session/$sid');
+    }
+  }
+
+  Future<void> _deleteMyWorkout(
+    BuildContext context,
+    WidgetRef ref,
+    ProgramSessionModel workout,
+  ) async {
+    final bool? ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete workout?'),
+        content: Text('"${workout.name}" is removed from My workouts. '
+            'Sessions you already logged with it are kept.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Cancel')),
+          FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('Delete')),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    await ref.read(programRepositoryProvider).deleteSession(workout.id);
+  }
+}
+
+// ── My workouts section ───────────────────────────────────────────────────────
+
+/// The user's own single-workout templates: tap to start, ✎ to edit,
+/// long-press to delete, ＋ to make a new one.
+class _MyWorkoutsSection extends StatelessWidget {
+  const _MyWorkoutsSection({
+    required this.workouts,
+    required this.onStart,
+    required this.onEdit,
+    required this.onDelete,
+    required this.onCreate,
+  });
+
+  final List<ProgramSessionModel> workouts;
+  final void Function(ProgramSessionModel) onStart;
+  final void Function(ProgramSessionModel) onEdit;
+  final void Function(ProgramSessionModel) onDelete;
+  final VoidCallback onCreate;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text(
+                'My Workouts',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              const Spacer(),
+              TextButton.icon(
+                onPressed: onCreate,
+                icon: const Icon(Icons.add_rounded, size: 18),
+                label: const Text('New'),
+              ),
+            ],
+          ),
+          if (workouts.isEmpty)
+            Card(
+              child: InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: onCreate,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 14),
+                  child: Text(
+                    'Build your own workout once — start it in one tap, '
+                    'edit it any time.',
+                    style: TextStyle(
+                        fontSize: 13, color: cs.onSurface.withAlpha(120)),
+                  ),
+                ),
+              ),
+            )
+          else
+            Card(
+              child: Column(
+                children: [
+                  for (final ProgramSessionModel w in workouts)
+                    InkWell(
+                      onTap: () => onStart(w),
+                      onLongPress: () => onDelete(w),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 4),
+                        child: Row(
+                          children: [
+                            Icon(Icons.play_circle_fill_rounded,
+                                color: cs.primary, size: 28),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.start,
+                                children: [
+                                  Text(w.name,
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.w600)),
+                                  Text(
+                                    w.exercises.isEmpty
+                                        ? 'No exercises yet — tap ✎'
+                                        : '${w.exercises.length} exercise'
+                                            '${w.exercises.length == 1 ? '' : 's'}',
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        color:
+                                            cs.onSurface.withAlpha(140)),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            IconButton(
+                              icon: Icon(Icons.edit_rounded,
+                                  size: 20,
+                                  color: cs.onSurface.withAlpha(150)),
+                              tooltip: 'Edit workout',
+                              onPressed: () => onEdit(w),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
 }
 
 // (loggedThisWeek + the attendance strip live in

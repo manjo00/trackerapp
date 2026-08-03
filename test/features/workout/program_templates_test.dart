@@ -89,4 +89,43 @@ void main() {
     final tpl = (await repo.watchProgramTemplates().first).single;
     expect(tpl.name, 'Snapshot');
   });
+
+  group('my workouts (single-workout templates)', () {
+    test('created workouts appear on the shelf with their exercises',
+        () async {
+      final (_, int sid) = await repo.createMyWorkout('Chest & arms');
+      await repo.addExercise(
+          programSessionId: sid,
+          exerciseName: 'Bench Press',
+          targetSets: 4,
+          targetReps: 8,
+          restSeconds: 180);
+
+      final shelf = await repo.watchMyWorkouts().first;
+      expect(shelf.single.name, 'Chest & arms');
+      expect(shelf.single.exercises.single.exerciseName, 'Bench Press');
+    });
+
+    test('the container is invisible everywhere else', () async {
+      await repo.createMyWorkout('Quick pump');
+      expect(await repo.watchAllPrograms().first, isEmpty);
+      expect(await repo.watchProgramTemplates().first, isEmpty);
+    });
+
+    test('the container is created exactly once', () async {
+      final int a = await repo.ensureMyWorkoutsContainer();
+      await repo.createMyWorkout('One');
+      final int b = await repo.ensureMyWorkoutsContainer();
+      expect(a, b);
+      expect((await repo.watchMyWorkouts().first).length, 1);
+    });
+
+    test('deleting a workout leaves the others', () async {
+      final (_, int sid) = await repo.createMyWorkout('Push');
+      await repo.createMyWorkout('Pull');
+      await repo.deleteSession(sid);
+      final shelf = await repo.watchMyWorkouts().first;
+      expect(shelf.map((w) => w.name), ['Pull']);
+    });
+  });
 }

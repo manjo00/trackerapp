@@ -191,9 +191,59 @@ class ProgramRepository {
 
   // ── Personal templates (v22) ──────────────────────────────────────────────
 
+  /// The hidden container program whose "days" are the user's personal
+  /// single-workout templates (the "My workouts" shelf). Never shown as a
+  /// program or a program template; the leading marker makes a name clash
+  /// with a real user template impossible.
+  static const String kMyWorkoutsContainer = '⁣my_workouts';
+
   /// The user's saved program templates, with sessions + exercises loaded.
+  /// The My-workouts container is not a program template — excluded.
   Stream<List<ProgramModel>> watchProgramTemplates() =>
-      _programDao.watchProgramTemplates().asyncMap(_hydrateAll);
+      _programDao.watchProgramTemplates().asyncMap((rows) => _hydrateAll(
+          rows.where((p) => p.name != kMyWorkoutsContainer).toList()));
+
+  // ── My workouts: single-workout templates ─────────────────────────────────
+
+  /// Finds or creates the hidden container. Safe to call repeatedly.
+  Future<int> ensureMyWorkoutsContainer() async {
+    final Program? existing =
+        await _programDao.findTemplateByName(kMyWorkoutsContainer);
+    if (existing != null) return existing.id;
+    return _programDao.insertProgram(ProgramsCompanion.insert(
+      name: kMyWorkoutsContainer,
+      isTemplate: const Value(true),
+      createdAt: DateTime.now(),
+    ));
+  }
+
+  /// The user's personal workouts (each a fully-loaded session: exercises,
+  /// targets, rest), in the order they were made.
+  Stream<List<ProgramSessionModel>> watchMyWorkouts() async* {
+    final int containerId = await ensureMyWorkoutsContainer();
+    yield* _programDao.watchSessionsForProgram(containerId).asyncMap(
+      (rows) async {
+        final out = <ProgramSessionModel>[];
+        for (final sRow in rows) {
+          out.add(await _hydrateSessionRow(sRow));
+        }
+        return out;
+      },
+    );
+  }
+
+  /// Creates an empty personal workout and returns (containerId, sessionId)
+  /// so the caller can open the session editor on it.
+  Future<(int, int)> createMyWorkout(String name) async {
+    final int containerId = await ensureMyWorkoutsContainer();
+    final existing = await _programDao.getSessionsForProgram(containerId);
+    final int sessionId = await addSession(
+      programId: containerId,
+      name: name,
+      orderIndex: existing.length,
+    );
+    return (containerId, sessionId);
+  }
 
   /// Deep-copies program [programId] (sessions + exercise slots) into a saved
   /// template. The copy is never active and never shows in the program list.
@@ -316,33 +366,38 @@ class ProgramRepository {
     return result;
   }
 
+  /// Loads one session row with its exercises — shared by program hydration
+  /// and the My-workouts shelf.
+  Future<ProgramSessionModel> _hydrateSessionRow(ProgramSession sRow) async {
+    final exRows = await _programDao.getExercisesForSession(sRow.id);
+    return ProgramSessionModel(
+      id: sRow.id,
+      programId: sRow.programId,
+      name: sRow.name,
+      colorValue: sRow.colorValue,
+      orderIndex: sRow.orderIndex,
+      weekDays: sRow.weekDays,
+      exercises: exRows
+          .map((e) => ProgramExerciseModel(
+                id: e.id,
+                programSessionId: e.programSessionId,
+                exerciseId: e.exerciseId,
+                exerciseName: e.exerciseName,
+                targetSets: e.targetSets,
+                targetReps: e.targetReps,
+                restSeconds: e.restSeconds,
+                orderIndex: e.orderIndex,
+              ))
+          .toList(),
+    );
+  }
+
   Future<ProgramModel> _hydrateProgram(Program row) async {
     final sessionRows =
         await _programDao.getSessionsForProgram(row.id);
     final sessions = <ProgramSessionModel>[];
     for (final sRow in sessionRows) {
-      final exRows =
-          await _programDao.getExercisesForSession(sRow.id);
-      sessions.add(ProgramSessionModel(
-        id: sRow.id,
-        programId: sRow.programId,
-        name: sRow.name,
-        colorValue: sRow.colorValue,
-        orderIndex: sRow.orderIndex,
-        weekDays: sRow.weekDays,
-        exercises: exRows
-            .map((e) => ProgramExerciseModel(
-                  id: e.id,
-                  programSessionId: e.programSessionId,
-                  exerciseId: e.exerciseId,
-                  exerciseName: e.exerciseName,
-                  targetSets: e.targetSets,
-                  targetReps: e.targetReps,
-                  restSeconds: e.restSeconds,
-                  orderIndex: e.orderIndex,
-                ))
-            .toList(),
-      ));
+      sessions.add(await _hydrateSessionRow(sRow));
     }
     return ProgramModel(
       id: row.id,

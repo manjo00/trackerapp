@@ -594,27 +594,29 @@ const List<CodexTopic> kCodexTopics = [
     ],
   ),
   CodexTopic(
-    id: 'workout-my-templates',
-    title: 'Save your own program as a template',
+    id: 'workout-my-workouts',
+    title: 'My workouts — your own one-tap sessions',
     category: CodexCategory.workout,
-    summary: 'Reuse a program you built, without rebuilding it.',
-    keywords: ['template', 'reuse', 'custom', 'copy', 'preset'],
+    summary: 'Build a workout once, then start it any day with one tap.',
+    keywords: ['template', 'reuse', 'custom', 'preset', 'routine', 'quick'],
     body: [
       CodexBlock.p(
-          'Once you have a program set up the way you like it, keep it as a '
-          'template so you can spin up the same thing again later — for a new '
-          'training block, or a different phase.'),
-      CodexBlock.step('Open the program.'),
-      CodexBlock.step('Tap ⋮ → Save as my template.'),
-      CodexBlock.step('Give it a name.'),
+          'For workouts you repeat but that do not belong to a program — a '
+          'favourite chest day, a quick home session — build them once under '
+          'My Workouts on the Workout screen.'),
+      CodexBlock.step('Workout → My Workouts → New.'),
+      CodexBlock.step('Name it (e.g. "Chest & arms").'),
+      CodexBlock.step(
+          'Add exercises with target sets, reps and rest — the same editor '
+          'programs use.'),
       CodexBlock.p(
-          'Your templates appear under Workout → Create Program → "My '
-          'templates". Tap one and it becomes a fresh, active program with '
-          'every day and exercise copied in.'),
+          'From then on: tap it to start training it immediately, with all '
+          'the usual previous-set hints and the rest timer. Tap ✎ to change '
+          'it any time; hold it to delete it. Deleting never touches the '
+          'sessions you already logged.'),
       CodexBlock.tip(
-          'The copy is independent: editing the program afterwards does not '
-          'change the template, and vice versa. Delete a template from the '
-          'same list — programs made from it are untouched.'),
+          'Whole programs can be kept too: open a program → ⋮ → "Save as my '
+          'template", and reuse it later from Create Program → My templates.'),
     ],
   ),
   CodexTopic(

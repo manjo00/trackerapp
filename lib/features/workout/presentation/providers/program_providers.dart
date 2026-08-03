@@ -29,6 +29,12 @@ Stream<List<ProgramModel>> allPrograms(AllProgramsRef ref) =>
 Stream<List<ProgramModel>> programTemplates(ProgramTemplatesRef ref) =>
     ref.watch(programRepositoryProvider).watchProgramTemplates();
 
+/// The user's personal single-workout templates ("My workouts") — each a
+/// ready-to-start session with exercises, targets and rest.
+@riverpod
+Stream<List<ProgramSessionModel>> myWorkouts(MyWorkoutsRef ref) =>
+    ref.watch(programRepositoryProvider).watchMyWorkouts();
+
 // ── Active program stream ─────────────────────────────────────────────────────
 
 /// Emits the currently active program, or null if none is set.
