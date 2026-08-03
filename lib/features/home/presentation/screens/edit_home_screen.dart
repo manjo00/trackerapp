@@ -2,15 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/database/app_database.dart';
+import '../../../tasks/presentation/providers/lists_providers.dart';
 import '../../data/home_block_config.dart';
 import '../../data/home_block_type.dart';
 import '../providers/home_blocks_providers.dart';
+import '../widgets/block_config_sheet.dart';
 import '../widgets/note_picker_sheet.dart';
 
 /// Full controls for the Home dashboard layout (home_blocks rows): drag to
-/// reorder, remove, and add blocks. Every change applies instantly (no save
-/// button). "Pinned note" can be added any number of times — one per note —
-/// and tapping a pinned row re-points it at a different note.
+/// reorder, remove, add blocks, and open each block's ⚙ options. Every change
+/// applies instantly (no save button). Pinned note / list / label blocks can
+/// be added any number of times — one per target — and tapping such a row
+/// re-points it.
 class EditHomeScreen extends ConsumerWidget {
   const EditHomeScreen({super.key});
 
@@ -24,39 +27,137 @@ class EditHomeScreen extends ConsumerWidget {
     HomeBlockType? typeOf(HomeBlock row) =>
         HomeBlockType.values.where((t) => t.name == row.type).firstOrNull;
 
-    // Single-instance types not currently on the dashboard; a pinned note can
-    // always be added again (for another note).
+    // Multi-instance types are always offered; single-instance ones only
+    // while absent from the dashboard.
     final Set<String> present = {for (final r in rows) r.type};
     final List<HomeBlockType> available = [
       for (final HomeBlockType t in HomeBlockType.values)
-        if (t == HomeBlockType.pinnedNote || !present.contains(t.name)) t
+        if (HomeBlockType.multiInstance.contains(t) || !present.contains(t.name))
+          t
     ];
 
+    Future<TaskList?> pickList() async {
+      final List<TaskList> lists =
+          ref.read(taskListsProvider).valueOrNull ?? const [];
+      return showModalBottomSheet<TaskList>(
+        context: context,
+        showDragHandle: true,
+        builder: (ctx) => SafeArea(
+          child: lists.isEmpty
+              ? const Padding(
+                  padding: EdgeInsets.all(32),
+                  child: Text('No lists yet — create one in Lists first.'))
+              : ListView(
+                  shrinkWrap: true,
+                  children: [
+                    for (final TaskList l in lists)
+                      ListTile(
+                        leading: Icon(Icons.list_alt_rounded,
+                            color: Color(l.colorValue)),
+                        title: Text(l.name),
+                        onTap: () => Navigator.of(ctx).pop(l),
+                      ),
+                  ],
+                ),
+        ),
+      );
+    }
+
+    Future<Label?> pickLabel() async {
+      final List<Label> labels =
+          ref.read(labelsProvider).valueOrNull ?? const [];
+      return showModalBottomSheet<Label>(
+        context: context,
+        showDragHandle: true,
+        builder: (ctx) => SafeArea(
+          child: labels.isEmpty
+              ? const Padding(
+                  padding: EdgeInsets.all(32),
+                  child: Text('No labels yet — create one in a task first.'))
+              : ListView(
+                  shrinkWrap: true,
+                  children: [
+                    for (final Label l in labels)
+                      ListTile(
+                        leading: const Icon(Icons.label_rounded),
+                        title: Text(l.name),
+                        onTap: () => Navigator.of(ctx).pop(l),
+                      ),
+                  ],
+                ),
+        ),
+      );
+    }
+
     Future<void> addBlock(HomeBlockType type) async {
-      if (type == HomeBlockType.pinnedNote) {
-        final Note? picked = await showNotePicker(context, ref);
-        if (picked == null) return;
-        await dao.addBlock(type, configJson: pinnedNoteConfig(picked.id));
-      } else {
-        await dao.addBlock(type);
+      switch (type) {
+        case HomeBlockType.pinnedNote:
+          final Note? picked = await showNotePicker(context, ref);
+          if (picked == null) return;
+          await dao.addBlock(type, configJson: pinnedNoteConfig(picked.id));
+        case HomeBlockType.list:
+          final TaskList? picked = await pickList();
+          if (picked == null) return;
+          await dao.addBlock(type, configJson: listConfig(picked.id));
+        case HomeBlockType.label:
+          final Label? picked = await pickLabel();
+          if (picked == null) return;
+          await dao.addBlock(type, configJson: labelConfig(picked.id));
+        default:
+          await dao.addBlock(type);
       }
     }
 
-    Future<void> changeNote(HomeBlock row) async {
-      final Note? picked = await showNotePicker(context, ref);
-      if (picked == null) return;
-      await dao.updateConfig(row.id, pinnedNoteConfig(picked.id));
+    /// Re-point a multi-instance block at a different note/list/label.
+    Future<void> changeTarget(HomeBlock row, HomeBlockType type) async {
+      switch (type) {
+        case HomeBlockType.pinnedNote:
+          final Note? picked = await showNotePicker(context, ref);
+          if (picked == null) return;
+          await dao.updateConfig(row.id,
+              mergeConfig(row.configJson, {'noteId': picked.id}));
+        case HomeBlockType.list:
+          final TaskList? picked = await pickList();
+          if (picked == null) return;
+          await dao.updateConfig(
+              row.id, mergeConfig(row.configJson, {'listId': picked.id}));
+        case HomeBlockType.label:
+          final Label? picked = await pickLabel();
+          if (picked == null) return;
+          await dao.updateConfig(
+              row.id, mergeConfig(row.configJson, {'labelId': picked.id}));
+        default:
+          break;
+      }
     }
 
-    Widget? pinnedSubtitle(HomeBlock row) {
-      final int? noteId = pinnedNoteIdFromConfig(row.configJson);
-      final Note? note = noteId == null
-          ? null
-          : ref.watch(watchNoteProvider(noteId)).valueOrNull;
-      final String title = note == null
-          ? 'No note chosen — tap to pick'
-          : (note.title.trim().isEmpty ? 'Untitled' : note.title);
-      return Text(title, maxLines: 1, overflow: TextOverflow.ellipsis);
+    /// What this block points at (pinned note / list / label rows only).
+    Widget? subtitleFor(HomeBlock row, HomeBlockType type) {
+      String? text;
+      switch (type) {
+        case HomeBlockType.pinnedNote:
+          final int? id = pinnedNoteIdFromConfig(row.configJson);
+          final Note? note =
+              id == null ? null : ref.watch(watchNoteProvider(id)).valueOrNull;
+          text = note == null
+              ? 'No note chosen — tap to pick'
+              : (note.title.trim().isEmpty ? 'Untitled' : note.title);
+        case HomeBlockType.list:
+          final int? id = listIdFromConfig(row.configJson);
+          final List<TaskList> lists =
+              ref.watch(taskListsProvider).valueOrNull ?? const [];
+          text = lists.where((l) => l.id == id).firstOrNull?.name ??
+              'No list chosen — tap to pick';
+        case HomeBlockType.label:
+          final int? id = labelIdFromConfig(row.configJson);
+          final List<Label> labels =
+              ref.watch(labelsProvider).valueOrNull ?? const [];
+          text = labels.where((l) => l.id == id).firstOrNull?.name ??
+              'No label chosen — tap to pick';
+        default:
+          return null;
+      }
+      return Text(text, maxLines: 1, overflow: TextOverflow.ellipsis);
     }
 
     return Scaffold(
@@ -99,16 +200,22 @@ class EditHomeScreen extends ConsumerWidget {
                   ListTile(
                     key: ValueKey(row.id),
                     leading: Icon(type.icon, color: cs.primary),
-                    title: Text(type.label),
-                    subtitle: type == HomeBlockType.pinnedNote
-                        ? pinnedSubtitle(row)
-                        : null,
-                    onTap: type == HomeBlockType.pinnedNote
-                        ? () => changeNote(row)
+                    title: Text(type.title),
+                    subtitle: subtitleFor(row, type),
+                    onTap: HomeBlockType.multiInstance.contains(type)
+                        ? () => changeTarget(row, type)
                         : null,
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        if (blockHasOptions(type))
+                          IconButton(
+                            icon: Icon(Icons.tune_rounded,
+                                size: 20, color: cs.onSurface.withAlpha(150)),
+                            tooltip: 'Block options',
+                            onPressed: () =>
+                                showBlockConfigSheet(context, row, type),
+                          ),
                         IconButton(
                           icon: Icon(Icons.remove_circle_outline_rounded,
                               color: cs.error),
@@ -136,10 +243,18 @@ class EditHomeScreen extends ConsumerWidget {
           for (final HomeBlockType type in available)
             ListTile(
               leading: Icon(type.icon, color: cs.onSurface.withAlpha(140)),
-              title: Text(type.label),
-              subtitle: type == HomeBlockType.pinnedNote
-                  ? const Text('Show a note\'s content on Home')
-                  : null,
+              title: Text(type.title),
+              subtitle: switch (type) {
+                HomeBlockType.pinnedNote =>
+                  const Text('Work in a note right on Home'),
+                HomeBlockType.list => const Text('Pin one list\'s tasks'),
+                HomeBlockType.label =>
+                  const Text('Tasks carrying one label'),
+                HomeBlockType.habits => const Text('Today\'s check-offs'),
+                HomeBlockType.shift =>
+                  const Text('Today + next shift at a glance'),
+                _ => null,
+              },
               trailing:
                   Icon(Icons.add_circle_outline_rounded, color: cs.primary),
               onTap: () => addBlock(type),

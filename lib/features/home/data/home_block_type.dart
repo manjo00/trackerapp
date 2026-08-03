@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/constants/app_strings.dart';
+
 /// The kinds of block the Home dashboard can show.
 ///
 /// The user's layout is an ordered list of these, stored in preferences
@@ -13,12 +15,23 @@ enum HomeBlockType {
   workout,
   notes,
 
-  /// Renders one chosen note's content inline (v21). The only type that may
-  /// appear multiple times (different notes) and the first to carry per-block
-  /// config (`{"noteId": …}` in home_blocks.configJson).
-  pinnedNote;
+  /// Renders one chosen note's content inline (v21). May appear multiple
+  /// times (different notes); config `{"noteId": …}`.
+  pinnedNote,
 
-  String get label => switch (this) {
+  /// One chosen list's incomplete tasks (config `{"listId": …}`). Multi.
+  list,
+
+  /// Incomplete tasks carrying one label (config `{"labelId": …}`). Multi.
+  label,
+
+  /// Today's habits with check-off.
+  habits,
+
+  /// Today's shift + the next upcoming one, at a glance.
+  shift;
+
+  String get title => switch (this) {
         urgent => 'Urgent',
         dueToday => 'Due today',
         captured => 'Captured',
@@ -26,6 +39,10 @@ enum HomeBlockType {
         workout => 'Workout',
         notes => 'Notes',
         pinnedNote => 'Pinned note',
+        list => kListNoun,
+        label => 'Label',
+        habits => 'Habits',
+        shift => 'Shift',
       };
 
   IconData get icon => switch (this) {
@@ -36,7 +53,15 @@ enum HomeBlockType {
         workout => Icons.fitness_center_rounded,
         notes => Icons.sticky_note_2_rounded,
         pinnedNote => Icons.push_pin_rounded,
+        list => Icons.list_alt_rounded,
+        label => Icons.label_rounded,
+        habits => Icons.repeat_rounded,
+        shift => Icons.work_history_rounded,
       };
+
+  /// Types that may appear on Home more than once (each instance pointing at
+  /// a different note/list/label). Everything else is single-instance.
+  static const Set<HomeBlockType> multiInstance = {pinnedNote, list, label};
 
   /// Shipped layout — the original blocks with workout then notes appended, so
   /// existing users see what they had plus the new blocks at the bottom.

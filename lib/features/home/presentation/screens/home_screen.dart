@@ -9,21 +9,27 @@ import '../../../tasks/presentation/providers/tasks_providers.dart';
 import '../../../tasks/presentation/widgets/task_tile.dart';
 import '../../data/home_block_config.dart';
 import '../../data/home_block_type.dart';
+import '../../data/home_layout.dart';
 import '../providers/home_blocks_providers.dart';
+import '../widgets/habits_block.dart';
 import '../widgets/notes_block.dart';
 import '../widgets/pinned_note_block.dart';
+import '../widgets/shift_block.dart';
 import '../widgets/workout_block.dart';
 import 'edit_home_screen.dart';
 
 /// The app's landing dashboard.
 ///
-/// Renders the user's blocks in their chosen order (home_blocks rows, v21 —
-/// seeded once from the legacy prefs layout). Long-press a block header to
-/// drag it into a new position; the ✎ button opens the Edit Home screen for
-/// add/remove/reorder with full controls.
+/// Renders the user's blocks in their chosen order (home_blocks rows, v21).
+/// Long-press a block header to drag it into a new position (phone layout);
+/// the ✎ button opens Edit Home for add/remove/reorder + per-block options.
+/// On wide screens (tablet / unfolded foldable) blocks flow into 2–3 columns,
+/// distributed round-robin so the top rows keep the user's priorities; drag
+/// reorder there lives in Edit Home.
 ///
-/// Task de-dupe follows the USER'S order: walking the blocks top-down, a
-/// task appears only in the first block that claims it.
+/// Task de-dupe follows the USER'S order: walking the blocks top-down, a task
+/// appears only in the first block that SHOWS it — a task hidden by one
+/// block's "items shown" cap is still available to a later block.
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -47,114 +53,225 @@ class HomeScreen extends ConsumerWidget {
         ref.watch(capturedTasksProvider).valueOrNull ?? const [];
     final List<TaskModel> week =
         ref.watch(thisWeekTasksProvider).valueOrNull ?? const [];
+    final List<TaskModel> allTasks =
+        ref.watch(allTasksProvider).valueOrNull ?? const [];
+    final List<TaskList> allLists =
+        ref.watch(taskListsProvider).valueOrNull ?? const [];
+    final List<Label> allLabels =
+        ref.watch(labelsProvider).valueOrNull ?? const [];
 
-    // Build visible blocks in the user's order, de-duping as we go.
+    // De-dupe in the user's order, claiming only what a block SHOWS.
     final Set<int> shownIds = {};
-    List<TaskModel> claim(List<TaskModel> tasks) {
+    (List<TaskModel>, int) claim(List<TaskModel> tasks, int? limit) {
       final List<TaskModel> mine =
           tasks.where((t) => !shownIds.contains(t.id)).toList();
-      shownIds.addAll(mine.map((t) => t.id));
-      return mine;
+      final List<TaskModel> shown =
+          limit == null ? mine : mine.take(limit).toList();
+      shownIds.addAll(shown.map((t) => t.id));
+      return (shown, mine.length - shown.length);
     }
 
-    // Every enabled block always renders — an empty one shows a quiet
-    // placeholder instead of vanishing (user feedback: the dashboard's
-    // structure should stay put even on an empty day).
     final List<Widget> children = [];
     for (final (HomeBlock row, HomeBlockType type) in layout) {
-      final Widget content = switch (type) {
-        HomeBlockType.urgent =>
-          _tasksOrEmpty(claim(urgentAll), 'Nothing urgent 🎉', cs),
-        HomeBlockType.dueToday =>
-          _tasksOrEmpty(claim(dueTodayAll), 'Nothing due today', cs),
-        HomeBlockType.captured =>
-          _tasksOrEmpty(claim(capturedAll), 'Nothing captured', cs),
-        HomeBlockType.thisWeek => _WeekCard(tasks: week),
-        HomeBlockType.workout => const WorkoutBlock(),
-        HomeBlockType.notes => const NotesBlock(),
-        HomeBlockType.pinnedNote => PinnedNoteBlock(row: row),
-      };
+      final int? limit = limitFromConfig(row.configJson);
+      final bool hideWhenEmpty = hideWhenEmptyFromConfig(row.configJson);
+      final bool collapsed = collapsedFromConfig(row.configJson);
 
-      // A pinned note's header shows the NOTE'S title, not the type label.
       String? titleOverride;
-      if (type == HomeBlockType.pinnedNote) {
-        final int? noteId = pinnedNoteIdFromConfig(row.configJson);
-        final Note? note = noteId == null
-            ? null
-            : ref.watch(watchNoteProvider(noteId)).valueOrNull;
-        final String t = note?.title.trim() ?? '';
-        if (t.isNotEmpty) titleOverride = t;
+      Widget content;
+      bool isEmpty = false;
+
+      switch (type) {
+        case HomeBlockType.urgent:
+          final (shown, more) = claim(urgentAll, limit);
+          isEmpty = shown.isEmpty && more == 0;
+          content = _tasksOrEmpty(shown, more, 'Nothing urgent 🎉', cs);
+        case HomeBlockType.dueToday:
+          final (shown, more) = claim(dueTodayAll, limit);
+          isEmpty = shown.isEmpty && more == 0;
+          content = _tasksOrEmpty(shown, more, 'Nothing due today', cs);
+        case HomeBlockType.captured:
+          final (shown, more) = claim(capturedAll, limit);
+          isEmpty = shown.isEmpty && more == 0;
+          content = _tasksOrEmpty(shown, more, 'Nothing captured', cs);
+        case HomeBlockType.thisWeek:
+          content =
+              _WeekCard(tasks: week, days: daysFromConfig(row.configJson) ?? 7);
+        case HomeBlockType.workout:
+          content = const WorkoutBlock();
+        case HomeBlockType.notes:
+          content = const NotesBlock();
+        case HomeBlockType.pinnedNote:
+          content = PinnedNoteBlock(row: row);
+          final int? noteId = pinnedNoteIdFromConfig(row.configJson);
+          final Note? note = noteId == null
+              ? null
+              : ref.watch(watchNoteProvider(noteId)).valueOrNull;
+          final String t = note?.title.trim() ?? '';
+          if (t.isNotEmpty) titleOverride = t;
+        case HomeBlockType.list:
+          final int? listId = listIdFromConfig(row.configJson);
+          final TaskList? list =
+              allLists.where((l) => l.id == listId).firstOrNull;
+          titleOverride = list?.name;
+          final List<TaskModel> source = listId == null
+              ? const []
+              : (ref.watch(tasksForListProvider(listId)).valueOrNull ??
+                      const [])
+                  .where((t) => !t.isCompleted)
+                  .toList();
+          final (shown, more) = claim(source, limit);
+          isEmpty = shown.isEmpty && more == 0;
+          content = _tasksOrEmpty(shown, more, 'Nothing here', cs,
+              onMore:
+                  listId == null ? null : () => context.push('/lists/$listId'));
+        case HomeBlockType.label:
+          final int? labelId = labelIdFromConfig(row.configJson);
+          final Label? lbl = allLabels.where((l) => l.id == labelId).firstOrNull;
+          titleOverride = lbl?.name;
+          final Set<int> ids = labelId == null
+              ? const {}
+              : ref.watch(taskIdsForLabelProvider(labelId)).valueOrNull ??
+                  const {};
+          final List<TaskModel> source = allTasks
+              .where((t) => ids.contains(t.id) && !t.isCompleted)
+              .toList();
+          final (shown, more) = claim(source, limit);
+          isEmpty = shown.isEmpty && more == 0;
+          content = _tasksOrEmpty(shown, more, 'Nothing here', cs);
+        case HomeBlockType.habits:
+          content = const HabitsBlock();
+        case HomeBlockType.shift:
+          final byDate =
+              ref.watch(shiftGlanceEmptyProvider).valueOrNull ?? false;
+          isEmpty = byDate;
+          content = const ShiftBlock();
       }
+
+      // "Hide when empty" removes the whole block, header included.
+      if (hideWhenEmpty && isEmpty) continue;
 
       children.add(Column(
         key: ValueKey(row.id),
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Long-press the header to drag the whole block.
+          // Long-press the header to drag the whole block (phone layout; a
+          // no-op inside the wide multi-column layout).
           ReorderableDelayedDragStartListener(
             index: children.length,
             child: _BlockHeader(
               type: type,
               color: _headerColor(type, cs),
               titleOverride: titleOverride,
+              collapsed: collapsed,
+              onToggleCollapse: () => ref
+                  .read(homeBlocksDaoProvider)
+                  .updateConfig(row.id,
+                      mergeConfig(row.configJson, {'collapsed': !collapsed})),
             ),
           ),
-          content,
+          if (!collapsed) content,
         ],
       ));
     }
 
-    return Scaffold(
-      body: ReorderableListView(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 96),
-        buildDefaultDragHandles: false,
-        // onReorderItem (Flutter 3.41+) already adjusts newIndex for the
-        // removed item — no manual `newIndex -= 1` dance. Children map 1:1
-        // onto the layout (every enabled block renders), so this is a
-        // straight list move.
-        onReorderItem: (int oldIndex, int newIndex) {
-          if (oldIndex == newIndex) return;
-          final List<int> ids = [for (final (row, _) in layout) row.id];
-          final int moved = ids.removeAt(oldIndex);
-          ids.insert(newIndex, moved);
-          ref.read(homeBlocksDaoProvider).reorderBlocks(ids);
-        },
-        header: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Align(
-              alignment: Alignment.centerRight,
-              child: IconButton(
-                icon: Icon(Icons.edit_rounded,
-                    size: 18, color: cs.onSurface.withAlpha(120)),
-                tooltip: 'Edit Home',
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                      builder: (_) => const EditHomeScreen()),
-                ),
-              ),
+    final Widget headerBar = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Align(
+          alignment: Alignment.centerRight,
+          child: IconButton(
+            icon: Icon(Icons.edit_rounded,
+                size: 18, color: cs.onSurface.withAlpha(120)),
+            tooltip: 'Edit Home',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => const EditHomeScreen()),
             ),
-            if (layout.isEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 48, bottom: 24),
-                child: Column(
+          ),
+        ),
+        if (layout.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 48, bottom: 24),
+            child: Column(
+              children: [
+                const Text('🏗️', style: TextStyle(fontSize: 44)),
+                const SizedBox(height: 10),
+                Text('Home is empty',
+                    style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 4),
+                Text(
+                  'Add blocks with the ✎ above',
+                  style: TextStyle(
+                      fontSize: 13, color: cs.onSurface.withAlpha(120)),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+
+    return Scaffold(
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final int cols = constraints.maxWidth >= 1080
+              ? 3
+              : (constraints.maxWidth >= 720 ? 2 : 1);
+          if (cols == 1) {
+            return ReorderableListView(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 96),
+              buildDefaultDragHandles: false,
+              // onReorderItem (Flutter 3.41+) already adjusts newIndex for the
+              // removed item. Children map 1:1 onto the RENDERED blocks;
+              // hidden-when-empty rows keep their stored order untouched.
+              onReorderItem: (int oldIndex, int newIndex) {
+                if (oldIndex == newIndex) return;
+                final List<int> rendered = [
+                  for (final Widget w in children)
+                    ((w.key as ValueKey<int>?)?.value ?? -1)
+                ];
+                final int moved = rendered.removeAt(oldIndex);
+                rendered.insert(newIndex, moved);
+                // Splice the moved visible ids back over the full stored order.
+                final List<int> all = [for (final (r, _) in layout) r.id];
+                final Set<int> visible = rendered.toSet();
+                int vi = 0;
+                final List<int> next = [
+                  for (final int id in all)
+                    visible.contains(id) ? rendered[vi++] : id
+                ];
+                ref.read(homeBlocksDaoProvider).reorderBlocks(next);
+              },
+              header: headerBar,
+              children: children,
+            );
+          }
+          // Wide layout: user order distributed round-robin across columns.
+          final List<List<Widget>> columns =
+              distributeRoundRobin(children, cols);
+          return SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 96),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                headerBar,
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('🏗️', style: TextStyle(fontSize: 44)),
-                    const SizedBox(height: 10),
-                    Text('Home is empty',
-                        style: Theme.of(context).textTheme.titleMedium),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Add blocks with the ✎ above',
-                      style: TextStyle(
-                          fontSize: 13, color: cs.onSurface.withAlpha(120)),
-                    ),
+                    for (int c = 0; c < columns.length; c++) ...[
+                      if (c > 0) const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: columns[c],
+                        ),
+                      ),
+                    ],
                   ],
                 ),
-              ),
-          ],
-        ),
-        children: children,
+              ],
+            ),
+          );
+        },
       ),
       floatingActionButton: FloatingActionButton(
         heroTag: 'home_fab',
@@ -173,26 +290,49 @@ class HomeScreen extends ConsumerWidget {
         HomeBlockType.workout => cs.primary,
         HomeBlockType.notes => cs.tertiary,
         HomeBlockType.pinnedNote => cs.secondary,
+        HomeBlockType.list => cs.primary,
+        HomeBlockType.label => cs.tertiary,
+        HomeBlockType.habits => cs.secondary,
+        HomeBlockType.shift => cs.primary,
       };
 
-  /// Task tiles, or a quiet placeholder card when the block is empty.
+  /// Task tiles (+ a muted "+N more"), or a quiet placeholder when empty.
   static Widget _tasksOrEmpty(
-      List<TaskModel> tasks, String emptyText, ColorScheme cs) {
-    if (tasks.isEmpty) {
+      List<TaskModel> tasks, int more, String emptyText, ColorScheme cs,
+      {VoidCallback? onMore}) {
+    if (tasks.isEmpty && more == 0) {
       return Card(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           child: Text(
             emptyText,
-            style: TextStyle(
-                fontSize: 13, color: cs.onSurface.withAlpha(110)),
+            style: TextStyle(fontSize: 13, color: cs.onSurface.withAlpha(110)),
           ),
         ),
       );
     }
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         for (final t in tasks) TaskTile(task: t, showListName: true),
+        if (more > 0)
+          InkWell(
+            onTap: onMore,
+            borderRadius: BorderRadius.circular(8),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 6, 16, 4),
+              child: Text(
+                '+$more more',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: onMore == null
+                      ? cs.onSurface.withAlpha(120)
+                      : cs.primary,
+                ),
+              ),
+            ),
+          ),
       ],
     );
   }
@@ -201,17 +341,27 @@ class HomeScreen extends ConsumerWidget {
 // ── Block header (also the drag handle) ───────────────────────────────────
 
 class _BlockHeader extends StatelessWidget {
-  const _BlockHeader(
-      {required this.type, required this.color, this.titleOverride});
+  const _BlockHeader({
+    required this.type,
+    required this.color,
+    this.titleOverride,
+    this.collapsed = false,
+    this.onToggleCollapse,
+  });
 
   final HomeBlockType type;
   final Color color;
 
-  /// Custom header text (a pinned note shows its note's title).
+  /// Custom header text (a pinned note / list / label shows its own name).
   final String? titleOverride;
+
+  /// Folded on Home — content hidden, chevron points right.
+  final bool collapsed;
+  final VoidCallback? onToggleCollapse;
 
   @override
   Widget build(BuildContext context) {
+    final ColorScheme cs = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.fromLTRB(4, 14, 4, 6),
       child: Row(
@@ -220,7 +370,7 @@ class _BlockHeader extends StatelessWidget {
           const SizedBox(width: 6),
           Expanded(
             child: Text(
-              (titleOverride ?? type.label).toUpperCase(),
+              (titleOverride ?? type.title).toUpperCase(),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
@@ -230,6 +380,18 @@ class _BlockHeader extends StatelessWidget {
                   ),
             ),
           ),
+          if (onToggleCollapse != null)
+            InkResponse(
+              onTap: onToggleCollapse,
+              radius: 18,
+              child: Icon(
+                collapsed
+                    ? Icons.chevron_right_rounded
+                    : Icons.expand_more_rounded,
+                size: 20,
+                color: cs.onSurface.withAlpha(120),
+              ),
+            ),
         ],
       ),
     );
@@ -239,9 +401,13 @@ class _BlockHeader extends StatelessWidget {
 // ── This-week card ────────────────────────────────────────────────────────
 
 class _WeekCard extends StatelessWidget {
-  const _WeekCard({required this.tasks});
+  const _WeekCard({required this.tasks, this.days = 7});
 
   final List<TaskModel> tasks;
+
+  /// How many days ahead to show (per-block "Days ahead" option, max 7 — the
+  /// source stream covers a week).
+  final int days;
 
   @override
   Widget build(BuildContext context) {
@@ -261,7 +427,7 @@ class _WeekCard extends StatelessWidget {
     return Card(
       child: Column(
         children: [
-          for (int i = 0; i < 7; i++)
+          for (int i = 0; i < days.clamp(1, 7); i++)
             _dayRow(
               context,
               cs,
