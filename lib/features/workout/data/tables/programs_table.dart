@@ -24,5 +24,12 @@ class Programs extends Table {
   TextColumn get splitType =>
       text().withDefault(const Constant('rotating'))();
 
+  /// A reusable template the user saved from one of their own programs (v22).
+  /// Templates never appear in the program list and are never active — they
+  /// live in the "My templates" shelf and are copied into a real program on
+  /// use. Mirrors `notes.isTemplate`.
+  BoolColumn get isTemplate =>
+      boolean().withDefault(const Constant(false))();
+
   DateTimeColumn get createdAt => dateTime()();
 }

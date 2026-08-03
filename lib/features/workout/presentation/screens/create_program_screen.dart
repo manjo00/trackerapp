@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../data/models/program_model.dart';
 import '../../data/models/program_template_data.dart';
 import '../providers/program_providers.dart';
 
@@ -46,6 +47,42 @@ class _CreateProgramScreenState
     }
   }
 
+  /// Spin a real program out of one of the user's saved templates.
+  Future<void> _useMyTemplate(ProgramModel template) async {
+    setState(() => _loading = true);
+    try {
+      final program = await ref
+          .read(programRepositoryProvider)
+          .createFromUserTemplate(template.id);
+      if (mounted && program != null) {
+        context.pushReplacement('/workout/programs/${program.id}');
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _deleteMyTemplate(ProgramModel template) async {
+    final bool? ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete template?'),
+        content: Text('"${template.name}" is removed from your templates. '
+            'Programs you already created from it are untouched.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Cancel')),
+          FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('Delete')),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    await ref.read(programRepositoryProvider).deleteProgram(template.id);
+  }
+
   Future<void> _createCustom() async {
     final name = _nameCtrl.text.trim();
     if (name.isEmpty) return;
@@ -69,6 +106,8 @@ class _CreateProgramScreenState
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final List<ProgramModel> myTemplates =
+        ref.watch(programTemplatesProvider).valueOrNull ?? const [];
 
     return Scaffold(
       appBar: AppBar(title: const Text('Create Program')),
@@ -94,6 +133,39 @@ class _CreateProgramScreenState
                       template: template,
                       onTap: () => _pickTemplate(template),
                     ),
+
+                  // ── The user's own saved templates ───────────────────────
+                  if (myTemplates.isNotEmpty) ...[
+                    const SizedBox(height: 20),
+                    Text(
+                      'My templates',
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleMedium
+                          ?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 12),
+                    for (final ProgramModel t in myTemplates)
+                      Card(
+                        child: ListTile(
+                          leading: Icon(Icons.bookmark_rounded,
+                              color: cs.secondary),
+                          title: Text(t.name),
+                          subtitle: Text(
+                            '${t.sessions.length} '
+                            '${t.sessions.length == 1 ? 'day' : 'days'} · '
+                            '${t.splitType == 'weekly' ? 'Weekly' : 'Rotating'}',
+                          ),
+                          onTap: () => _useMyTemplate(t),
+                          trailing: IconButton(
+                            icon: Icon(Icons.delete_outline_rounded,
+                                color: cs.onSurface.withAlpha(150)),
+                            tooltip: 'Delete template',
+                            onPressed: () => _deleteMyTemplate(t),
+                          ),
+                        ),
+                      ),
+                  ],
 
                   const SizedBox(height: 24),
                   const Divider(),

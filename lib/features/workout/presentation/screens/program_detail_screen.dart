@@ -164,6 +164,45 @@ class _ProgramDetailViewState
     }
   }
 
+  /// Saves this program (days + exercise slots) as a reusable personal
+  /// template, offering a name first. Copies are independent — editing the
+  /// program later doesn't change the template.
+  Future<void> _saveAsTemplate(ProgramModel program) async {
+    final TextEditingController ctrl =
+        TextEditingController(text: program.name);
+    final String? name = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Save as my template'),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          decoration: const InputDecoration(labelText: 'Template name'),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Cancel')),
+          FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(ctrl.text.trim()),
+              child: const Text('Save')),
+        ],
+      ),
+    );
+    ctrl.dispose();
+    if (name == null || name.isEmpty) return;
+    await ref
+        .read(programRepositoryProvider)
+        .saveAsTemplate(program.id, name: name);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Saved — find it under Create Program → '
+                'My templates')),
+      );
+    }
+  }
+
   Future<void> _deleteProgram() async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -265,12 +304,17 @@ class _ProgramDetailViewState
           PopupMenuButton<String>(
             itemBuilder: (_) => [
               const PopupMenuItem(
+                value: 'save_template',
+                child: Text('Save as my template'),
+              ),
+              const PopupMenuItem(
                 value: 'delete',
                 child: Text('Delete Program'),
               ),
             ],
             onSelected: (v) {
               if (v == 'delete') _deleteProgram();
+              if (v == 'save_template') _saveAsTemplate(program);
             },
           ),
         ],

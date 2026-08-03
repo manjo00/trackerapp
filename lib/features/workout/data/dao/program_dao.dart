@@ -13,17 +13,28 @@ class ProgramDao extends DatabaseAccessor<AppDatabase>
 
   // ── Programs ──────────────────────────────────────────────────────────────
 
-  /// Stream of all programs, newest first.
-  Stream<List<Program>> watchAllPrograms() =>
-      (select(programs)
-            ..orderBy([(p) => OrderingTerm.desc(p.createdAt)]))
-          .watch();
+  /// Stream of all real programs, newest first (saved templates excluded).
+  Stream<List<Program>> watchAllPrograms() => (select(programs)
+        ..where((p) => p.isTemplate.equals(false))
+        ..orderBy([(p) => OrderingTerm.desc(p.createdAt)]))
+      .watch();
 
-  /// One-shot list of all programs.
-  Future<List<Program>> getAllPrograms() =>
-      (select(programs)
-            ..orderBy([(p) => OrderingTerm.desc(p.createdAt)]))
-          .get();
+  /// One-shot list of all real programs (saved templates excluded).
+  Future<List<Program>> getAllPrograms() => (select(programs)
+        ..where((p) => p.isTemplate.equals(false))
+        ..orderBy([(p) => OrderingTerm.desc(p.createdAt)]))
+      .get();
+
+  /// The user's saved program templates, newest first (v22).
+  Stream<List<Program>> watchProgramTemplates() => (select(programs)
+        ..where((p) => p.isTemplate.equals(true))
+        ..orderBy([(p) => OrderingTerm.desc(p.createdAt)]))
+      .watch();
+
+  /// One-shot fetch of any program row by id — templates included, so a
+  /// template can be read back for copying.
+  Future<Program?> getProgramById(int id) =>
+      (select(programs)..where((p) => p.id.equals(id))).getSingleOrNull();
 
   /// Inserts a program and returns its id.
   Future<int> insertProgram(ProgramsCompanion companion) =>

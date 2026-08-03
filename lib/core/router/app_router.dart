@@ -16,6 +16,7 @@ import '../../features/tasks/presentation/screens/lists_overview_screen.dart';
 import '../../features/tasks/presentation/screens/quick_add_task_screen.dart';
 import '../../features/planner/presentation/screens/planner_screen.dart';
 import '../../features/settings/presentation/screens/settings_screen.dart';
+import '../../features/codex/presentation/screens/codex_screen.dart';
 import '../../features/shifts/presentation/screens/shift_schedule_screen.dart';
 import '../../features/today/presentation/screens/today_screen.dart';
 import '../../features/trackers/data/models/tracker_item_model.dart';
@@ -191,6 +192,11 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/archived',
       builder: (context, state) => const ArchivedScreen(),
+    ),
+
+    GoRoute(
+      path: '/codex',
+      builder: (context, state) => const CodexScreen(),
     ),
 
     // ── Notes (full-screen, no bottom nav) ────────────────────────────────

@@ -189,6 +189,75 @@ class ProgramRepository {
     return _hydrateProgram(row);
   }
 
+  // ── Personal templates (v22) ──────────────────────────────────────────────
+
+  /// The user's saved program templates, with sessions + exercises loaded.
+  Stream<List<ProgramModel>> watchProgramTemplates() =>
+      _programDao.watchProgramTemplates().asyncMap(_hydrateAll);
+
+  /// Deep-copies program [programId] (sessions + exercise slots) into a saved
+  /// template. The copy is never active and never shows in the program list.
+  Future<int> saveAsTemplate(int programId, {String? name}) async {
+    final Program? source = await _programDao.getProgramById(programId);
+    if (source == null) return -1;
+    final int templateId = await _programDao.insertProgram(
+      ProgramsCompanion.insert(
+        name: name ?? source.name,
+        description: Value(source.description),
+        splitType: Value(source.splitType),
+        isTemplate: const Value(true),
+        createdAt: DateTime.now(),
+      ),
+    );
+    await _copySessionsInto(from: programId, to: templateId);
+    return templateId;
+  }
+
+  /// Creates a real program from one of the user's saved templates, makes it
+  /// active, and returns it fully hydrated.
+  Future<ProgramModel?> createFromUserTemplate(int templateId) async {
+    final Program? tpl = await _programDao.getProgramById(templateId);
+    if (tpl == null) return null;
+    final int programId = await createProgram(
+      name: tpl.name,
+      description: tpl.description,
+      splitType: tpl.splitType,
+    );
+    await setActiveProgram(programId);
+    await _copySessionsInto(from: templateId, to: programId);
+
+    final Program? row = await _programDao.getProgramById(programId);
+    return row == null ? null : _hydrateProgram(row);
+  }
+
+  /// Duplicates every session (and its exercise slots) from one program row
+  /// onto another — the shared half of save-as-template / use-template.
+  Future<void> _copySessionsInto(
+      {required int from, required int to}) async {
+    final sessionRows = await _programDao.getSessionsForProgram(from);
+    for (final s in sessionRows) {
+      final int newSessionId = await addSession(
+        programId: to,
+        name: s.name,
+        colorValue: s.colorValue,
+        weekDays: s.weekDays,
+        orderIndex: s.orderIndex,
+      );
+      final exRows = await _programDao.getExercisesForSession(s.id);
+      for (int i = 0; i < exRows.length; i++) {
+        final e = exRows[i];
+        await addExercise(
+          programSessionId: newSessionId,
+          exerciseName: e.exerciseName,
+          targetSets: e.targetSets,
+          targetReps: e.targetReps,
+          restSeconds: e.restSeconds,
+          orderIndex: i,
+        );
+      }
+    }
+  }
+
   // ── Scheduling helpers ────────────────────────────────────────────────────
 
   /// For rotating programs: returns the next session to train based on

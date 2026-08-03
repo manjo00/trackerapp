@@ -226,6 +226,15 @@ class AppDrawer extends ConsumerWidget {
 
             // ── Settings & info ─────────────────────────────────────────
             _DrawerTile(
+              icon: Icons.menu_book_rounded,
+              label: 'Codex',
+              subtitle: 'How everything works, hidden tricks included',
+              onTap: () {
+                Navigator.of(context).pop();
+                context.push('/codex');
+              },
+            ),
+            _DrawerTile(
               icon: Icons.inventory_2_rounded,
               label: 'Archived',
               subtitle: 'Restore or delete hidden items',

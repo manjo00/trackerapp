@@ -129,8 +129,10 @@ class AppDatabase extends _$AppDatabase {
   ///        from the old derived depth
   /// v21 → home_blocks table — the Home dashboard layout moves from prefs into
   ///        the DB (per-block config + rides in backups)
+  /// v22 → personal workout templates: isTemplate flag on programs (a saved
+  ///        copy of the user's own program, copied back out on use)
   @override
-  int get schemaVersion => 21;
+  int get schemaVersion => 22;
 
   /// The old vs. new default rotation-label colour (see v8 migration).
   static const int _oldRotationColor = 0xFFFFB347;
@@ -312,6 +314,11 @@ class AppDatabase extends _$AppDatabase {
             // the provider layer seeds it once from the legacy prefs layout
             // (prefs aren't reachable from inside a migration).
             await m.createTable(homeBlocks);
+          }
+          if (from < 22) {
+            // Personal workout templates. Existing programs stay real programs
+            // (isTemplate = false) — nothing to backfill.
+            await m.addColumn(programs, programs.isTemplate);
           }
         },
         beforeOpen: (details) async {

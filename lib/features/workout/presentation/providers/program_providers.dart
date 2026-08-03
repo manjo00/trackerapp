@@ -22,6 +22,13 @@ ProgramRepository programRepository(ProgramRepositoryRef ref) {
 Stream<List<ProgramModel>> allPrograms(AllProgramsRef ref) =>
     ref.watch(programRepositoryProvider).watchAllPrograms();
 
+// ── Saved program templates (v22) ─────────────────────────────────────────────
+
+/// The user's own saved program templates ("My templates").
+@riverpod
+Stream<List<ProgramModel>> programTemplates(ProgramTemplatesRef ref) =>
+    ref.watch(programRepositoryProvider).watchProgramTemplates();
+
 // ── Active program stream ─────────────────────────────────────────────────────
 
 /// Emits the currently active program, or null if none is set.
