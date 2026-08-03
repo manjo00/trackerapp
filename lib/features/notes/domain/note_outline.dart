@@ -37,3 +37,15 @@ Map<int, int> blockDepths(List<NoteBlock> blocks) {
 /// indent on its own leading side, so a mixed Arabic/English note looks
 /// deliberate rather than randomly shifted.
 bool lineStartsRtl(String text) => Bidi.startsWithRtl(text);
+
+/// Outline depth for a line inserted after [anchor]: one level deeper when it
+/// follows a heading (a bed's lines nest automatically), the same depth after
+/// anything else, top level when the note is empty. Shared by the full editor
+/// and the Home pinned-note card so new lines land identically everywhere.
+int indentForInsertAfter(NoteBlock? anchor) {
+  if (anchor == null) return 0;
+  final bool isHeading =
+      NoteBlockType.parse(anchor.type) == NoteBlockType.text &&
+          anchor.headingLevel != 0;
+  return isHeading ? anchor.indent + 1 : anchor.indent;
+}

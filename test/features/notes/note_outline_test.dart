@@ -47,6 +47,21 @@ void main() {
     });
   });
 
+  group('indentForInsertAfter', () {
+    test('empty note → top level', () {
+      expect(indentForInsertAfter(null), 0);
+    });
+
+    test('after a heading → one level deeper (its first line)', () {
+      final NoteBlock h = _b(1, heading: 1);
+      expect(indentForInsertAfter(h), h.indent + 1);
+    });
+
+    test('after a plain line → same depth (a sibling)', () {
+      expect(indentForInsertAfter(_b(2)), 0);
+    });
+  });
+
   group('lineStartsRtl', () {
     test('Latin / digits / empty read left-to-right', () {
       expect(lineStartsRtl('Bed 9 vent'), isFalse);

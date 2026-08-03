@@ -13,6 +13,7 @@ import '../../domain/section_fold.dart';
 import '../providers/notes_providers.dart';
 import '../widgets/checkbox_block_view.dart';
 import '../widgets/divider_block_view.dart';
+import '../widgets/heading_line_view.dart';
 import '../widgets/note_arrange_view.dart';
 import '../widgets/photo_block_view.dart';
 import '../widgets/text_block_view.dart';
@@ -100,13 +101,6 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     return blocks.where((b) => b.id == _focusedBlockId).firstOrNull;
   }
 
-  /// Depth for a line inserted after [anchor]: one level in when it follows a
-  /// heading (so a bed's lines nest automatically), otherwise the same depth.
-  int _indentAfter(NoteBlock? anchor) {
-    if (anchor == null) return 0;
-    return isHeadingBlock(anchor) ? anchor.indent + 1 : anchor.indent;
-  }
-
   NoteBlock? _lastBlock() {
     final List<NoteBlock> list =
         ref.read(noteBlocksProvider(widget.noteId)).valueOrNull ?? const [];
@@ -116,7 +110,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
   Future<void> _addBlock(NoteBlockType type) async {
     final dao = ref.read(notesDaoProvider);
     final NoteBlock? anchor = _addAnchor();
-    final int indent = _indentAfter(anchor ?? _lastBlock());
+    final int indent = indentForInsertAfter(anchor ?? _lastBlock());
     final int id = anchor != null
         ? await dao.insertBlockAfter(
             noteId: widget.noteId,
@@ -143,7 +137,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
       type: NoteBlockType.parse(current.type),
       content: after,
       afterOrderIndex: current.orderIndex,
-      indent: _indentAfter(current),
+      indent: indentForInsertAfter(current),
     );
     await dao.touchNote(widget.noteId, DateTime.now());
     if (mounted) setState(() => _focusRequestId = id);
@@ -154,7 +148,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     // otherwise clear _focusedBlockId before the photo comes back.
     final NoteBlock? anchor = _addAnchor();
     final int end = _nextOrder;
-    final int indent = _indentAfter(anchor ?? _lastBlock());
+    final int indent = indentForInsertAfter(anchor ?? _lastBlock());
     final ImageSource? source = await showModalBottomSheet<ImageSource>(
       context: context,
       builder: (ctx) => SafeArea(
@@ -347,7 +341,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
   Future<void> _addDividerBlock() async {
     final dao = ref.read(notesDaoProvider);
     final NoteBlock? anchor = _addAnchor();
-    final int indent = _indentAfter(anchor ?? _lastBlock());
+    final int indent = indentForInsertAfter(anchor ?? _lastBlock());
     if (anchor != null) {
       await dao.insertBlockAfter(
           noteId: widget.noteId,
@@ -535,7 +529,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     switch (NoteBlockType.parse(b.type)) {
       case NoteBlockType.text:
         if (b.headingLevel != 0) {
-          return _HeadingLine(
+          return HeadingLineView(
             block: b,
             hiddenCount: fold.hiddenCountByHeadingId[b.id] ?? 0,
             autofocus: focusMe,
@@ -904,70 +898,3 @@ class _FormatRow extends StatelessWidget {
   }
 }
 
-/// A heading row: a fold caret in the left gutter + the editable heading field,
-/// with a muted "· N hidden" when the section is folded. Tapping the caret
-/// folds/unfolds; tapping the text edits it (the caret avoids the tap conflict
-/// between "toggle fold" and "place the caret to edit").
-class _HeadingLine extends StatelessWidget {
-  const _HeadingLine({
-    required this.block,
-    required this.hiddenCount,
-    required this.onToggle,
-    this.autofocus = false,
-    this.onSplit,
-    this.onDeleteEmpty,
-    this.onFocus,
-    this.onBlur,
-  });
-
-  final NoteBlock block;
-  final int hiddenCount;
-  final VoidCallback onToggle;
-  final bool autofocus;
-  final void Function(String after)? onSplit;
-  final VoidCallback? onDeleteEmpty;
-  final void Function(int blockId)? onFocus;
-  final VoidCallback? onBlur;
-
-  @override
-  Widget build(BuildContext context) {
-    final ColorScheme cs = Theme.of(context).colorScheme;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(top: 6, right: 2),
-          child: InkResponse(
-            onTap: onToggle,
-            radius: 20,
-            child: Icon(
-              block.collapsed
-                  ? Icons.chevron_right_rounded
-                  : Icons.expand_more_rounded,
-              color: cs.onSurface.withAlpha(140),
-            ),
-          ),
-        ),
-        Expanded(
-          child: TextBlockView(
-            block: block,
-            autofocus: autofocus,
-            onSplit: onSplit,
-            onDeleteEmpty: onDeleteEmpty,
-            onFocus: onFocus,
-            onBlur: onBlur,
-          ),
-        ),
-        if (block.collapsed && hiddenCount > 0)
-          Padding(
-            padding: const EdgeInsets.only(top: 10, left: 4),
-            child: Text(
-              '· $hiddenCount hidden',
-              style:
-                  TextStyle(fontSize: 12, color: cs.onSurface.withAlpha(130)),
-            ),
-          ),
-      ],
-    );
-  }
-}
