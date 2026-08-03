@@ -9,6 +9,35 @@ import 'codex_topic.dart';
 const List<CodexTopic> kCodexTopics = [
   // ── Getting around ──────────────────────────────────────────────────────
   CodexTopic(
+    id: 'codex-itself',
+    title: 'About the Codex',
+    category: CodexCategory.basics,
+    summary: 'What this manual is, and how to get answers out of it fast.',
+    keywords: ['help', 'manual', 'guide', 'tutorial', 'how to', 'docs'],
+    body: [
+      CodexBlock.p(
+          'The Codex documents every part of Uplan — including the things you '
+          'would never find by tapping around. It works offline and ships '
+          'with the app, so it is always in step with the version you have.'),
+      CodexBlock.heading('Finding things'),
+      CodexBlock.bullet(
+          'Search matches titles, the text of every article, and synonyms — '
+          'so describing a feature in your own words usually finds it.'),
+      CodexBlock.bullet(
+          'The 💡 Hidden gems chip filters to the buried features: gestures, '
+          'shortcuts and tricks that have no visible button.'),
+      CodexBlock.bullet(
+          'With the search box empty, topics are grouped by area — read it '
+          'like a manual.'),
+      CodexBlock.tip(
+          'A 💡 next to a topic means "you would not have discovered this on '
+          'your own". If you only read a few articles, read those.'),
+      CodexBlock.p(
+          'Every new feature is added here as it is built, so the Codex stays '
+          'a complete picture of what the app can do.'),
+    ],
+  ),
+  CodexTopic(
     id: 'nav',
     title: 'Tabs, drawer and where things live',
     category: CodexCategory.basics,
