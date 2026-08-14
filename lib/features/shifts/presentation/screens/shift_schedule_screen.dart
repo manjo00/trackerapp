@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../coach/data/coach_tip.dart';
+import '../../../coach/presentation/coach_controller.dart';
+import '../../../coach/presentation/coach_target.dart';
 import '../widgets/shift_month_calendar.dart';
 import 'rotations_editor_screen.dart';
 
@@ -14,53 +17,62 @@ class ShiftScheduleScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final ColorScheme cs = Theme.of(context).colorScheme;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Work schedule'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.tune_rounded),
-            tooltip: 'Edit rotations',
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => const RotationsEditorScreen(),
+    return CoachMarks(
+      screen: kCoachShifts,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Work schedule'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.tune_rounded),
+              tooltip: 'Edit rotations',
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const RotationsEditorScreen(),
+                ),
               ),
             ),
-          ),
-        ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.only(top: 8, bottom: 32),
-        children: [
-          const ShiftMonthCalendar(),
-          const SizedBox(height: 16),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: cs.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.touch_app_rounded,
-                      size: 20, color: cs.onSurface.withAlpha(160)),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Tap a day to set its shift — day/night + rotation',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: cs.onSurface.withAlpha(180),
+          ],
+        ),
+        body: ListView(
+          padding: const EdgeInsets.only(top: 8, bottom: 32),
+          children: [
+            const CoachTarget(
+              id: 'shifts.calendar',
+              child: ShiftMonthCalendar(),
+            ),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: cs.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.touch_app_rounded,
+                      size: 20,
+                      color: cs.onSurface.withAlpha(160),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Tap a day to set its shift — day/night + rotation',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: cs.onSurface.withAlpha(180),
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

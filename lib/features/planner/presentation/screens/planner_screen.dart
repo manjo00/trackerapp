@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import '../../../shifts/presentation/widgets/shift_month_calendar.dart';
 import '../widgets/day_detail_view.dart';
 import '../widgets/week_strip.dart';
+import '../../../coach/data/coach_tip.dart';
+import '../../../coach/presentation/coach_controller.dart';
+import '../../../coach/presentation/coach_target.dart';
 
 /// The Planner tab — a week-strip calendar above a day detail view.
 ///
@@ -38,15 +41,35 @@ class _PlannerScreenState extends State<PlannerScreen> {
 
   String get _selectedDateLabel {
     const List<String> weekdays = [
-      '', 'Monday', 'Tuesday', 'Wednesday',
-      'Thursday', 'Friday', 'Saturday', 'Sunday',
+      '',
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday',
     ];
     const List<String> months = [
-      '', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      '',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     final DateTime today = DateTime(
-        DateTime.now().year, DateTime.now().month, DateTime.now().day);
+      DateTime.now().year,
+      DateTime.now().month,
+      DateTime.now().day,
+    );
     final int diff = _selectedDate.difference(today).inDays;
 
     final String dayName = switch (diff) {
@@ -62,72 +85,75 @@ class _PlannerScreenState extends State<PlannerScreen> {
   Widget build(BuildContext context) {
     final ColorScheme cs = Theme.of(context).colorScheme;
 
-    return Scaffold(
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // ── Week / Month toggle ─────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-            child: SegmentedButton<bool>(
-              style: SegmentedButton.styleFrom(
-                minimumSize: const Size.fromHeight(36),
-              ),
-              segments: const [
-                ButtonSegment(
-                  value: false,
-                  icon: Icon(Icons.view_week_rounded, size: 16),
-                  label: Text('Week'),
+    return CoachMarks(
+      screen: kCoachPlanner,
+      child: Scaffold(
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // ── Week / Month toggle ─────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+              child: SegmentedButton<bool>(
+                style: SegmentedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(36),
                 ),
-                ButtonSegment(
-                  value: true,
-                  icon: Icon(Icons.calendar_view_month_rounded, size: 16),
-                  label: Text('Month'),
-                ),
-              ],
-              selected: {_monthView},
-              onSelectionChanged: (Set<bool> s) =>
-                  setState(() => _monthView = s.first),
-            ),
-          ),
-
-          // ── Calendar: week strip or month grid ──────────────────────────
-          if (_monthView)
-            ShiftMonthCalendar(
-              initialMonth: _selectedDate,
-              selectedDate: _dateStr(_selectedDate),
-              showSummary: false,
-              onDaySelected: (String ds) =>
-                  setState(() => _selectedDate = DateTime.parse(ds)),
-            )
-          else
-            WeekStrip(
-              selectedDate: _selectedDate,
-              onDateSelected: (DateTime d) =>
-                  setState(() => _selectedDate = d),
-            ),
-
-          // ── Selected day label ──────────────────────────────────────────
-          Container(
-            color: cs.surfaceContainerLow,
-            padding:
-                const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-            child: Text(
-              _selectedDateLabel,
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: cs.onSurface,
+                segments: const [
+                  ButtonSegment(
+                    value: false,
+                    icon: Icon(Icons.view_week_rounded, size: 16),
+                    label: Text('Week'),
                   ),
+                  ButtonSegment(
+                    value: true,
+                    icon: Icon(Icons.calendar_view_month_rounded, size: 16),
+                    label: Text('Month'),
+                  ),
+                ],
+                selected: {_monthView},
+                onSelectionChanged: (Set<bool> s) =>
+                    setState(() => _monthView = s.first),
+              ),
             ),
-          ),
 
-          const Divider(height: 1),
+            // ── Calendar: week strip or month grid ──────────────────────────
+            if (_monthView)
+              CoachTarget(
+                id: 'planner.calendar',
+                child: ShiftMonthCalendar(
+                  initialMonth: _selectedDate,
+                  selectedDate: _dateStr(_selectedDate),
+                  showSummary: false,
+                  onDaySelected: (String ds) =>
+                      setState(() => _selectedDate = DateTime.parse(ds)),
+                ),
+              )
+            else
+              WeekStrip(
+                selectedDate: _selectedDate,
+                onDateSelected: (DateTime d) =>
+                    setState(() => _selectedDate = d),
+              ),
 
-          // ── Day detail ──────────────────────────────────────────────────
-          Expanded(
-            child: DayDetailView(selectedDate: _selectedDate),
-          ),
-        ],
+            // ── Selected day label ──────────────────────────────────────────
+            Container(
+              color: cs.surfaceContainerLow,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              child: Text(
+                _selectedDateLabel,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: cs.onSurface,
+                ),
+              ),
+            ),
+
+            const Divider(height: 1),
+
+            // ── Day detail ──────────────────────────────────────────────────
+            Expanded(child: DayDetailView(selectedDate: _selectedDate)),
+          ],
+        ),
       ),
     );
   }

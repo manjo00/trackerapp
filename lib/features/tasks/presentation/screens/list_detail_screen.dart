@@ -14,6 +14,9 @@ import '../providers/lists_providers.dart';
 import '../widgets/list_form_dialog.dart';
 import '../widgets/task_tile.dart';
 import 'add_task_screen.dart';
+import '../../../coach/data/coach_tip.dart';
+import '../../../coach/presentation/coach_controller.dart';
+import '../../../coach/presentation/coach_target.dart';
 
 /// One list, full-screen: unsectioned tasks first, then each section as a
 /// header with its tasks. List rename/recolor/delete via the AppBar menu.
@@ -45,102 +48,114 @@ class ListDetailScreen extends ConsumerWidget {
         .where((t) => t.sectionId == null || !sectionIds.contains(t.sectionId))
         .toList();
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.circle, size: 14, color: Color(list.colorValue)),
-            const SizedBox(width: 10),
-            Flexible(child: Text(list.name, overflow: TextOverflow.ellipsis)),
-          ],
-        ),
-        actions: [
-          PopupMenuButton<String>(
-            onSelected: (String action) => action == 'push_github'
-                ? _pushToGithub(context, ref, list, sections, tasks)
-                : _onListAction(context, ref, action, list),
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                  value: 'rename', child: Text('Rename / recolor')),
-              CheckedPopupMenuItem(
-                value: 'auto_archive',
-                checked: list.autoArchiveCompleted,
-                child: const Text('Auto-archive done tasks'),
-              ),
-              // Dev-only (7× the drawer About tile): publish this list as
-              // feedback for the development workflow.
-              if (ref.read(settingsProvider).devMode)
-                const PopupMenuItem(
-                    value: 'push_github',
-                    child: Text('Push feedback to GitHub')),
-              const PopupMenuItem(
-                  value: 'archive', child: Text('Archive')),
-              const PopupMenuItem(value: 'delete', child: Text('Delete')),
+    return CoachMarks(
+      screen: kCoachListDetail,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.circle, size: 14, color: Color(list.colorValue)),
+              const SizedBox(width: 10),
+              Flexible(child: Text(list.name, overflow: TextOverflow.ellipsis)),
             ],
           ),
-        ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-        children: [
-          if (tasks.isEmpty && sections.isEmpty)
+          actions: [
+            CoachTarget(
+              id: 'listDetail.menu',
+              child: PopupMenuButton<String>(
+                onSelected: (String action) => action == 'push_github'
+                    ? _pushToGithub(context, ref, list, sections, tasks)
+                    : _onListAction(context, ref, action, list),
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'rename',
+                    child: Text('Rename / recolor'),
+                  ),
+                  CheckedPopupMenuItem(
+                    value: 'auto_archive',
+                    checked: list.autoArchiveCompleted,
+                    child: const Text('Auto-archive done tasks'),
+                  ),
+                  // Dev-only (7× the drawer About tile): publish this list as
+                  // feedback for the development workflow.
+                  if (ref.read(settingsProvider).devMode)
+                    const PopupMenuItem(
+                      value: 'push_github',
+                      child: Text('Push feedback to GitHub'),
+                    ),
+                  const PopupMenuItem(value: 'archive', child: Text('Archive')),
+                  const PopupMenuItem(value: 'delete', child: Text('Delete')),
+                ],
+              ),
+            ),
+          ],
+        ),
+        body: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+          children: [
+            if (tasks.isEmpty && sections.isEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 48),
+                child: Center(
+                  child: Text(
+                    'Nothing here yet — add a task or a section',
+                    style: TextStyle(color: cs.onSurface.withAlpha(140)),
+                  ),
+                ),
+              ),
+
+            // ── Unsectioned tasks (list body) ──────────────────────────────
+            ...unsectioned.map((t) => TaskTile(task: t)),
+
+            // ── Sections ───────────────────────────────────────────────────
+            for (final ListSection section in sections) ...[
+              _SectionHeader(
+                section: section,
+                onAddTask: () => context.push(
+                  '/tasks/add',
+                  extra: AddTaskArgs(listId: listId, sectionId: section.id),
+                ),
+                onRename: () => _renameSection(context, ref, section),
+                onDelete: () => _deleteSection(context, ref, section),
+              ),
+              ...tasks
+                  .where((t) => t.sectionId == section.id)
+                  .map((t) => TaskTile(task: t)),
+            ],
+
+            // ── Add section ────────────────────────────────────────────────
             Padding(
-              padding: const EdgeInsets.only(top: 48),
-              child: Center(
-                child: Text(
-                  'Nothing here yet — add a task or a section',
-                  style: TextStyle(color: cs.onSurface.withAlpha(140)),
+              padding: const EdgeInsets.only(top: 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: () => _addSection(context, ref),
+                  icon: const Icon(Icons.add_rounded, size: 18),
+                  label: const Text('Add section'),
                 ),
               ),
             ),
-
-          // ── Unsectioned tasks (list body) ──────────────────────────────
-          ...unsectioned.map((t) => TaskTile(task: t)),
-
-          // ── Sections ───────────────────────────────────────────────────
-          for (final ListSection section in sections) ...[
-            _SectionHeader(
-              section: section,
-              onAddTask: () => context.push(
-                '/tasks/add',
-                extra: AddTaskArgs(listId: listId, sectionId: section.id),
-              ),
-              onRename: () => _renameSection(context, ref, section),
-              onDelete: () => _deleteSection(context, ref, section),
-            ),
-            ...tasks
-                .where((t) => t.sectionId == section.id)
-                .map((t) => TaskTile(task: t)),
           ],
-
-          // ── Add section ────────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                onPressed: () => _addSection(context, ref),
-                icon: const Icon(Icons.add_rounded, size: 18),
-                label: const Text('Add section'),
-              ),
-            ),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        heroTag: 'list_detail_fab',
-        onPressed: () =>
-            context.push('/tasks/add', extra: AddTaskArgs(listId: listId)),
-        child: const Icon(Icons.add_rounded),
+        ),
+        floatingActionButton: FloatingActionButton(
+          heroTag: 'list_detail_fab',
+          onPressed: () =>
+              context.push('/tasks/add', extra: AddTaskArgs(listId: listId)),
+          child: const Icon(Icons.add_rounded),
+        ),
       ),
     );
   }
 
   // ── List actions ──────────────────────────────────────────────────────────
 
-  Future<void> _onListAction(BuildContext context, WidgetRef ref,
-      String action, TaskList list) async {
+  Future<void> _onListAction(
+    BuildContext context,
+    WidgetRef ref,
+    String action,
+    TaskList list,
+  ) async {
     final repo = ref.read(listsRepositoryProvider);
     switch (action) {
       case 'rename':
@@ -157,25 +172,31 @@ class ListDetailScreen extends ConsumerWidget {
         final bool next = !list.autoArchiveCompleted;
         await ref.read(listsDaoProvider).setListAutoArchive(list.id, next);
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(next
-                ? 'Done tasks in "${list.name}" will auto-archive'
-                : 'Done tasks in "${list.name}" will stay visible'),
-          ));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                next
+                    ? 'Done tasks in "${list.name}" will auto-archive'
+                    : 'Done tasks in "${list.name}" will stay visible',
+              ),
+            ),
+          );
         }
       case 'archive':
         await ref
             .read(archiveServiceProvider)
             .archiveList(list.id, DateTime.now());
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('"${list.name}" archived'),
-            action: SnackBarAction(
-              label: 'Undo',
-              onPressed: () =>
-                  ref.read(archiveServiceProvider).restoreList(list.id),
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('"${list.name}" archived'),
+              action: SnackBarAction(
+                label: 'Undo',
+                onPressed: () =>
+                    ref.read(archiveServiceProvider).restoreList(list.id),
+              ),
             ),
-          ));
+          );
           context.pop();
         }
       case 'delete':
@@ -207,31 +228,40 @@ class ListDetailScreen extends ConsumerWidget {
 
   /// Publishes this list as feedback/<slug>.md in the configured repo.
   /// Uses the sections/tasks already loaded by build() — no extra fetch.
-  Future<void> _pushToGithub(BuildContext context, WidgetRef ref,
-      TaskList list, List<ListSection> sections, List<TaskModel> tasks) async {
+  Future<void> _pushToGithub(
+    BuildContext context,
+    WidgetRef ref,
+    TaskList list,
+    List<ListSection> sections,
+    List<TaskModel> tasks,
+  ) async {
     final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
     final GoRouter router = GoRouter.of(context);
 
-    final GithubFeedbackService service =
-        ref.read(githubFeedbackServiceProvider);
+    final GithubFeedbackService service = ref.read(
+      githubFeedbackServiceProvider,
+    );
 
     GithubFeedbackConfig? config;
     GithubPushResult result;
     try {
       config = await service.loadConfig();
       if (config == null) {
-        messenger.showSnackBar(SnackBar(
-          content: const Text('Set up the GitHub connection first'),
-          action: SnackBarAction(
-            label: 'Settings',
-            onPressed: () => router.push('/settings'),
+        messenger.showSnackBar(
+          SnackBar(
+            content: const Text('Set up the GitHub connection first'),
+            action: SnackBarAction(
+              label: 'Settings',
+              onPressed: () => router.push('/settings'),
+            ),
           ),
-        ));
+        );
         return;
       }
 
       messenger.showSnackBar(
-          const SnackBar(content: Text('Pushing to GitHub…')));
+        const SnackBar(content: Text('Pushing to GitHub…')),
+      );
 
       final String markdown = buildFeedbackMarkdown(
         listName: list.name,
@@ -282,15 +312,24 @@ class ListDetailScreen extends ConsumerWidget {
   }
 
   Future<void> _renameSection(
-      BuildContext context, WidgetRef ref, ListSection section) async {
-    final String? name =
-        await _promptForName(context, 'Rename section', initial: section.name);
+    BuildContext context,
+    WidgetRef ref,
+    ListSection section,
+  ) async {
+    final String? name = await _promptForName(
+      context,
+      'Rename section',
+      initial: section.name,
+    );
     if (name == null || name.isEmpty) return;
     await ref.read(listsRepositoryProvider).renameSection(section.id, name);
   }
 
   Future<void> _deleteSection(
-      BuildContext context, WidgetRef ref, ListSection section) async {
+    BuildContext context,
+    WidgetRef ref,
+    ListSection section,
+  ) async {
     final bool? confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -313,8 +352,11 @@ class ListDetailScreen extends ConsumerWidget {
     }
   }
 
-  static Future<String?> _promptForName(BuildContext context, String title,
-      {String initial = ''}) {
+  static Future<String?> _promptForName(
+    BuildContext context,
+    String title, {
+    String initial = '',
+  }) {
     final TextEditingController ctrl = TextEditingController(text: initial);
     return showDialog<String>(
       context: context,
@@ -369,10 +411,10 @@ class _SectionHeader extends StatelessWidget {
             child: Text(
               section.name.toUpperCase(),
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: cs.primary,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1,
-                  ),
+                color: cs.primary,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1,
+              ),
             ),
           ),
           IconButton(

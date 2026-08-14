@@ -12,6 +12,9 @@ import '../providers/workout_providers.dart';
 import '../widgets/week_attendance_strip.dart';
 import '../widgets/weekly_scoreboard_card.dart';
 import '../workout_actions.dart';
+import '../../../coach/data/coach_tip.dart';
+import '../../../coach/presentation/coach_controller.dart';
+import '../../../coach/presentation/coach_target.dart';
 
 /// The main Workout tab.
 ///
@@ -32,147 +35,151 @@ class WorkoutHomeScreen extends ConsumerWidget {
     final activeWorkout = ref.watch(activeWorkoutProvider).valueOrNull;
     // Weekly targets is an opt-in experiment (Settings → Labs). When off,
     // the Workout tab is always the classic Program view — no mode switch.
-    final bool experimentOn =
-        ref.watch(settingsProvider.select((s) => s.experimentalTargets));
+    final bool experimentOn = ref.watch(
+      settingsProvider.select((s) => s.experimentalTargets),
+    );
     final bool targetsMode =
         experimentOn && ref.watch(workoutTargetsModeProvider);
 
-    return Scaffold(
-      body: programAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
-        data: (program) => CustomScrollView(
-          slivers: [
-            // ── Active-workout resume banner ──────────────────────────────
-            if (activeWorkout != null)
-              SliverToBoxAdapter(
-                child: _ResumeBanner(
-                  onResume: () => context.push('/workout/active'),
-                ),
-              ),
-
-            // ── Mode switch: Targets ⇄ Program (experiment only) ──────────
-            if (experimentOn)
-              SliverToBoxAdapter(
-                child: _ModeToggle(
-                  targetsMode: targetsMode,
-                  onChanged: (v) =>
-                      ref.read(workoutTargetsModeProvider.notifier).set(v),
-                ),
-              ),
-
-            // ── Targets mode: scoreboard + quick start ────────────────────
-            if (targetsMode) ...[
-              const SliverToBoxAdapter(child: WeeklyScoreboardCard()),
-              SliverToBoxAdapter(
-                child: _QuickStartRow(
-                  onStart: (t) => _startTemplate(context, ref, t),
-                ),
-              ),
-            ],
-
-            // ── Program mode: program card + attendance ───────────────────
-            if (!targetsMode) ...[
-              SliverToBoxAdapter(
-                child: program == null
-                    ? _NoProgramCard(
-                        onSetUp: () =>
-                            context.push('/workout/programs/create'),
-                      )
-                    : _ProgramCard(
-                        program: program,
-                        suggestedSession: suggestedAsync.valueOrNull,
-                        onTrain: (session) => _startWorkout(
-                          context,
-                          ref,
-                          session: session,
-                        ),
-                        onManage: () =>
-                            context.push('/workout/programs/${program.id}'),
-                      ),
-              ),
-              if (program != null && program.sessions.isNotEmpty)
+    return CoachMarks(
+      screen: kCoachWorkout,
+      child: Scaffold(
+        body: programAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => Center(child: Text('Error: $e')),
+          data: (program) => CustomScrollView(
+            slivers: [
+              // ── Active-workout resume banner ──────────────────────────────
+              if (activeWorkout != null)
                 SliverToBoxAdapter(
-                  child: WeekAttendanceStrip(
-                    program: program,
-                    loggedIds: loggedThisWeek(
+                  child: _ResumeBanner(
+                    onResume: () => context.push('/workout/active'),
+                  ),
+                ),
+
+              // ── Mode switch: Targets ⇄ Program (experiment only) ──────────
+              if (experimentOn)
+                SliverToBoxAdapter(
+                  child: _ModeToggle(
+                    targetsMode: targetsMode,
+                    onChanged: (v) =>
+                        ref.read(workoutTargetsModeProvider.notifier).set(v),
+                  ),
+                ),
+
+              // ── Targets mode: scoreboard + quick start ────────────────────
+              if (targetsMode) ...[
+                const SliverToBoxAdapter(child: WeeklyScoreboardCard()),
+                SliverToBoxAdapter(
+                  child: _QuickStartRow(
+                    onStart: (t) => _startTemplate(context, ref, t),
+                  ),
+                ),
+              ],
+
+              // ── Program mode: program card + attendance ───────────────────
+              if (!targetsMode) ...[
+                SliverToBoxAdapter(
+                  child: program == null
+                      ? _NoProgramCard(
+                          onSetUp: () =>
+                              context.push('/workout/programs/create'),
+                        )
+                      : _ProgramCard(
+                          program: program,
+                          suggestedSession: suggestedAsync.valueOrNull,
+                          onTrain: (session) =>
+                              _startWorkout(context, ref, session: session),
+                          onManage: () =>
+                              context.push('/workout/programs/${program.id}'),
+                        ),
+                ),
+                if (program != null && program.sessions.isNotEmpty)
+                  SliverToBoxAdapter(
+                    child: WeekAttendanceStrip(
+                      program: program,
+                      loggedIds: loggedThisWeek(
                         sessionsAsync.valueOrNull ?? const [],
-                        sundayStart: ref.watch(settingsProvider
-                            .select((s) => s.weekStartsSunday))),
-                  ),
-                ),
-            ],
-
-            // ── My workouts: personal one-tap templates ───────────────────
-            SliverToBoxAdapter(
-              child: _MyWorkoutsSection(
-                workouts: ref.watch(myWorkoutsProvider).valueOrNull ??
-                    const <ProgramSessionModel>[],
-                onStart: (s) => _startWorkout(context, ref, session: s),
-                onEdit: (s) => context.push(
-                    '/workout/programs/${s.programId}/session/${s.id}'),
-                onDelete: (s) => _deleteMyWorkout(context, ref, s),
-                onCreate: () => _createMyWorkout(context, ref),
-              ),
-            ),
-
-            // ── History header ────────────────────────────────────────────
-            const SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(16, 20, 16, 4),
-                child: Text(
-                  'Recent Sessions',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-              ),
-            ),
-
-            // ── Session history ───────────────────────────────────────────
-            sessionsAsync.when(
-              loading: () => const SliverToBoxAdapter(
-                child: Center(child: CircularProgressIndicator()),
-              ),
-              error: (e, _) =>
-                  SliverToBoxAdapter(child: Text('Error: $e')),
-              data: (sessions) {
-                if (sessions.isEmpty) {
-                  return const SliverToBoxAdapter(
-                    child: Padding(
-                      padding: EdgeInsets.all(32),
-                      child: Center(
-                        child: Text(
-                          'No sessions logged yet',
-                          style: TextStyle(color: Colors.grey),
+                        sundayStart: ref.watch(
+                          settingsProvider.select((s) => s.weekStartsSunday),
                         ),
                       ),
                     ),
-                  );
-                }
-                return SliverPadding(
-                  padding: const EdgeInsets.only(bottom: 100),
-                  sliver: SliverList.separated(
-                    itemCount: sessions.length,
-                    separatorBuilder: (_, __) => const Divider(
-                        height: 1, indent: 16, endIndent: 16),
-                    itemBuilder: (ctx, i) =>
-                        _SessionTile(session: sessions[i]),
                   ),
-                );
-              },
-            ),
-          ],
-        ),
-      ),
+              ],
 
-      // ── FAB: custom / freeform session ───────────────────────────────────
-      floatingActionButton: FloatingActionButton(
-        heroTag: 'workout_home_fab',
-        onPressed: () => _startWorkout(context, ref),
-        tooltip: 'Log custom session',
-        child: const Icon(Icons.add_rounded),
+              // ── My workouts: personal one-tap templates ───────────────────
+              SliverToBoxAdapter(
+                child: CoachTarget(
+                  id: 'workout.myWorkouts',
+                  child: _MyWorkoutsSection(
+                    workouts:
+                        ref.watch(myWorkoutsProvider).valueOrNull ??
+                        const <ProgramSessionModel>[],
+                    onStart: (s) => _startWorkout(context, ref, session: s),
+                    onEdit: (s) => context.push(
+                      '/workout/programs/${s.programId}/session/${s.id}',
+                    ),
+                    onDelete: (s) => _deleteMyWorkout(context, ref, s),
+                    onCreate: () => _createMyWorkout(context, ref),
+                  ),
+                ),
+              ),
+
+              // ── History header ────────────────────────────────────────────
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(16, 20, 16, 4),
+                  child: Text(
+                    'Recent Sessions',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                ),
+              ),
+
+              // ── Session history ───────────────────────────────────────────
+              sessionsAsync.when(
+                loading: () => const SliverToBoxAdapter(
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+                error: (e, _) => SliverToBoxAdapter(child: Text('Error: $e')),
+                data: (sessions) {
+                  if (sessions.isEmpty) {
+                    return const SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.all(32),
+                        child: Center(
+                          child: Text(
+                            'No sessions logged yet',
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+                  return SliverPadding(
+                    padding: const EdgeInsets.only(bottom: 100),
+                    sliver: SliverList.separated(
+                      itemCount: sessions.length,
+                      separatorBuilder: (_, __) =>
+                          const Divider(height: 1, indent: 16, endIndent: 16),
+                      itemBuilder: (ctx, i) =>
+                          _SessionTile(session: sessions[i]),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+
+        // ── FAB: custom / freeform session ───────────────────────────────────
+        floatingActionButton: FloatingActionButton(
+          heroTag: 'workout_home_fab',
+          onPressed: () => _startWorkout(context, ref),
+          tooltip: 'Log custom session',
+          child: const Icon(Icons.add_rounded),
+        ),
       ),
     );
   }
@@ -181,8 +188,7 @@ class WorkoutHomeScreen extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref, {
     ProgramSessionModel? session,
-  }) =>
-      startProgramSession(context, ref, session: session);
+  }) => startProgramSession(context, ref, session: session);
 
   /// Starts an ad-hoc session from a quick-start template (shared logic
   /// lives in workout_actions.dart — also used by the Home workout block).
@@ -190,8 +196,7 @@ class WorkoutHomeScreen extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     QuickStartTemplate template,
-  ) =>
-      startQuickTemplate(context, ref, template);
+  ) => startQuickTemplate(context, ref, template);
 
   /// Name a new personal workout, then open the exercise editor on it.
   Future<void> _createMyWorkout(BuildContext context, WidgetRef ref) async {
@@ -204,23 +209,25 @@ class WorkoutHomeScreen extends ConsumerWidget {
           controller: ctrl,
           autofocus: true,
           textCapitalization: TextCapitalization.sentences,
-          decoration:
-              const InputDecoration(hintText: 'e.g. Chest & arms'),
+          decoration: const InputDecoration(hintText: 'e.g. Chest & arms'),
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Cancel')),
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
           FilledButton(
-              onPressed: () => Navigator.of(ctx).pop(ctrl.text.trim()),
-              child: const Text('Create')),
+            onPressed: () => Navigator.of(ctx).pop(ctrl.text.trim()),
+            child: const Text('Create'),
+          ),
         ],
       ),
     );
     ctrl.dispose();
     if (name == null || name.isEmpty) return;
-    final (int pid, int sid) =
-        await ref.read(programRepositoryProvider).createMyWorkout(name);
+    final (int pid, int sid) = await ref
+        .read(programRepositoryProvider)
+        .createMyWorkout(name);
     if (context.mounted) {
       context.push('/workout/programs/$pid/session/$sid');
     }
@@ -235,15 +242,19 @@ class WorkoutHomeScreen extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Delete workout?'),
-        content: Text('"${workout.name}" is removed from My workouts. '
-            'Sessions you already logged with it are kept.'),
+        content: Text(
+          '"${workout.name}" is removed from My workouts. '
+          'Sessions you already logged with it are kept.',
+        ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.of(ctx).pop(false),
-              child: const Text('Cancel')),
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
           FilledButton(
-              onPressed: () => Navigator.of(ctx).pop(true),
-              child: const Text('Delete')),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Delete'),
+          ),
         ],
       ),
     );
@@ -300,12 +311,16 @@ class _MyWorkoutsSection extends StatelessWidget {
                 onTap: onCreate,
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 14),
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
                   child: Text(
                     'Build your own workout once — start it in one tap, '
                     'edit it any time.',
                     style: TextStyle(
-                        fontSize: 13, color: cs.onSurface.withAlpha(120)),
+                      fontSize: 13,
+                      color: cs.onSurface.withAlpha(120),
+                    ),
                   ),
                 ),
               ),
@@ -320,37 +335,46 @@ class _MyWorkoutsSection extends StatelessWidget {
                       onLongPress: () => onDelete(w),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 4),
+                          horizontal: 12,
+                          vertical: 4,
+                        ),
                         child: Row(
                           children: [
-                            Icon(Icons.play_circle_fill_rounded,
-                                color: cs.primary, size: 28),
+                            Icon(
+                              Icons.play_circle_fill_rounded,
+                              color: cs.primary,
+                              size: 28,
+                            ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Column(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(w.name,
-                                      style: const TextStyle(
-                                          fontWeight: FontWeight.w600)),
+                                  Text(
+                                    w.name,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
                                   Text(
                                     w.exercises.isEmpty
                                         ? 'No exercises yet — tap ✎'
                                         : '${w.exercises.length} exercise'
-                                            '${w.exercises.length == 1 ? '' : 's'}',
+                                              '${w.exercises.length == 1 ? '' : 's'}',
                                     style: TextStyle(
-                                        fontSize: 12,
-                                        color:
-                                            cs.onSurface.withAlpha(140)),
+                                      fontSize: 12,
+                                      color: cs.onSurface.withAlpha(140),
+                                    ),
                                   ),
                                 ],
                               ),
                             ),
                             IconButton(
-                              icon: Icon(Icons.edit_rounded,
-                                  size: 20,
-                                  color: cs.onSurface.withAlpha(150)),
+                              icon: Icon(
+                                Icons.edit_rounded,
+                                size: 20,
+                                color: cs.onSurface.withAlpha(150),
+                              ),
                               tooltip: 'Edit workout',
                               onPressed: () => onEdit(w),
                             ),
@@ -483,8 +507,7 @@ class _ResumeBanner extends StatelessWidget {
                 ),
               ),
             ),
-            Icon(Icons.chevron_right_rounded,
-                color: cs.onTertiaryContainer),
+            Icon(Icons.chevron_right_rounded, color: cs.onTertiaryContainer),
           ],
         ),
       ),
@@ -507,37 +530,32 @@ class _NoProgramCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: cs.surfaceContainerHigh,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-            color: cs.outline.withAlpha(60)),
+        border: Border.all(color: cs.outline.withAlpha(60)),
       ),
       child: Column(
         children: [
-          Icon(Icons.fitness_center_rounded,
-              size: 48, color: cs.primary),
+          Icon(Icons.fitness_center_rounded, size: 48, color: cs.primary),
           const SizedBox(height: 16),
           Text(
             'Set up your workout plan',
-            style: Theme.of(context)
-                .textTheme
-                .titleLarge
-                ?.copyWith(fontWeight: FontWeight.bold),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           Text(
             'Choose from PPL, Upper/Lower, or build your own split',
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: cs.onSurface.withAlpha(160),
-                ),
+              color: cs.onSurface.withAlpha(160),
+            ),
           ),
           const SizedBox(height: 20),
           FilledButton.icon(
             onPressed: onSetUp,
             icon: const Icon(Icons.add_rounded),
             label: const Text('Create Program'),
-            style: FilledButton.styleFrom(
-              minimumSize: const Size(200, 48),
-            ),
+            style: FilledButton.styleFrom(minimumSize: const Size(200, 48)),
           ),
         ],
       ),
@@ -585,9 +603,7 @@ class _ProgramCard extends StatelessWidget {
                     children: [
                       Text(
                         program.name,
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleMedium
+                        style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(
                               color: cs.onPrimaryContainer,
                               fontWeight: FontWeight.bold,
@@ -597,20 +613,18 @@ class _ProgramCard extends StatelessWidget {
                         program.isRotating
                             ? '${program.sessions.length}-day rotating'
                             : 'Weekly split',
-                        style: Theme.of(context)
-                            .textTheme
-                            .bodySmall
-                            ?.copyWith(
-                              color:
-                                  cs.onPrimaryContainer.withAlpha(180),
-                            ),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: cs.onPrimaryContainer.withAlpha(180),
+                        ),
                       ),
                     ],
                   ),
                 ),
                 IconButton(
-                  icon: Icon(Icons.settings_rounded,
-                      color: cs.onPrimaryContainer.withAlpha(160)),
+                  icon: Icon(
+                    Icons.settings_rounded,
+                    color: cs.onPrimaryContainer.withAlpha(160),
+                  ),
                   onPressed: onManage,
                   tooltip: 'Manage program',
                 ),
@@ -622,15 +636,13 @@ class _ProgramCard extends StatelessWidget {
           if (program.sessions.isNotEmpty)
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Row(
                 children: program.sessions.map((s) {
                   final isToday = s.id == session?.id;
                   return Padding(
                     padding: const EdgeInsets.only(right: 8),
-                    child: _SessionChip(
-                        session: s, isHighlighted: isToday),
+                    child: _SessionChip(session: s, isHighlighted: isToday),
                   );
                 }).toList(),
               ),
@@ -645,7 +657,8 @@ class _ProgramCard extends StatelessWidget {
                         ? 'Rest day — no session scheduled today'
                         : 'All sessions complete for today',
                     style: TextStyle(
-                        color: cs.onPrimaryContainer.withAlpha(160)),
+                      color: cs.onPrimaryContainer.withAlpha(160),
+                    ),
                   )
                 : Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -663,9 +676,7 @@ class _ProgramCard extends StatelessWidget {
                           const SizedBox(width: 6),
                           Text(
                             'Today: ${session.name}',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleSmall
+                            style: Theme.of(context).textTheme.titleSmall
                                 ?.copyWith(
                                   color: cs.onPrimaryContainer,
                                   fontWeight: FontWeight.w600,
@@ -677,18 +688,15 @@ class _ProgramCard extends StatelessWidget {
                         const SizedBox(height: 4),
                         Text(
                           session.exercises
-                              .take(3)
-                              .map((e) => e.exerciseName)
-                              .join(' · ')
-                            + (session.exercises.length > 3
-                                ? ' +${session.exercises.length - 3} more'
-                                : ''),
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodySmall
+                                  .take(3)
+                                  .map((e) => e.exerciseName)
+                                  .join(' · ') +
+                              (session.exercises.length > 3
+                                  ? ' +${session.exercises.length - 3} more'
+                                  : ''),
+                          style: Theme.of(context).textTheme.bodySmall
                               ?.copyWith(
-                                color:
-                                    cs.onPrimaryContainer.withAlpha(180),
+                                color: cs.onPrimaryContainer.withAlpha(180),
                               ),
                         ),
                       ],
@@ -726,20 +734,15 @@ class _SessionChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: isHighlighted
-            ? color
-            : color.withAlpha(40),
+        color: isHighlighted ? color : color.withAlpha(40),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: color.withAlpha(isHighlighted ? 0 : 120),
-        ),
+        border: Border.all(color: color.withAlpha(isHighlighted ? 0 : 120)),
       ),
       child: Text(
         session.name,
         style: TextStyle(
           color: isHighlighted ? Colors.white : color,
-          fontWeight:
-              isHighlighted ? FontWeight.bold : FontWeight.normal,
+          fontWeight: isHighlighted ? FontWeight.bold : FontWeight.normal,
           fontSize: 12,
         ),
       ),
@@ -760,12 +763,13 @@ class _SessionTile extends StatelessWidget {
     final dateLabel = DateFormat('EEE, d MMM').format(date);
 
     return ListTile(
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       title: Row(
         children: [
-          Text(session.displayName,
-              style: const TextStyle(fontWeight: FontWeight.w600)),
+          Text(
+            session.displayName,
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
           if (session.hasPr) ...[
             const SizedBox(width: 6),
             const Text('🏆', style: TextStyle(fontSize: 13)),
@@ -776,10 +780,10 @@ class _SessionTile extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 2),
-          Text(dateLabel,
-              style: TextStyle(
-                  color: cs.onSurface.withAlpha(140),
-                  fontSize: 12)),
+          Text(
+            dateLabel,
+            style: TextStyle(color: cs.onSurface.withAlpha(140), fontSize: 12),
+          ),
           const SizedBox(height: 4),
           Wrap(
             spacing: 6,
@@ -791,15 +795,15 @@ class _SessionTile extends StatelessWidget {
       trailing: Text(
         '${session.totalSets} sets',
         style: TextStyle(
-            color: cs.primary,
-            fontWeight: FontWeight.w600,
-            fontSize: 13),
+          color: cs.primary,
+          fontWeight: FontWeight.w600,
+          fontSize: 13,
+        ),
       ),
     );
   }
 
-  List<Widget> _buildChips(
-      BuildContext context, WorkoutSessionModel session) {
+  List<Widget> _buildChips(BuildContext context, WorkoutSessionModel session) {
     final cs = Theme.of(context).colorScheme;
     final names = session.exerciseNames;
     const max = 3;
@@ -808,10 +812,12 @@ class _SessionTile extends StatelessWidget {
       chips.add(_MiniChip(label: names[i]));
     }
     if (names.length > max) {
-      chips.add(_MiniChip(
-        label: '+${names.length - max} more',
-        color: cs.surfaceContainerHighest,
-      ));
+      chips.add(
+        _MiniChip(
+          label: '+${names.length - max} more',
+          color: cs.surfaceContainerHighest,
+        ),
+      );
     }
     return chips;
   }
@@ -831,10 +837,12 @@ class _MiniChip extends StatelessWidget {
         color: color ?? cs.primaryContainer.withAlpha(100),
         borderRadius: BorderRadius.circular(10),
       ),
-      child: Text(label,
-          style: const TextStyle(fontSize: 11),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis),
+      child: Text(
+        label,
+        style: const TextStyle(fontSize: 11),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
     );
   }
 }

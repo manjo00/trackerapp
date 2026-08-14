@@ -17,6 +17,9 @@ import '../widgets/heading_line_view.dart';
 import '../widgets/note_arrange_view.dart';
 import '../widgets/photo_block_view.dart';
 import '../widgets/text_block_view.dart';
+import '../../../coach/data/coach_tip.dart';
+import '../../../coach/presentation/coach_controller.dart';
+import '../../../coach/presentation/coach_target.dart';
 
 /// The block editor for one note. The resting view is a clean, open page: a
 /// title over a flowing stack of text / checkbox / photo blocks with no
@@ -117,13 +120,15 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
             type: type,
             content: '',
             afterOrderIndex: anchor.orderIndex,
-            indent: indent)
+            indent: indent,
+          )
         : await dao.addBlock(
             noteId: widget.noteId,
             type: type,
             content: '',
             orderIndex: _nextOrder,
-            indent: indent);
+            indent: indent,
+          );
     await dao.touchNote(widget.noteId, DateTime.now());
     if (mounted) setState(() => _focusRequestId = id);
   }
@@ -170,7 +175,9 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
       ),
     );
     if (source == null) return;
-    await ref.read(notesRepositoryProvider).addPhotoBlock(
+    await ref
+        .read(notesRepositoryProvider)
+        .addPhotoBlock(
           widget.noteId,
           source,
           afterOrderIndex: anchor?.orderIndex,
@@ -200,28 +207,31 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
       builder: (ctx) => AlertDialog(
         title: const Text('Delete note?'),
         content: const Text(
-            'The note, its photos, and any tasks it created are deleted.'),
+          'The note, its photos, and any tasks it created are deleted.',
+        ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.of(ctx).pop(false),
-              child: const Text('Cancel')),
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
           FilledButton(
-              onPressed: () => Navigator.of(ctx).pop(true),
-              child: const Text('Delete')),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Delete'),
+          ),
         ],
       ),
     );
     if (confirmed != true) return;
     _deleted = true;
-    await ref
-        .read(notesRepositoryProvider)
-        .deleteNoteWithPhotos(widget.noteId);
+    await ref.read(notesRepositoryProvider).deleteNoteWithPhotos(widget.noteId);
     if (mounted) Navigator.of(context).pop();
   }
 
   /// Commits an arrange-mode drop (new order + new depths) in one write.
   Future<void> _applyArrangement(
-      List<int> orderedIds, Map<int, int> indentById) async {
+    List<int> orderedIds,
+    Map<int, int> indentById,
+  ) async {
     final dao = ref.read(notesDaoProvider);
     await dao.applyArrangement(orderedIds, indentById);
     await dao.touchNote(widget.noteId, DateTime.now());
@@ -257,27 +267,30 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     // Nothing left to manage → drop back to the clean editor.
     if (_editingLines && blocks.isEmpty) _editingLines = false;
 
-    return PopScope(
-      canPop: !_editingLines,
-      onPopInvokedWithResult: (didPop, _) {
-        if (_editingLines) {
-          setState(() => _editingLines = false);
-        } else if (didPop) {
-          _onLeave();
-        }
-      },
-      child: Scaffold(
-        appBar: _editingLines ? _arrangeAppBar() : _normalAppBar(blocks),
-        // Toolbar lives at the bottom of the BODY (not bottomNavigationBar) so
-        // it rides directly on top of the keyboard and is never hidden by it.
-        body: _editingLines
-            ? _arrangeBody(blocks)
-            : Column(
-                children: [
-                  Expanded(child: _editorBody(blocks)),
-                  _bottomBar(blocks),
-                ],
-              ),
+    return CoachMarks(
+      screen: kCoachNoteEditor,
+      child: PopScope(
+        canPop: !_editingLines,
+        onPopInvokedWithResult: (didPop, _) {
+          if (_editingLines) {
+            setState(() => _editingLines = false);
+          } else if (didPop) {
+            _onLeave();
+          }
+        },
+        child: Scaffold(
+          appBar: _editingLines ? _arrangeAppBar() : _normalAppBar(blocks),
+          // Toolbar lives at the bottom of the BODY (not bottomNavigationBar) so
+          // it rides directly on top of the keyboard and is never hidden by it.
+          body: _editingLines
+              ? _arrangeBody(blocks)
+              : Column(
+                  children: [
+                    Expanded(child: _editorBody(blocks)),
+                    _bottomBar(blocks),
+                  ],
+                ),
+        ),
       ),
     );
   }
@@ -289,8 +302,9 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     final NoteBlock? focused = _focusedBlockId == null
         ? null
         : blocks.where((b) => b.id == _focusedBlockId).firstOrNull;
-    final NoteBlockType? kind =
-        focused == null ? null : NoteBlockType.parse(focused.type);
+    final NoteBlockType? kind = focused == null
+        ? null
+        : NoteBlockType.parse(focused.type);
     final bool formattable =
         kind == NoteBlockType.text || kind == NoteBlockType.checkbox;
     final dao = ref.read(notesDaoProvider);
@@ -314,14 +328,18 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
                     // Becoming a heading adopts the lines below it; dropping
                     // back to body releases them one level.
                     await dao.reflowAfterHeadingChange(
-                        widget.noteId, focused.id);
+                      widget.noteId,
+                      focused.id,
+                    );
                   },
                   onBold: () =>
                       dao.setBlockFormat(focused.id, bold: !focused.bold),
                   onItalic: () =>
                       dao.setBlockFormat(focused.id, italic: !focused.italic),
-                  onHighlight: () => dao.setBlockFormat(focused.id,
-                      highlighted: !focused.highlighted),
+                  onHighlight: () => dao.setBlockFormat(
+                    focused.id,
+                    highlighted: !focused.highlighted,
+                  ),
                 ),
                 Divider(height: 1, thickness: 1, color: cs.outlineVariant),
               ],
@@ -344,18 +362,20 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     final int indent = indentForInsertAfter(anchor ?? _lastBlock());
     if (anchor != null) {
       await dao.insertBlockAfter(
-          noteId: widget.noteId,
-          type: NoteBlockType.divider,
-          content: null,
-          afterOrderIndex: anchor.orderIndex,
-          indent: indent);
+        noteId: widget.noteId,
+        type: NoteBlockType.divider,
+        content: null,
+        afterOrderIndex: anchor.orderIndex,
+        indent: indent,
+      );
     } else {
       await dao.addBlock(
-          noteId: widget.noteId,
-          type: NoteBlockType.divider,
-          content: null,
-          orderIndex: _nextOrder,
-          indent: indent);
+        noteId: widget.noteId,
+        type: NoteBlockType.divider,
+        content: null,
+        orderIndex: _nextOrder,
+        indent: indent,
+      );
     }
     await dao.touchNote(widget.noteId, DateTime.now());
   }
@@ -367,8 +387,11 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
         ref.read(templatesProvider).valueOrNull ?? const [];
     if (templates.isEmpty) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('No templates yet — make one in Notes → Templates')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No templates yet — make one in Notes → Templates'),
+          ),
+        );
       }
       return;
     }
@@ -382,7 +405,8 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
               ListTile(
                 leading: const Icon(Icons.dashboard_customize_rounded),
                 title: Text(
-                    t.title.trim().isEmpty ? 'Untitled template' : t.title),
+                  t.title.trim().isEmpty ? 'Untitled template' : t.title,
+                ),
                 onTap: () => Navigator.of(c).pop(t),
               ),
           ],
@@ -394,9 +418,14 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     final List<NoteBlock> blocks =
         ref.read(noteBlocksProvider(widget.noteId)).valueOrNull ?? const [];
     final int after = anchor?.orderIndex ?? (blocks.length - 1);
-    await ref.read(notesRepositoryProvider).insertTemplateInto(
-        chosen.id, widget.noteId, after,
-        now: DateTime.now());
+    await ref
+        .read(notesRepositoryProvider)
+        .insertTemplateInto(
+          chosen.id,
+          widget.noteId,
+          after,
+          now: DateTime.now(),
+        );
   }
 
   /// Save the current note as a reusable template.
@@ -405,60 +434,77 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
         .read(notesRepositoryProvider)
         .saveAsTemplate(widget.noteId, now: DateTime.now());
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Saved to Templates')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Saved to Templates')));
     }
   }
 
   // ---- Normal (clean) editor ------------------------------------------------
 
   AppBar _normalAppBar(List<NoteBlock> blocks) {
-    final bool hasHeading = blocks.any((b) =>
-        NoteBlockType.parse(b.type) == NoteBlockType.text &&
-        b.headingLevel != 0);
+    final bool hasHeading = blocks.any(
+      (b) =>
+          NoteBlockType.parse(b.type) == NoteBlockType.text &&
+          b.headingLevel != 0,
+    );
     return AppBar(
       title: const Text('Note'),
       actions: [
         if (blocks.isNotEmpty)
-          IconButton(
-            icon: const Icon(Icons.swap_vert_rounded),
-            tooltip: 'Rearrange',
-            onPressed: () {
-              FocusScope.of(context).unfocus();
-              setState(() => _editingLines = true);
-            },
+          CoachTarget(
+            id: 'noteEditor.arrange',
+            child: IconButton(
+              icon: const Icon(Icons.swap_vert_rounded),
+              tooltip: 'Rearrange',
+              onPressed: () {
+                FocusScope.of(context).unfocus();
+                setState(() => _editingLines = true);
+              },
+            ),
           ),
-        PopupMenuButton<String>(
-          onSelected: (v) async {
-            final dao = ref.read(notesDaoProvider);
-            switch (v) {
-              case 'collapse_all':
-                await dao.setAllHeadingsCollapsed(widget.noteId, true);
-                await dao.touchNote(widget.noteId, DateTime.now());
-              case 'expand_all':
-                await dao.setAllHeadingsCollapsed(widget.noteId, false);
-                await dao.touchNote(widget.noteId, DateTime.now());
-              case 'insert_template':
-                _pickTemplateToInsert();
-              case 'save_template':
-                _saveAsTemplate();
-              case 'delete':
-                _deleteNote();
-            }
-          },
-          itemBuilder: (context) => [
-            if (hasHeading) ...[
+        CoachTarget(
+          id: 'noteEditor.menu',
+          child: PopupMenuButton<String>(
+            onSelected: (v) async {
+              final dao = ref.read(notesDaoProvider);
+              switch (v) {
+                case 'collapse_all':
+                  await dao.setAllHeadingsCollapsed(widget.noteId, true);
+                  await dao.touchNote(widget.noteId, DateTime.now());
+                case 'expand_all':
+                  await dao.setAllHeadingsCollapsed(widget.noteId, false);
+                  await dao.touchNote(widget.noteId, DateTime.now());
+                case 'insert_template':
+                  _pickTemplateToInsert();
+                case 'save_template':
+                  _saveAsTemplate();
+                case 'delete':
+                  _deleteNote();
+              }
+            },
+            itemBuilder: (context) => [
+              if (hasHeading) ...[
+                const PopupMenuItem(
+                  value: 'collapse_all',
+                  child: Text('Collapse all'),
+                ),
+                const PopupMenuItem(
+                  value: 'expand_all',
+                  child: Text('Expand all'),
+                ),
+              ],
               const PopupMenuItem(
-                  value: 'collapse_all', child: Text('Collapse all')),
+                value: 'insert_template',
+                child: Text('Insert template'),
+              ),
               const PopupMenuItem(
-                  value: 'expand_all', child: Text('Expand all')),
+                value: 'save_template',
+                child: Text('Save as template'),
+              ),
+              const PopupMenuItem(value: 'delete', child: Text('Delete note')),
             ],
-            const PopupMenuItem(
-                value: 'insert_template', child: Text('Insert template')),
-            const PopupMenuItem(
-                value: 'save_template', child: Text('Save as template')),
-            const PopupMenuItem(value: 'delete', child: Text('Delete note')),
-          ],
+          ),
         ),
       ],
     );
@@ -475,10 +521,10 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
           focusNode: _titleFocus,
           textCapitalization: TextCapitalization.sentences,
           onTapOutside: (_) => _titleFocus.unfocus(),
-          style: Theme.of(context)
-              .textTheme
-              .headlineSmall
-              ?.copyWith(fontWeight: FontWeight.w700, height: 1.25),
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.w700,
+            height: 1.25,
+          ),
           decoration: InputDecoration(
             filled: false,
             border: InputBorder.none,
@@ -597,15 +643,20 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
           padding: const EdgeInsets.fromLTRB(20, 10, 20, 2),
           child: Row(
             children: [
-              Icon(Icons.open_with_rounded,
-                  size: 15, color: cs.onSurface.withAlpha(120)),
+              Icon(
+                Icons.open_with_rounded,
+                size: 15,
+                color: cs.onSurface.withAlpha(120),
+              ),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
                   'Hold to drag · drop in a gap to move it out · hold over a '
                   'heading to put it inside',
                   style: TextStyle(
-                      fontSize: 12, color: cs.onSurface.withAlpha(140)),
+                    fontSize: 12,
+                    color: cs.onSurface.withAlpha(140),
+                  ),
                 ),
               ),
             ],
@@ -631,12 +682,16 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     final ColorScheme cs = Theme.of(context).colorScheme;
     final bool isHeading = isHeadingBlock(b);
     return Directionality(
-      textDirection:
-          lineStartsRtl(b.content ?? '') ? TextDirection.rtl : TextDirection.ltr,
+      textDirection: lineStartsRtl(b.content ?? '')
+          ? TextDirection.rtl
+          : TextDirection.ltr,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         margin: EdgeInsetsDirectional.only(
-            start: b.indent * kNoteIndentStep, top: 2, bottom: 2),
+          start: b.indent * kNoteIndentStep,
+          top: 2,
+          bottom: 2,
+        ),
         decoration: BoxDecoration(
           color: highlighted
               ? cs.primaryContainer.withAlpha(90)
@@ -667,14 +722,21 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
               if (b.collapsed && hiddenCount > 0)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: Text('· $hiddenCount',
-                      style: TextStyle(
-                          fontSize: 12, color: cs.onSurface.withAlpha(130))),
+                  child: Text(
+                    '· $hiddenCount',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: cs.onSurface.withAlpha(130),
+                    ),
+                  ),
                 ),
               IconButton(
                 visualDensity: VisualDensity.compact,
-                icon: Icon(Icons.remove_circle_rounded,
-                    size: 22, color: cs.error.withAlpha(210)),
+                icon: Icon(
+                  Icons.remove_circle_rounded,
+                  size: 22,
+                  color: cs.error.withAlpha(210),
+                ),
                 tooltip: 'Delete line',
                 onPressed: () => _deleteBlock(b),
               ),
@@ -755,13 +817,13 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
   }
 
   Widget _highlightWrap(Widget child, ColorScheme cs) => Container(
-        decoration: BoxDecoration(
-          color: cs.tertiaryContainer.withAlpha(150),
-          borderRadius: BorderRadius.circular(6),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 6),
-        child: child,
-      );
+    decoration: BoxDecoration(
+      color: cs.tertiaryContainer.withAlpha(150),
+      borderRadius: BorderRadius.circular(6),
+    ),
+    padding: const EdgeInsets.symmetric(horizontal: 6),
+    child: child,
+  );
 
   /// A compact, tap-inert photo thumbnail for arrange mode.
   Widget _arrangePhoto(String filename) {
@@ -778,16 +840,21 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
           child: exists
               ? ConstrainedBox(
                   constraints: const BoxConstraints(maxHeight: 140),
-                  child: Image.file(File(path),
-                      width: double.infinity, fit: BoxFit.cover),
+                  child: Image.file(
+                    File(path),
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
                 )
               : Container(
                   height: 60,
                   width: double.infinity,
                   color: cs.surfaceContainerHighest,
                   alignment: Alignment.center,
-                  child: Icon(Icons.broken_image_outlined,
-                      color: cs.onSurface.withAlpha(120)),
+                  child: Icon(
+                    Icons.broken_image_outlined,
+                    color: cs.onSurface.withAlpha(120),
+                  ),
                 ),
         );
       },
@@ -818,21 +885,25 @@ class _AddRow extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
           IconButton(
-              tooltip: 'Text',
-              onPressed: onText,
-              icon: const Icon(Icons.notes_rounded)),
+            tooltip: 'Text',
+            onPressed: onText,
+            icon: const Icon(Icons.notes_rounded),
+          ),
           IconButton(
-              tooltip: 'Checkbox',
-              onPressed: onCheckbox,
-              icon: const Icon(Icons.check_box_outlined)),
+            tooltip: 'Checkbox',
+            onPressed: onCheckbox,
+            icon: const Icon(Icons.check_box_outlined),
+          ),
           IconButton(
-              tooltip: 'Photo',
-              onPressed: onPhoto,
-              icon: const Icon(Icons.photo_camera_rounded)),
+            tooltip: 'Photo',
+            onPressed: onPhoto,
+            icon: const Icon(Icons.photo_camera_rounded),
+          ),
           IconButton(
-              tooltip: 'Divider',
-              onPressed: onDivider,
-              icon: const Icon(Icons.horizontal_rule_rounded)),
+            tooltip: 'Divider',
+            onPressed: onDivider,
+            icon: const Icon(Icons.horizontal_rule_rounded),
+          ),
         ],
       ),
     );
@@ -858,8 +929,12 @@ class _FormatRow extends StatelessWidget {
   final VoidCallback onItalic;
   final VoidCallback onHighlight;
 
-  static String _headingLabel(int l) =>
-      switch (l) { 1 => 'H1', 2 => 'H2', 3 => 'H3', _ => 'Body' };
+  static String _headingLabel(int l) => switch (l) {
+    1 => 'H1',
+    2 => 'H2',
+    3 => 'H3',
+    _ => 'Body',
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -872,8 +947,7 @@ class _FormatRow extends StatelessWidget {
           icon: Icon(icon),
           style: IconButton.styleFrom(
             backgroundColor: on ? cs.secondaryContainer : null,
-            foregroundColor:
-                on ? cs.onSecondaryContainer : cs.onSurfaceVariant,
+            foregroundColor: on ? cs.onSecondaryContainer : cs.onSurfaceVariant,
           ),
         );
 
@@ -890,11 +964,14 @@ class _FormatRow extends StatelessWidget {
             ),
           toggle(Icons.format_bold_rounded, block.bold, onBold, 'Bold'),
           toggle(Icons.format_italic_rounded, block.italic, onItalic, 'Italic'),
-          toggle(Icons.highlight_rounded, block.highlighted, onHighlight,
-              'Highlight'),
+          toggle(
+            Icons.highlight_rounded,
+            block.highlighted,
+            onHighlight,
+            'Highlight',
+          ),
         ],
       ),
     );
   }
 }
-
