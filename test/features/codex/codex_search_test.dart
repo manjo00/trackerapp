@@ -58,5 +58,30 @@ void main() {
     test('the hidden gems shelf is populated', () {
       expect(hiddenGems(kCodexTopics).length, greaterThanOrEqualTo(8));
     });
+
+    /// The whole point of the Codex is the non-obvious stuff. Every gesture
+    /// the app implements should be findable by searching for it — if a new
+    /// gesture is added without a Codex line, this fails.
+    test('every gesture in the app is documented somewhere', () {
+      const Map<String, String> gestures = {
+        'hold any line to lift it': 'notes: drag in arrange mode',
+        'backspace on an empty line': 'notes: delete a line',
+        'swipe left': 'tasks/habits: archive or delete',
+        'long-press': 'tiles: edit / delete / drag',
+        'hold it over that heading': 'notes: nest while dragging',
+        'holding one opens the task editor': 'calendars: add a task on a day',
+        'tap the "previous" hint': 'workout: copy last session',
+        'long-press a set row': 'workout: delete a set',
+        'seven times': 'drawer: developer mode',
+        'chevron': 'home: fold a block',
+      };
+      final String all = kCodexTopics
+          .expand((t) => t.body.map((b) => b.text))
+          .join(' ')
+          .toLowerCase();
+      for (final MapEntry<String, String> g in gestures.entries) {
+        expect(all, contains(g.key.toLowerCase()), reason: g.value);
+      }
+    });
   });
 }

@@ -270,6 +270,28 @@ const List<CodexTopic> kCodexTopics = [
     ],
   ),
 
+  CodexTopic(
+    id: 'calendar-long-press',
+    title: 'Long-press any day to add a task to it',
+    category: CodexCategory.planner,
+    hidden: true,
+    summary: 'Works on every calendar in the app.',
+    keywords: ['shortcut', 'quick add', 'hold', 'long press', 'date'],
+    body: [
+      CodexBlock.p(
+          'Anywhere Uplan shows days, holding one opens the task editor with '
+          'that date already filled in — no date picker needed.'),
+      CodexBlock.bullet('The Planner\'s month grid and its week strip.'),
+      CodexBlock.bullet('The month calendar on the Work schedule screen.'),
+      CodexBlock.p(
+          'A normal tap still does the usual thing (select the day, or set '
+          'the shift) — only the hold adds a task.'),
+      CodexBlock.tip(
+          'In the Planner\'s Grid view, holding an empty HOUR fills in the '
+          'time as well as the date.'),
+    ],
+  ),
+
   // ── Habits & trackers ───────────────────────────────────────────────────
   CodexTopic(
     id: 'habits',
@@ -284,9 +306,11 @@ const List<CodexTopic> kCodexTopics = [
       CodexBlock.p(
           'Habits appear on the Today screen and can be added to Home as a '
           'block, so you can tick them from wherever you start your day.'),
-      CodexBlock.p(
-          'Each habit can carry its own daily reminder time. Editing or '
-          'deleting one is done from its tile.'),
+      CodexBlock.p('Each habit can carry its own daily reminder time.'),
+      CodexBlock.heading('Tile gestures'),
+      CodexBlock.bullet('Tap — tick it off for today.'),
+      CodexBlock.bullet('Long-press — open it for editing.'),
+      CodexBlock.bullet('Swipe left — delete the habit.'),
     ],
   ),
   CodexTopic(
@@ -306,6 +330,8 @@ const List<CodexTopic> kCodexTopics = [
       CodexBlock.p(
           'Daily checklists show inline on the Today screen, so you can tick '
           'items without opening the tracker.'),
+      CodexBlock.p(
+          'Swipe a tracker card left to delete it — it asks first.'),
       CodexBlock.tip(
           'There is no separate medications feature — a daily checklist IS '
           'the medication tracker. Make one called "Meds" with an item per '
@@ -667,6 +693,8 @@ const List<CodexTopic> kCodexTopics = [
           'sets ever.'),
       CodexBlock.bullet(
           'Tick a set to mark it done — the whole row turns green.'),
+      CodexBlock.bullet(
+          'Long-press a set row to delete that set.'),
       CodexBlock.p(
           'Collapse an exercise to work through another one in between; your '
           'ticks survive. Finishing shows a summary: duration, total volume, '
