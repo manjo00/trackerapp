@@ -226,17 +226,15 @@ class ProgramRepository {
 
   /// The user's personal workouts (each a fully-loaded session: exercises,
   /// targets, rest), in the order they were made.
+  ///
+  /// Built on [watchProgramById] so it re-emits when EXERCISES change too —
+  /// watching `program_sessions` alone would hand out sessions with a stale
+  /// (often empty) exercise list, and starting one would launch an empty
+  /// workout.
   Stream<List<ProgramSessionModel>> watchMyWorkouts() async* {
     final int containerId = await ensureMyWorkoutsContainer();
-    yield* _programDao.watchSessionsForProgram(containerId).asyncMap(
-      (rows) async {
-        final out = <ProgramSessionModel>[];
-        for (final sRow in rows) {
-          out.add(await _hydrateSessionRow(sRow));
-        }
-        return out;
-      },
-    );
+    yield* watchProgramById(containerId)
+        .map((p) => p?.sessions ?? const <ProgramSessionModel>[]);
   }
 
   /// Creates an empty personal workout and returns (containerId, sessionId)

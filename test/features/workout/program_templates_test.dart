@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:life_tracker/core/database/app_database.dart';
 import 'package:life_tracker/features/workout/data/dao/program_dao.dart';
 import 'package:life_tracker/features/workout/data/models/program_model.dart';
+import 'package:life_tracker/features/workout/data/models/program_session_model.dart';
 import 'package:life_tracker/features/workout/data/dao/workout_dao.dart';
 import 'package:life_tracker/features/workout/data/repositories/program_repository.dart';
 
@@ -136,6 +137,25 @@ void main() {
       final ProgramModel? after = await repo.watchProgramById(pid).first;
       expect(after!.sessions.single.exercises.single.exerciseName,
           'Incline Press');
+    });
+
+    test('the shelf refreshes when exercises are added', () async {
+      // Regression: the shelf watched program_sessions only, so a workout
+      // opened from it still carried an EMPTY exercise list and starting it
+      // launched a blank workout.
+      final (_, int sid) = await repo.createMyWorkout('Push');
+      final List<List<ProgramSessionModel>> seen = [];
+      final sub = repo.watchMyWorkouts().listen(seen.add);
+      await pumpEventQueue();
+      expect(seen.last.single.exercises, isEmpty);
+
+      await repo.addExercise(
+          programSessionId: sid, exerciseName: 'Bench Press');
+      await pumpEventQueue();
+
+      expect(seen.last.single.exercises.single.exerciseName, 'Bench Press',
+          reason: 'the live shelf must see newly added exercises');
+      await sub.cancel();
     });
 
     test('deleting a workout leaves the others', () async {
