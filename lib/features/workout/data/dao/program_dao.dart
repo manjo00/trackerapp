@@ -36,6 +36,21 @@ class ProgramDao extends DatabaseAccessor<AppDatabase>
   Future<Program?> getProgramById(int id) =>
       (select(programs)..where((p) => p.id.equals(id))).getSingleOrNull();
 
+  /// Emits one program whenever IT, its sessions, or its exercises change —
+  /// templates and the hidden My-workouts container included.
+  ///
+  /// Screens that edit a single program must use this, not the program-list
+  /// stream: that one filters templates out (so a container's session would
+  /// read as "not found"), and it only re-emits on `programs` changes, so
+  /// adding an exercise would not refresh the view.
+  Stream<Program?> watchProgramRowById(int id) => customSelect(
+        'SELECT * FROM programs WHERE id = ? LIMIT 1',
+        variables: [Variable.withInt(id)],
+        readsFrom: {programs, programSessions, programExercises},
+      ).watch().map(
+            (rows) => rows.isEmpty ? null : programs.map(rows.first.data),
+          );
+
   /// Finds a template row by exact name — used to locate the hidden
   /// "My workouts" container.
   Future<Program?> findTemplateByName(String name) => (select(programs)

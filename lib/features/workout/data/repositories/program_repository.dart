@@ -21,6 +21,13 @@ class ProgramRepository {
     return _programDao.watchAllPrograms().asyncMap(_hydrateAll);
   }
 
+  /// One program by id, live — including templates and the My-workouts
+  /// container. Re-emits when its sessions or exercises change too.
+  Stream<ProgramModel?> watchProgramById(int id) =>
+      _programDao.watchProgramRowById(id).asyncMap(
+            (row) async => row == null ? null : _hydrateProgram(row),
+          );
+
   /// Stream of the currently active program (null if none).
   Stream<ProgramModel?> watchActiveProgram() {
     return _programDao.watchActiveProgram().asyncMap((row) async {

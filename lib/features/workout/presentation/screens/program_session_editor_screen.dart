@@ -28,15 +28,17 @@ class ProgramSessionEditorScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final programsAsync = ref.watch(allProgramsProvider);
+    // Resolve by id, not from the program LIST: that stream hides templates
+    // (so a "My workout" would read as not found) and does not re-emit when
+    // exercises change.
+    final programAsync = ref.watch(programByIdProvider(programId));
 
-    return programsAsync.when(
+    return programAsync.when(
       loading: () => Scaffold(
           appBar: AppBar(), body: const Center(child: CircularProgressIndicator())),
       error: (e, _) => Scaffold(
           appBar: AppBar(), body: Center(child: Text('Error: $e'))),
-      data: (programs) {
-        final program = programs.where((p) => p.id == programId).firstOrNull;
+      data: (program) {
         final session = program?.sessions
             .where((s) => s.id == sessionId)
             .firstOrNull;

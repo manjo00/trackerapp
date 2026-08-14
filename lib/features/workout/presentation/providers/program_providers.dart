@@ -35,6 +35,13 @@ Stream<List<ProgramModel>> programTemplates(ProgramTemplatesRef ref) =>
 Stream<List<ProgramSessionModel>> myWorkouts(MyWorkoutsRef ref) =>
     ref.watch(programRepositoryProvider).watchMyWorkouts();
 
+/// One program by id — templates and the hidden My-workouts container
+/// included. Screens that EDIT a single program use this; the program-list
+/// stream hides templates and misses exercise changes.
+@riverpod
+Stream<ProgramModel?> programById(ProgramByIdRef ref, int id) =>
+    ref.watch(programRepositoryProvider).watchProgramById(id);
+
 // ── Active program stream ─────────────────────────────────────────────────────
 
 /// Emits the currently active program, or null if none is set.

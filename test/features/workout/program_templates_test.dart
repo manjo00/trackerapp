@@ -2,6 +2,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:life_tracker/core/database/app_database.dart';
 import 'package:life_tracker/features/workout/data/dao/program_dao.dart';
+import 'package:life_tracker/features/workout/data/models/program_model.dart';
 import 'package:life_tracker/features/workout/data/dao/workout_dao.dart';
 import 'package:life_tracker/features/workout/data/repositories/program_repository.dart';
 
@@ -118,6 +119,23 @@ void main() {
       final int b = await repo.ensureMyWorkoutsContainer();
       expect(a, b);
       expect((await repo.watchMyWorkouts().first).length, 1);
+    });
+
+    test('the session editor can resolve a My-workouts session', () async {
+      // Regression: the editor used to look the program up in the program
+      // LIST, which hides templates — so a custom workout read as "Session
+      // not found" and exercises could not be added.
+      final (int pid, int sid) = await repo.createMyWorkout('Chest & arms');
+
+      final ProgramModel? program = await repo.watchProgramById(pid).first;
+      expect(program, isNotNull, reason: 'container must be findable by id');
+      expect(program!.sessions.where((s) => s.id == sid), hasLength(1));
+
+      await repo.addExercise(
+          programSessionId: sid, exerciseName: 'Incline Press');
+      final ProgramModel? after = await repo.watchProgramById(pid).first;
+      expect(after!.sessions.single.exercises.single.exerciseName,
+          'Incline Press');
     });
 
     test('deleting a workout leaves the others', () async {
