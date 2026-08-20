@@ -73,3 +73,52 @@ and is independently useful on the Tab S9.
 ## Not viable
 A stock Android cover-screen widget API does not exist; anything here is
 Samsung-specific and will not port to other phones.
+
+---
+
+# Route-B EXPERIMENT RESULT (same day) — **NO. Samsung curates the catalogue.**
+
+Built a `UplanCoverWidgetProvider` declaring
+`widgetCategory="home_screen|keyguard"` at a 4x2 footprint and installed it.
+
+| Step | Result |
+|---|---|
+| Category actually registered | **3** (was 1) — confirmed in `dumpsys appwidget` |
+| Appears in SystemUI cover tile registry | **No** (0 hits) |
+| Sized 4x4 → resized to 4x2 (only 2x2/4x2/3x3/4x3 exist) | still No |
+| **Rebooted** (registry rebuilt 317 → 323 tiles) | still **No** — caching was not the blocker |
+| Missing preview resource? | No — 26 existing tiles have neither loading nor preview res |
+
+## Why it fails
+The cover catalogue lives in SystemUI's `CoverWidgetDataControllerImpl`. Its
+entries carry **Samsung-assigned sequential ids** (`ID:000011`, `ID:000282`),
+and across **26 packages** holding tiles the only non-Samsung ones are:
+
+- `com.google.android.googlequicksearchbox` (Google)
+- `com.microsoft.office.outlook` (Microsoft)
+- `com.android.settings.intelligence` (system)
+
+i.e. **Samsung partners only**. Outlook misled me at first because it is
+installed in `/data/app` like any user app — but partnership, not install
+location, is what puts it in the catalogue. Decisive counter-example:
+`apps.ijp.coverwidgets`, an independent cover-screen app from the Play Store,
+has **zero** tiles — it works by running its own launcher on the cover screen
+instead.
+
+`widgetCategory=keyguard` is **necessary but not sufficient**. This is the same
+partner-path shape as the Now Bar finding (2026-07-03) — note
+`com.samsung.systemui.notilus` also appears in this catalogue.
+
+**Experiment reverted** (provider + XML + manifest entry removed): shipping a
+widget labelled "cover screen" that cannot be placed there would be a broken
+promise. Nothing else in the app changed.
+
+## Revised recommendation → build Route A
+Uplan is already allowlisted in MultiStar's `coverWidgetList`, so it can run on
+the Flex Window **today**. The work is a **cover-screen-aware compact layout**
+for ~352 × 339 dp (mind the ~31dp bottom-right camera cutout): drop the app
+bar/bottom nav, show a glance (today's shift · next 2–3 tasks · one-tap
+complete · quick add). No Samsung approval, and the same compact work benefits
+the Tab S9 and future foldables.
+
+Re-test Route B only if a future One UI opens the catalogue.
