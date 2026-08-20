@@ -154,11 +154,20 @@ class _NoteArrangeViewState extends State<NoteArrangeView> {
 
     final List<NoteBlock> rest = [for (final _Geom g in geoms) g.block];
     final int di = widget.blocks.indexWhere((b) => b.id == _draggingId);
+    // Where it started, in the same `rest` space the gap is measured in — the
+    // preview must resolve identically to the drop, or the indicator lies.
+    int originalGap = 0;
+    for (final NoteBlock b in visible) {
+      if (b.id == _draggingId) break;
+      originalGap++;
+    }
     final DropPlan plan = resolveDrop(
       rest: rest,
       originalContainerId: di < 0 ? null : containerIdOf(widget.blocks, di),
       gap: gap,
       enteredBedId: _enteredBedId,
+      originalIndent: di < 0 ? 0 : widget.blocks[di].indent,
+      originalGap: originalGap,
     );
 
     final RenderBox? surface =

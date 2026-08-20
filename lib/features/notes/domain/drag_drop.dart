@@ -53,8 +53,17 @@ DropPlan resolveDrop({
   required int? originalContainerId,
   required int gap,
   required int? enteredBedId,
+  int originalIndent = 0,
+  int? originalGap,
 }) {
   final int g0 = gap.clamp(0, rest.length);
+
+  // Dropped back exactly where it started: change nothing. Without this the
+  // "leave the bed downwards" rule below would eject a line that was already
+  // its bed's last one and simply was not moved.
+  if (originalGap != null && g0 == originalGap) {
+    return DropPlan(g0, originalIndent, null);
+  }
 
   // Deliberately entered a bed → land inside it, one level deeper.
   if (enteredBedId != null) {
@@ -78,8 +87,20 @@ DropPlan resolveDrop({
   }
 
   final int? aboveContainer = containerIdOf(rest, g0 - 1);
-  // Same bed you started in → a plain reorder among your siblings.
+  // Same bed you started in → a plain reorder among your siblings…
   if (aboveContainer == originalContainerId) {
+    // …except at the very end of that bed, where "last line inside" and
+    // "first thing after the bed" are the SAME gap. Break that tie toward
+    // OUT, so a line can leave its bed by dragging DOWN past the last line
+    // (previously the only way out was to drag above the heading).
+    // Appending to the end of a bed is still available: hold over its header
+    // and drop at the bottom — the deliberate-in path.
+    if (aboveContainer != null) {
+      final int oi = rest.indexWhere((b) => b.id == aboveContainer);
+      if (oi >= 0 && g0 >= oi + bedSize(rest, oi)) {
+        return DropPlan(g0, 0, null);
+      }
+    }
     return DropPlan(g0, above.indent, null);
   }
   if (aboveContainer == null) return DropPlan(g0, 0, null);
@@ -119,11 +140,20 @@ Arrangement? applyDrop({
       if (!hiddenIds.contains(b.id)) b
   ];
 
+  // Where the dragged group sat in `rest` space, so a no-op drop stays a no-op.
+  int originalGap = 0;
+  for (int i = 0; i < di; i++) {
+    final NoteBlock b = full[i];
+    if (!hiddenIds.contains(b.id) && !groupIds.contains(b.id)) originalGap++;
+  }
+
   final DropPlan plan = resolveDrop(
     rest: restVisible,
     originalContainerId: containerIdOf(full, di),
     gap: gap,
     enteredBedId: enteredBedId,
+    originalIndent: full[di].indent,
+    originalGap: originalGap,
   );
 
   int insertAt = restFull.length;

@@ -502,12 +502,14 @@ const List<CodexTopic> kCodexTopics = [
           'Hold a heading and its whole section folds into your hand and '
           'travels with it.'),
       CodexBlock.bullet(
-          'Drop into any gap and the line moves OUT to the top level. A stray '
-          'drop never splits a section apart.'),
+          'Drop into any gap and the line moves OUT to the top level — '
+          'including dragging it DOWN past the last line of its section. A '
+          'stray drop never splits a section apart.'),
       CodexBlock.bullet(
           'To put a line INSIDE a section, hold it over that heading for '
           'about half a second — the section opens and highlights, then drop '
-          'it where you want.'),
+          'it where you want. That is also how you add a line to the END of a '
+          'section, since dropping there on its own moves the line out.'),
       CodexBlock.p(
           'A blue line previews where it will land, and its indent shows you '
           'whether you are landing inside or outside.'),
