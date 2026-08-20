@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../data/codex_content.dart';
+import '../../data/release_notes.dart';
+import '../../domain/whats_new.dart';
 import '../../data/codex_topic.dart';
 import '../../domain/codex_search.dart';
 import 'codex_topic_screen.dart';
@@ -103,9 +105,33 @@ class _CodexScreenState extends State<CodexScreen> {
     );
   }
 
-  /// Browse layout: a header per area, then its topics.
+  /// Browse layout: the "What's new" shelf (this release only), then a header
+  /// per area. New topics are deliberately pulled OUT of their areas while
+  /// they are new, and drop back in on their own once the release moves on.
   List<Widget> _byCategory(List<CodexTopic> topics, ColorScheme cs) {
     final List<Widget> out = [];
+    final List<CodexTopic> fresh = whatsNewTopics(topics, kCurrentRelease);
+    if (fresh.isNotEmpty) {
+      out.add(Padding(
+        padding: const EdgeInsets.fromLTRB(16, 18, 16, 6),
+        child: Row(
+          children: [
+            const Text('✨', style: TextStyle(fontSize: 14)),
+            const SizedBox(width: 8),
+            Text(
+              'NEW IN v$kCurrentRelease',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: cs.primary,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1,
+                  ),
+            ),
+          ],
+        ),
+      ));
+      out.addAll(fresh.map((t) => _tile(t, cs)));
+    }
+    topics = browsableTopics(topics, kCurrentRelease);
     for (final CodexCategory c in CodexCategory.values) {
       final List<CodexTopic> mine = topics
           .where((t) => t.category == c)

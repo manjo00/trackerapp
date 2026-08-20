@@ -80,6 +80,7 @@ class CodexTopic {
     required this.body,
     this.hidden = false,
     this.keywords = const [],
+    this.sinceVersion,
   });
 
   final String id;
@@ -96,4 +97,9 @@ class CodexTopic {
 
   /// Extra search terms that don't appear in the text (synonyms).
   final List<String> keywords;
+
+  /// Release this topic arrived in (or was rewritten for). While it equals
+  /// `kCurrentRelease` the topic is listed under "What's new" instead of its
+  /// own area; afterwards it returns to that area automatically.
+  final String? sinceVersion;
 }

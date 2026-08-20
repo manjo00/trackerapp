@@ -1,4 +1,5 @@
 import 'codex_topic.dart';
+import 'release_notes.dart';
 
 /// The Codex: Uplan's built-in manual. Static content — no database, works
 /// offline, ships with the app. Topics flagged `hidden: true` are the things
@@ -39,6 +40,35 @@ const List<CodexTopic> kCodexTopics = [
       CodexBlock.p(
           'Every new feature is added here as it is built, so the Codex stays '
           'a complete picture of what the app can do.'),
+    ],
+  ),
+  CodexTopic(
+    id: 'guided-tour',
+    title: 'The guided tour, and replaying it',
+    category: CodexCategory.basics,
+    sinceVersion: kCurrentRelease,
+    summary: 'Uplan highlights things as you meet them — and you can ask for '
+        'any tip again.',
+    keywords: ['tutorial', 'tour', 'coach', 'tips', 'show me', 'highlight'],
+    body: [
+      CodexBlock.p(
+          'The first time you open a screen, Uplan dims it and highlights the '
+          'control it is describing. Tap through the tips, or Skip to dismiss '
+          'the rest of that screen.'),
+      CodexBlock.p(
+          'You are never shown the same tip twice — and when an update adds '
+          'something, only the genuinely new tip appears on your next visit, '
+          'marked NEW.'),
+      CodexBlock.heading('Seeing a tip again'),
+      CodexBlock.step('Open the Codex article for the thing you want.'),
+      CodexBlock.step('Tap "Show me".'),
+      CodexBlock.p(
+          'Uplan takes you to that screen and puts the spotlight back on the '
+          'control. Repeat as often as you like.'),
+      CodexBlock.tip(
+          'Articles for screens that need something specific open first (a '
+          'particular note or list) have no Show me button — visit the screen '
+          'and the tip finds you there.'),
     ],
   ),
   CodexTopic(
@@ -490,6 +520,7 @@ const List<CodexTopic> kCodexTopics = [
     title: 'Rearranging a note',
     category: CodexCategory.notes,
     hidden: true,
+    sinceVersion: kCurrentRelease,
     summary: 'Hold to drag; hold over a heading to move something inside it.',
     keywords: ['reorder', 'move', 'drag', 'nest', 'indent'],
     body: [

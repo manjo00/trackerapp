@@ -6,6 +6,7 @@ import 'core/notifications/live_dashboard_service.dart';
 import 'core/notifications/notification_service.dart';
 import 'core/router/app_router.dart';
 import 'core/settings/settings_provider.dart';
+import 'features/codex/presentation/widgets/patch_notes_dialog.dart';
 import 'core/update/update_service.dart';
 import 'core/theme/app_theme.dart';
 import 'core/widget/home_widget_service.dart';
@@ -138,12 +139,24 @@ class _LifeTrackerAppState extends ConsumerState<LifeTrackerApp>
     await HomeWidgetService.sync(db);
     await LiveDashboardService.syncCards(db);
 
+    // First run after an update: what changed, once. Before the update check
+    // so the two dialogs can never fight over the screen.
+    await _maybeShowPatchNotes();
+
     // Quiet daily check for a newer APK on the releases repo.
     await _maybeOfferUpdate();
   }
 
   /// Auto update check (throttled to once/day inside the service). Shows a
   /// dialog only when a newer release exists; silent otherwise.
+  /// First launch after an update: say what changed, once.
+  Future<void> _maybeShowPatchNotes() async {
+    final BuildContext? context =
+        appRouter.routerDelegate.navigatorKey.currentContext;
+    if (context == null || !context.mounted) return;
+    await maybeShowPatchNotes(context, ref.read(sharedPreferencesProvider));
+  }
+
   Future<void> _maybeOfferUpdate() async {
     final UpdateInfo? update =
         await UpdateService.autoCheck(ref.read(sharedPreferencesProvider));
