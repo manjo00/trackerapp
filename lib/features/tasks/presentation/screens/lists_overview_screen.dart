@@ -7,6 +7,8 @@ import '../../../../core/database/app_database.dart';
 import '../providers/lists_providers.dart';
 import '../widgets/list_form_dialog.dart';
 import 'task_list_screen.dart';
+import '../../../coach/data/coach_tip.dart';
+import '../../../coach/presentation/coach_controller.dart';
 
 /// The Lists tab: a built-in "All tasks" view (the old flat Tasks screen)
 /// followed by the user's lists. Lives inside the shell (no own AppBar).
@@ -20,7 +22,9 @@ class ListsOverviewScreen extends ConsumerWidget {
     final Map<int, int> counts =
         ref.watch(listTaskCountsProvider).valueOrNull ?? const {};
 
-    return Scaffold(
+    return CoachMarks(
+      screen: kCoachLists,
+      child: Scaffold(
       body: listsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (Object err, StackTrace _) =>
@@ -130,6 +134,6 @@ class ListsOverviewScreen extends ConsumerWidget {
         icon: const Icon(Icons.add_rounded),
         label: const Text('New $kListNoun'),
       ),
-    );
+    ));
   }
 }

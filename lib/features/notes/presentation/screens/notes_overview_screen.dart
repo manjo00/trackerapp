@@ -6,6 +6,8 @@ import '../../../../core/database/app_database.dart';
 import '../providers/notes_providers.dart';
 import '../widgets/notebook_form_dialog.dart';
 import '../widgets/notebook_tile.dart';
+import '../../../coach/data/coach_tip.dart';
+import '../../../coach/presentation/coach_controller.dart';
 
 /// Top level of the Notes feature: a fixed "Unfiled" entry followed by the
 /// user's notebooks. FAB creates a notebook.
@@ -18,7 +20,9 @@ class NotesOverviewScreen extends ConsumerWidget {
     final List<Notebook> notebooks =
         ref.watch(notebooksProvider).valueOrNull ?? const [];
 
-    return Scaffold(
+    return CoachMarks(
+      screen: kCoachNotes,
+      child: Scaffold(
       appBar: AppBar(title: const Text('Notes')),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
@@ -73,7 +77,7 @@ class NotesOverviewScreen extends ConsumerWidget {
         onPressed: () => _createNotebook(context, ref),
         child: const Icon(Icons.add_rounded),
       ),
-    );
+    ));
   }
 
   Future<void> _createNotebook(BuildContext context, WidgetRef ref) async {

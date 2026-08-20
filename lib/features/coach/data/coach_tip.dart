@@ -7,9 +7,10 @@ class CoachTip {
   const CoachTip({
     required this.id,
     required this.screen,
-    required this.target,
     required this.text,
     required this.sinceVersion,
+    this.target,
+    this.route,
     this.codexTopicId,
   });
 
@@ -20,9 +21,16 @@ class CoachTip {
   /// Screen key this belongs to (see kCoachScreen* constants).
   final String screen;
 
-  /// Id of the [CoachTarget] to spotlight. A tip whose target is not on
-  /// screen right now is skipped and offered again next visit.
-  final String target;
+  /// Id of the [CoachTarget] to spotlight. Null = a screen-level tip with no
+  /// single control to point at: it shows as a centred card with no cutout.
+  /// A tip whose target IS named but is not on screen right now is skipped
+  /// and offered again next visit.
+  final String? target;
+
+  /// Where to send the user when they replay this tip from the Codex. Null
+  /// for screens that need an id to open (a specific note, list or workout) —
+  /// those can only be seen by visiting the screen normally.
+  final String? route;
 
   final String text;
 

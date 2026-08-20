@@ -39,9 +39,16 @@ class CoachController {
     await _prefs.setString(_kVersionKey, pkg.version);
   }
 
-  /// Forget everything — Settings → "Replay tutorials".
+  /// Forget everything — a full replay of every tour.
   Future<void> resetAll() async {
     await _prefs.remove(_kSeenKey);
+  }
+
+  /// Un-sees a single tip so it fires again the next time its screen opens.
+  /// Used by the Codex's "Show me" button, which then navigates there.
+  Future<void> replay(String tipId) async {
+    final Set<String> next = _seen..remove(tipId);
+    await _prefs.setStringList(_kSeenKey, next.toList());
   }
 
   bool get hasSeenAnything => _seen.isNotEmpty;
@@ -61,11 +68,19 @@ class CoachController {
       if (!context.mounted) return;
 
       final String? last = lastSeenVersion;
-      final List<CoachStep> steps = [
-        for (final CoachTip t in due)
-          if (CoachRegistry.rectOf(t.target) case final Rect r)
-            CoachStep(t, r, isNew: isNewSince(t, last)),
-      ];
+      final List<CoachStep> steps = [];
+      for (final CoachTip t in due) {
+        final String? target = t.target;
+        if (target == null) {
+          // Screen-level tip: dim, centred card, nothing to point at.
+          steps.add(CoachStep(t, null, isNew: isNewSince(t, last)));
+          continue;
+        }
+        // A named target that is not on screen right now is left for next
+        // time rather than burned.
+        final Rect? r = CoachRegistry.rectOf(target);
+        if (r != null) steps.add(CoachStep(t, r, isNew: isNewSince(t, last)));
+      }
       if (steps.isEmpty) return;
 
       final OverlayState overlay = Overlay.of(context, rootOverlay: true);
@@ -114,7 +129,14 @@ class _CoachMarksState extends ConsumerState<CoachMarks> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      ref.read(coachControllerProvider).run(context, widget.screen);
+      // A tutorial must never be able to break the screen it teaches: if the
+      // controller is unavailable (e.g. prefs not provided in a widget test)
+      // the screen just renders without coach marks.
+      try {
+        ref.read(coachControllerProvider).run(context, widget.screen);
+      } on Object catch (_) {
+        // no coach marks here — deliberately silent
+      }
     });
   }
 

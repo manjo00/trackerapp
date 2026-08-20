@@ -11,6 +11,8 @@ import '../providers/workout_providers.dart';
 import '../widgets/exercise_accordion_card.dart';
 import '../widgets/rest_timer_bar.dart';
 import 'workout_summary_screen.dart';
+import '../../../coach/data/coach_tip.dart';
+import '../../../coach/presentation/coach_controller.dart';
 
 /// The in-progress workout screen.
 ///
@@ -355,7 +357,9 @@ class _ActiveWorkoutScreenState
         final exercises = active.exerciseNames;
         final setsByExercise = active.setsByExercise;
 
-        return Scaffold(
+        return CoachMarks(
+      screen: kCoachActiveWorkout,
+      child: Scaffold(
           appBar: AppBar(
             leading: IconButton(
               icon: const Icon(Icons.arrow_back_rounded),
@@ -443,7 +447,7 @@ class _ActiveWorkoutScreenState
             icon: const Icon(Icons.add_rounded),
             label: const Text('Add Exercise'),
           ),
-        );
+        ));
       },
     );
   }

@@ -1,18 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../coach/data/coach_tip.dart';
+import '../../../coach/presentation/coach_controller.dart';
 import '../../data/codex_topic.dart';
+import '../../domain/codex_coach_link.dart';
 
 /// One Codex article. Steps auto-number within each consecutive run, so a
 /// topic can have several separate "1, 2, 3" sequences.
-class CodexTopicScreen extends StatelessWidget {
+class CodexTopicScreen extends ConsumerWidget {
   const CodexTopicScreen({required this.topic, super.key});
 
   final CodexTopic topic;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final ColorScheme cs = Theme.of(context).colorScheme;
     final TextTheme text = Theme.of(context).textTheme;
+    // If a coach mark demonstrates this topic, offer to replay it in place.
+    final CoachTip? demo = coachTipForTopic(topic.id);
 
     final List<Widget> children = [];
     int stepNo = 0;
@@ -51,6 +58,33 @@ class CodexTopicScreen extends StatelessWidget {
                   fontSize: 14,
                   height: 1.4,
                   color: cs.onSurface.withAlpha(160))),
+          if (demo != null) ...[
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: FilledButton.tonalIcon(
+                onPressed: () async {
+                  final String? route = demo.route;
+                  // Un-see it, then go to its screen — the coach marks fire
+                  // on arrival and put the spotlight on the real control.
+                  await ref.read(coachControllerProvider).replay(demo.id);
+                  if (!context.mounted) return;
+                  if (route != null) {
+                    context.go(route);
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Open that screen and the tip will '
+                            'show you where it is.'),
+                      ),
+                    );
+                  }
+                },
+                icon: const Icon(Icons.play_circle_outline_rounded, size: 18),
+                label: const Text('Show me'),
+              ),
+            ),
+          ],
           const SizedBox(height: 12),
           Divider(height: 1, thickness: 1, color: cs.outlineVariant),
           const SizedBox(height: 8),

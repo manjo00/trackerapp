@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/constants/app_strings.dart';
 import '../archive_providers.dart';
+import '../../../coach/data/coach_tip.dart';
+import '../../../coach/presentation/coach_controller.dart';
 
 /// Recovery bin for everything archived — tasks, lists, trackers, habits.
 /// Each row restores (archivedAt → null) or deletes forever (with confirm).
@@ -23,7 +25,9 @@ class ArchivedScreen extends ConsumerWidget {
         trackers.isNotEmpty ||
         habits.isNotEmpty;
 
-    return Scaffold(
+    return CoachMarks(
+      screen: kCoachArchived,
+      child: Scaffold(
       appBar: AppBar(title: const Text('Archived')),
       body: !anything
           ? const Center(child: _EmptyAll())
@@ -81,7 +85,7 @@ class ArchivedScreen extends ConsumerWidget {
                 ),
               ],
             ),
-    );
+    ));
   }
 
   Future<void> _confirmDelete(

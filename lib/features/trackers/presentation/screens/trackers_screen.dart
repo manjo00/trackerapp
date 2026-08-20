@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/trackers_providers.dart';
 import '../widgets/tracker_progress_card.dart';
+import '../../../coach/data/coach_tip.dart';
+import '../../../coach/presentation/coach_controller.dart';
 
 /// The main Trackers tab — lists all user-created trackers with today's
 /// progress, and provides a FAB to add a new one.
@@ -13,7 +15,9 @@ class TrackersScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final trackersAsync = ref.watch(trackersWithProgressProvider);
 
-    return Scaffold(
+    return CoachMarks(
+      screen: kCoachTrackers,
+      child: Scaffold(
       appBar: AppBar(
         title: const Text('Trackers'),
         centerTitle: false,
@@ -59,7 +63,7 @@ class TrackersScreen extends ConsumerWidget {
           );
         },
       ),
-    );
+    ));
   }
 }
 

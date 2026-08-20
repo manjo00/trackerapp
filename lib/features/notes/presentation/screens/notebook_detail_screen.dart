@@ -7,6 +7,8 @@ import '../../domain/note_preview.dart';
 import '../providers/notes_providers.dart';
 import '../widgets/note_grid_card.dart';
 import '../widgets/notebook_form_dialog.dart';
+import '../../../coach/data/coach_tip.dart';
+import '../../../coach/presentation/coach_controller.dart';
 
 /// One notebook's notes (newest-edited first). [notebookId] null = Unfiled.
 class NotebookDetailScreen extends ConsumerWidget {
@@ -27,7 +29,9 @@ class NotebookDetailScreen extends ConsumerWidget {
     final List<Note> notes =
         ref.watch(notesForNotebookProvider(notebookId)).valueOrNull ?? const [];
 
-    return Scaffold(
+    return CoachMarks(
+      screen: kCoachNotebook,
+      child: Scaffold(
       appBar: AppBar(
         title: Text(title),
         actions: [
@@ -71,7 +75,7 @@ class NotebookDetailScreen extends ConsumerWidget {
         onPressed: () => _createNote(context, ref),
         child: const Icon(Icons.add_rounded),
       ),
-    );
+    ));
   }
 
   Future<void> _createNote(BuildContext context, WidgetRef ref) async {

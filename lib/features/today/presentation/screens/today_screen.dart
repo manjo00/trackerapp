@@ -13,6 +13,8 @@ import '../../../../features/trackers/presentation/providers/trackers_providers.
 import '../../../../features/workout/data/models/program_session_model.dart';
 import '../../../../features/workout/presentation/providers/program_providers.dart';
 import '../../../../features/workout/presentation/providers/workout_providers.dart';
+import '../../../coach/data/coach_tip.dart';
+import '../../../coach/presentation/coach_controller.dart';
 
 /// The "Today" tab — shows today's habits, overdue tasks, and tasks due today.
 ///
@@ -45,7 +47,9 @@ class TodayScreen extends ConsumerWidget {
         overdueAsync is AsyncLoading &&
         todayAsync is AsyncLoading;
 
-    return Scaffold(
+    return CoachMarks(
+      screen: kCoachToday,
+      child: Scaffold(
       body: allLoading
           ? const Center(child: CircularProgressIndicator())
           : ListView(
@@ -81,7 +85,7 @@ class TodayScreen extends ConsumerWidget {
                 const SizedBox(height: 16),
               ],
             ),
-    );
+    ));
   }
 
   Widget _buildWorkoutSection(

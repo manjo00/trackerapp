@@ -33,6 +33,10 @@ const List<CodexTopic> kCodexTopics = [
           'A 💡 next to a topic means "you would not have discovered this on '
           'your own". If you only read a few articles, read those.'),
       CodexBlock.p(
+          'Where an article has a **Show me** button, tapping it takes you to '
+          'the screen and highlights the exact control it describes — the '
+          'same tip you saw the first time you opened that screen.'),
+      CodexBlock.p(
           'Every new feature is added here as it is built, so the Codex stays '
           'a complete picture of what the app can do.'),
     ],
@@ -413,6 +417,9 @@ const List<CodexTopic> kCodexTopics = [
           'to open it full size.'),
       CodexBlock.p(
           'Each photo has a crop button to trim it, and an ✕ to remove it.'),
+      CodexBlock.p(
+          'Opened full screen, a photo can be pinched to zoom in (up to 5×) '
+          'and dragged around — useful for reading a vent screen.'),
       CodexBlock.tip(
           'Photos live in the app\'s own storage, not your gallery — and they '
           'are NOT inside the JSON backup file. Keep that in mind before '
@@ -585,6 +592,9 @@ const List<CodexTopic> kCodexTopics = [
       CodexBlock.bullet('Days ahead — how far "This week" looks.'),
       CodexBlock.bullet(
           'Hide when empty — the block disappears until it has something.'),
+      CodexBlock.p(
+          'Edit Home also has drag handles for reordering, if you would '
+          'rather not long-press on Home itself.'),
     ],
   ),
   CodexTopic(
@@ -695,6 +705,9 @@ const List<CodexTopic> kCodexTopics = [
           'Tick a set to mark it done — the whole row turns green.'),
       CodexBlock.bullet(
           'Long-press a set row to delete that set.'),
+      CodexBlock.bullet(
+          'In a program day or one of your own workouts, drag the handle on '
+          'the right of an exercise to reorder it.'),
       CodexBlock.p(
           'Collapse an exercise to work through another one in between; your '
           'ticks survive. Finishing shows a summary: duration, total volume, '
@@ -823,6 +836,8 @@ const List<CodexTopic> kCodexTopics = [
           'shows a month calendar with your shifts (sun/moon and rotation '
           'labels) above a scrollable task list.'),
       CodexBlock.bullet('‹ › move between months.'),
+      CodexBlock.bullet(
+          'Tap a day on the widget to open Uplan on that date.'),
       CodexBlock.bullet('The ✚ opens a quick-add sheet without leaving home.'),
       CodexBlock.bullet('Resize it taller to see more tasks.'),
       CodexBlock.p(

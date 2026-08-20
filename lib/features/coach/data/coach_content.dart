@@ -14,14 +14,15 @@ import 'coach_tip.dart';
 /// on that screen. Adding a tip here WITHOUT wrapping its widget makes dead
 /// content that silently never shows — always do both.
 ///
-/// TODO(coach): screens still to wire — Today, Lists overview, Notes
-/// overview, Notebook detail, Active workout, Habits, Trackers, Archived.
-/// Their tips are written but held back until their targets exist.
+/// A tip with no `target` is a screen-level welcome: it dims and shows a
+/// centred card. Give it a `target` only when there is one control worth
+/// pointing at.
 const List<CoachTip> kCoachTips = [
   // ── Home ────────────────────────────────────────────────────────────────
   CoachTip(
     id: 'home.edit',
     screen: kCoachHome,
+    route: '/home',
     target: 'home.edit',
     text:
         'Home is yours to build. Tap ✎ to add blocks — a list, a label, '
@@ -32,6 +33,7 @@ const List<CoachTip> kCoachTips = [
   CoachTip(
     id: 'home.header',
     screen: kCoachHome,
+    route: '/home',
     target: 'home.firstHeader',
     text:
         'Long-press a block\'s header to drag it, or tap the chevron to '
@@ -42,6 +44,7 @@ const List<CoachTip> kCoachTips = [
   CoachTip(
     id: 'home.fab',
     screen: kCoachHome,
+    route: '/home',
     target: 'home.fab',
     text:
         'Adding a task? Just type when it is due — "tomorrow 5pm" — and '
@@ -51,6 +54,16 @@ const List<CoachTip> kCoachTips = [
   ),
 
   // ── Lists ───────────────────────────────────────────────────────────────
+  CoachTip(
+    id: 'lists.intro',
+    screen: kCoachLists,
+    route: '/lists',
+    text:
+        "Lists hold your tasks. Anything you add without picking one "
+        'lands in Captured.',
+    sinceVersion: '1.15.0',
+    codexTopicId: 'lists-labels',
+  ),
 
   // ── List detail ─────────────────────────────────────────────────────────
   CoachTip(
@@ -68,6 +81,7 @@ const List<CoachTip> kCoachTips = [
   CoachTip(
     id: 'planner.longPress',
     screen: kCoachPlanner,
+    route: '/planner',
     target: 'planner.calendar',
     text:
         'Hold any day to add a task straight to that date — no date picker '
@@ -77,8 +91,36 @@ const List<CoachTip> kCoachTips = [
   ),
 
   // ── Today ───────────────────────────────────────────────────────────────
+  CoachTip(
+    id: 'today.intro',
+    screen: kCoachToday,
+    route: '/today',
+    text:
+        "Today pulls together everything due now — habits, tasks and your "
+        'checklists — so you can work straight down it.',
+    sinceVersion: '1.15.0',
+  ),
 
   // ── Notes ───────────────────────────────────────────────────────────────
+  CoachTip(
+    id: 'notes.intro',
+    screen: kCoachNotes,
+    route: '/notes',
+    text:
+        "Notebooks group your notes. A note is a stack of lines: text, "
+        'checkboxes, photos and dividers.',
+    sinceVersion: '1.15.0',
+    codexTopicId: 'notes-basics',
+  ),
+  CoachTip(
+    id: 'notebook.templates',
+    screen: kCoachNotebook,
+    text:
+        "New notes can start from one of your templates — handy when every "
+        'round has the same shape.',
+    sinceVersion: '1.15.0',
+    codexTopicId: 'notes-templates',
+  ),
 
   // ── Note editor ─────────────────────────────────────────────────────────
   CoachTip(
@@ -104,6 +146,7 @@ const List<CoachTip> kCoachTips = [
   CoachTip(
     id: 'workout.myWorkouts',
     screen: kCoachWorkout,
+    route: '/workout',
     target: 'workout.myWorkouts',
     text: 'Build a workout once here, then start it any day with one tap.',
     sinceVersion: '1.15.0',
@@ -111,11 +154,21 @@ const List<CoachTip> kCoachTips = [
   ),
 
   // ── Active workout ──────────────────────────────────────────────────────
+  CoachTip(
+    id: 'activeWorkout.hints',
+    screen: kCoachActiveWorkout,
+    text:
+        "Each row shows what you lifted last time — tap that hint to copy "
+        "it in, and hold a row to delete the set. No '.' key? Type a comma.",
+    sinceVersion: '1.15.0',
+    codexTopicId: 'workout-session',
+  ),
 
   // ── Work shifts ─────────────────────────────────────────────────────────
   CoachTip(
     id: 'shifts.tap',
     screen: kCoachShifts,
+    route: '/schedule',
     target: 'shifts.calendar',
     text:
         'Tap a day to set a day or night shift and label it with your own '
@@ -125,15 +178,45 @@ const List<CoachTip> kCoachTips = [
   ),
 
   // ── Habits ──────────────────────────────────────────────────────────────
+  CoachTip(
+    id: 'habits.gestures',
+    screen: kCoachHabits,
+    route: '/habits',
+    text:
+        'Tap to tick a habit off, hold to edit it, swipe to delete it.',
+    sinceVersion: '1.15.0',
+    codexTopicId: 'habits',
+  ),
 
   // ── Trackers ────────────────────────────────────────────────────────────
+  CoachTip(
+    id: 'trackers.intro',
+    screen: kCoachTrackers,
+    route: '/trackers',
+    text:
+        "Trackers are checklists you design — a daily one makes a perfect "
+        'medications list, and it shows up on Today.',
+    sinceVersion: '1.15.0',
+    codexTopicId: 'trackers',
+  ),
 
   // ── Archived ────────────────────────────────────────────────────────────
+  CoachTip(
+    id: 'archived.intro',
+    screen: kCoachArchived,
+    route: '/archived',
+    text:
+        "Nothing you archive is gone — restore it here, or delete it for "
+        'good when you are sure.',
+    sinceVersion: '1.15.0',
+    codexTopicId: 'archive',
+  ),
 
   // ── Codex ───────────────────────────────────────────────────────────────
   CoachTip(
     id: 'codex.gems',
     screen: kCoachCodex,
+    route: '/codex',
     target: 'codex.gems',
     text:
         'Everything the app can do is written down here. Start with 💡 '

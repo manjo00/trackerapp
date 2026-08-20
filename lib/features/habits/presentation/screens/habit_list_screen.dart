@@ -5,6 +5,8 @@ import '../../data/models/habit_with_status.dart';
 import '../providers/habits_providers.dart';
 import '../widgets/empty_habits_placeholder.dart';
 import '../widgets/habit_tile.dart';
+import '../../../coach/data/coach_tip.dart';
+import '../../../coach/presentation/coach_controller.dart';
 
 /// Main habits tab — shows all habits and today's completion state.
 ///
@@ -24,7 +26,9 @@ class HabitListScreen extends ConsumerWidget {
     final AsyncValue<List<HabitWithStatus>> habitsAsync =
         ref.watch(habitsWithStatusProvider);
 
-    return Scaffold(
+    return CoachMarks(
+      screen: kCoachHabits,
+      child: Scaffold(
       body: habitsAsync.when(
         // skipLoadingOnReload: when the provider is refreshed after a toggle,
         // keep showing the current list instead of flashing a spinner.
@@ -69,6 +73,6 @@ class HabitListScreen extends ConsumerWidget {
         tooltip: 'Add habit',
         child: const Icon(Icons.add_rounded),
       ),
-    );
+    ));
   }
 }

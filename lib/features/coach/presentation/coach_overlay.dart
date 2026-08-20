@@ -8,7 +8,10 @@ class CoachStep {
   const CoachStep(this.tip, this.rect, {this.isNew = false});
 
   final CoachTip tip;
-  final Rect rect;
+
+  /// Where to cut the spotlight, or null for a screen-level tip that just
+  /// dims and shows a centred card.
+  final Rect? rect;
   final bool isNew;
 }
 
@@ -67,8 +70,8 @@ class _CoachOverlayState extends State<CoachOverlay> {
     final ColorScheme cs = Theme.of(context).colorScheme;
 
     // Grow the hole a little so the target does not touch the dim edge.
-    final Rect hole = step.rect.inflate(6);
-    final bool below = hole.bottom + 180 < screen.height;
+    final Rect? hole = step.rect?.inflate(6);
+    final bool below = hole != null && hole.bottom + 180 < screen.height;
     final bool last = _i == widget.steps.length - 1;
 
     return Material(
@@ -84,26 +87,31 @@ class _CoachOverlayState extends State<CoachOverlay> {
             ),
           ),
           // A ring around the spotlight so it reads as "this thing here".
-          Positioned(
-            left: hole.left,
-            top: hole.top,
-            width: hole.width,
-            height: hole.height,
-            child: IgnorePointer(
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: cs.primary, width: 2),
+          if (hole != null)
+            Positioned(
+              left: hole.left,
+              top: hole.top,
+              width: hole.width,
+              height: hole.height,
+              child: IgnorePointer(
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: cs.primary, width: 2),
+                  ),
                 ),
               ),
             ),
-          ),
-          // Tip card, above or below the target depending on room.
+          // Tip card: beside the target, or centred for a screen-level tip.
           Positioned(
             left: 16,
             right: 16,
-            top: below ? hole.bottom + 14 : null,
-            bottom: below ? null : (screen.height - hole.top) + 14,
+            top: hole == null
+                ? screen.height / 2 - 90
+                : (below ? hole.bottom + 14 : null),
+            bottom: hole == null || below
+                ? null
+                : (screen.height - hole.top) + 14,
             child: _TipCard(
               step: step,
               index: _i,
@@ -122,17 +130,21 @@ class _CoachOverlayState extends State<CoachOverlay> {
 class _SpotlightPainter extends CustomPainter {
   const _SpotlightPainter(this.hole);
 
-  final Rect hole;
+  /// Null dims the whole screen (screen-level tip, nothing to point at).
+  final Rect? hole;
 
   @override
   void paint(Canvas canvas, Size size) {
+    final Paint dim = Paint()..color = Colors.black.withAlpha(170);
+    final Rect? h = hole;
+    if (h == null) {
+      canvas.drawRect(Offset.zero & size, dim);
+      return;
+    }
     final Path full = Path()..addRect(Offset.zero & size);
     final Path cut = Path()
-      ..addRRect(RRect.fromRectAndRadius(hole, const Radius.circular(14)));
-    canvas.drawPath(
-      Path.combine(PathOperation.difference, full, cut),
-      Paint()..color = Colors.black.withAlpha(170),
-    );
+      ..addRRect(RRect.fromRectAndRadius(h, const Radius.circular(14)));
+    canvas.drawPath(Path.combine(PathOperation.difference, full, cut), dim);
   }
 
   @override

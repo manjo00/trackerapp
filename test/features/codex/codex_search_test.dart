@@ -74,6 +74,12 @@ void main() {
         'long-press a set row': 'workout: delete a set',
         'seven times': 'drawer: developer mode',
         'chevron': 'home: fold a block',
+        'pinched to zoom': 'photos: full-screen zoom',
+        'drag the handle': 'workout: reorder exercises',
+        'tap a day on the widget': 'home-screen widget: open that date',
+        'swipe a tracker card': 'trackers: delete',
+        'swipe left — delete the habit': 'habits: delete',
+        'long-press — open it for editing': 'habits: edit',
       };
       final String all = kCodexTopics
           .expand((t) => t.body.map((b) => b.text))

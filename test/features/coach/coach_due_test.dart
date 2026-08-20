@@ -73,10 +73,24 @@ void main() {
       expect(ids.toSet().length, ids.length);
     });
 
-    test('every tip has text and a target', () {
+    test('every tip has text, and a named target is never blank', () {
       for (final CoachTip t in kCoachTips) {
         expect(t.text.trim(), isNotEmpty, reason: t.id);
-        expect(t.target.trim(), isNotEmpty, reason: t.id);
+        if (t.target != null) {
+          expect(t.target!.trim(), isNotEmpty, reason: t.id);
+        }
+      }
+    });
+
+    test('every screen the app teaches has at least one tip', () {
+      final screens = kCoachTips.map((t) => t.screen).toSet();
+      for (final s in [
+        kCoachHome, kCoachLists, kCoachListDetail, kCoachPlanner,
+        kCoachToday, kCoachNotes, kCoachNotebook, kCoachNoteEditor,
+        kCoachWorkout, kCoachActiveWorkout, kCoachShifts, kCoachHabits,
+        kCoachTrackers, kCoachArchived, kCoachCodex,
+      ]) {
+        expect(screens, contains(s), reason: s);
       }
     });
 
