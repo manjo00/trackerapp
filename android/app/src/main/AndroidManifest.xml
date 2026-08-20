@@ -188,6 +188,21 @@
                 android:resource="@xml/uplan_month_widget_info" />
         </receiver>
 
+        <!-- ROUTE-B EXPERIMENT: same widget, declared with the `keyguard`
+             category so the Z Flip cover screen (Flex Window) may offer it.
+             See docs/superpowers/specs/2026-08-04-flip-cover-screen-feasibility.md -->
+        <receiver
+            android:name=".UplanCoverWidgetProvider"
+            android:label="Uplan (cover screen)"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/uplan_cover_widget_info" />
+        </receiver>
+
         <service
             android:name=".MonthRemoteViewsService"
             android:exported="false"

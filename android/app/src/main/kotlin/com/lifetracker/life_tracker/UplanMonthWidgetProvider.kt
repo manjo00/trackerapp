@@ -22,7 +22,7 @@ import java.util.Calendar
 /// "yyyy-MM"; the provider resolves the viewed month from the stored
 /// [PREF_OFFSET] and copies that month's data into the keys the grid factory
 /// reads ("month_cells" / "month_title").
-class UplanMonthWidgetProvider : HomeWidgetProvider() {
+open class UplanMonthWidgetProvider : HomeWidgetProvider() {
 
     companion object {
         const val ACTION_SELECT_DAY = "com.lifetracker.life_tracker.SELECT_DAY"
