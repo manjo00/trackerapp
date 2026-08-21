@@ -217,3 +217,27 @@ clinical use is **A7 (collapse under headings) + A8 (fast reorder) + A1/D1
 (shrink/gallery photos)** — together they tame long, photo-heavy rounds notes.
 **A6 (search)** is the other clear win once there are many notes. Favourites
 (A3/A4) and cover-photo (A2) are cheap, satisfying quick wins.
+
+## G. Picked up along the way (2026-08-04)
+
+- **G1. Cover-screen compact layout (backlog #20, Route A)** · M — Uplan is
+  already allowlisted in MultiStar, so it runs on the Z Flip's Flex Window
+  today; it just renders a tall-phone UI there. Needs a layout for
+  **~352 × 339 dp** (31dp bottom-right camera cutout): no app bar or bottom
+  nav, a glance instead — today's shift · next 2–3 tasks with big tap-to-tick ·
+  the rest timer while a workout runs · quick add. Typing is impractical on the
+  cover screen, so tap-only. The same compact work helps the Tab S9.
+  Widget route is **ruled out** — see
+  `specs/2026-08-04-flip-cover-screen-feasibility.md`. **User parked this
+  2026-08-04**; brainstorm the content before building.
+- **G2. De-clinicalise existing user-facing copy** · S — Working Style #11 now
+  requires **general** examples in the Codex, coach tips and release notes
+  ("Groceries", "Call the landlord"), but content written before that rule
+  still leans clinical ("Bed 9", "take bloods", "ICU1"). The user accepted it
+  as-is for now. Keep clinical shorthand ONLY where it explains real behaviour
+  (why the date parser must not read "bed 7" as a date). One pass over
+  `codex_content.dart` + `coach_content.dart`.
+- **G3. Coach-mark polish** · S — no reflow animation as rows part around the
+  drop point; the entered-bed expansion is an instant rebuild rather than an
+  eased reveal; the lifted tile doesn't scale/tilt. User called these
+  "not important".
