@@ -77,8 +77,12 @@ void main() {
         'pinched to zoom': 'photos: full-screen zoom',
         'drag the handle': 'workout: reorder exercises',
         'tap a day on the widget': 'home-screen widget: open that date',
-        'swipe a tracker card': 'trackers: delete',
-        'swipe left — delete the habit': 'habits: delete',
+        'swipe a tracker card': 'trackers: archive',
+        'swipe left — archive it': 'habits: archive',
+        '⋮ → delete habit': 'habits: delete',
+        '⋮ → delete tracker': 'trackers: delete',
+        'the bin icon next to it': 'archive: delete an archived item',
+        'the sweep icon': 'recently deleted: empty it now',
         'long-press — open it for editing': 'habits: edit',
       };
       final String all = kCodexTopics

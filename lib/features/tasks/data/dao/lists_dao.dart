@@ -29,10 +29,19 @@ class ListsDao extends DatabaseAccessor<AppDatabase> with _$ListsDaoMixin {
   }
 
   /// Archived lists, most-recently-archived first (Archived screen).
+  /// Deleted rows are excluded — they belong to the Recently deleted tab.
   Stream<List<TaskList>> watchArchivedLists() {
     return (select(taskLists)
-          ..where((l) => l.archivedAt.isNotNull())
+          ..where((l) => l.archivedAt.isNotNull() & l.deletedAt.isNull())
           ..orderBy([(l) => OrderingTerm.desc(l.archivedAt)]))
+        .watch();
+  }
+
+  /// Lists in Recently deleted, most-recently-deleted first.
+  Stream<List<TaskList>> watchDeletedLists() {
+    return (select(taskLists)
+          ..where((l) => l.deletedAt.isNotNull())
+          ..orderBy([(l) => OrderingTerm.desc(l.deletedAt)]))
         .watch();
   }
 
@@ -40,6 +49,16 @@ class ListsDao extends DatabaseAccessor<AppDatabase> with _$ListsDaoMixin {
   Future<void> setListArchived(int listId, DateTime? at) =>
       (update(taskLists)..where((l) => l.id.equals(listId)))
           .write(TaskListsCompanion(archivedAt: Value(at)));
+
+  /// Sets/clears a list's deleted state ([at] = null restores it from the bin).
+  Future<void> setListDeleted(int listId, DateTime? at) =>
+      (update(taskLists)..where((l) => l.id.equals(listId)))
+          .write(TaskListsCompanion(deletedAt: Value(at)));
+
+  /// Really removes lists binned before [cutoff]. Runs on launch.
+  Future<int> purgeListsDeletedBefore(DateTime cutoff) =>
+      (delete(taskLists)..where((l) => l.deletedAt.isSmallerThanValue(cutoff)))
+          .go();
 
   /// The auto-created list backing a given note (matched by identity, not
   /// name), if one exists. Drives the note→task linker's "find or create".

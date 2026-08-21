@@ -15,6 +15,11 @@ class Notebooks extends Table {
   DateTimeColumn get createdAt => dateTime()();
 
   /// When set, the notebook is archived — hidden from active views but
-  /// recoverable. NULL = active.
+  /// recoverable. Its notes are archived with it (same timestamp), and come
+  /// back together on restore. NULL = active.
   DateTimeColumn get archivedAt => dateTime().nullable()();
+
+  /// Sent to Recently deleted; really removed 30 days later. NULL = not
+  /// deleted. Never set without [archivedAt] — see ArchiveService.
+  DateTimeColumn get deletedAt => dateTime().nullable()();
 }

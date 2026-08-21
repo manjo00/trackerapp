@@ -124,10 +124,19 @@ class TasksDao extends DatabaseAccessor<AppDatabase> with _$TasksDaoMixin {
       (select(tasks)..where((t) => t.archivedAt.isNull())).get();
 
   /// Archived tasks, most-recently-archived first (Archived screen).
+  /// Deleted rows are excluded — they belong to the Recently deleted tab.
   Stream<List<Task>> watchArchivedTasks() {
     return (select(tasks)
-          ..where((t) => t.archivedAt.isNotNull())
+          ..where((t) => t.archivedAt.isNotNull() & t.deletedAt.isNull())
           ..orderBy([(t) => OrderingTerm.desc(t.archivedAt)]))
+        .watch();
+  }
+
+  /// Tasks in Recently deleted, most-recently-deleted first.
+  Stream<List<Task>> watchDeletedTasks() {
+    return (select(tasks)
+          ..where((t) => t.deletedAt.isNotNull())
+          ..orderBy([(t) => OrderingTerm.desc(t.deletedAt)]))
         .watch();
   }
 
@@ -135,6 +144,32 @@ class TasksDao extends DatabaseAccessor<AppDatabase> with _$TasksDaoMixin {
   Future<void> setTaskArchived(int taskId, DateTime? at) =>
       (update(tasks)..where((t) => t.id.equals(taskId)))
           .write(TasksCompanion(archivedAt: Value(at)));
+
+  /// Sets/clears a task's deleted state ([at] = null restores it from the bin).
+  Future<void> setTaskDeleted(int taskId, DateTime? at) =>
+      (update(tasks)..where((t) => t.id.equals(taskId)))
+          .write(TasksCompanion(deletedAt: Value(at)));
+
+  /// Really removes tasks binned before [cutoff]. Runs on launch.
+  Future<int> purgeTasksDeletedBefore(DateTime cutoff) =>
+      (delete(tasks)..where((t) => t.deletedAt.isSmallerThanValue(cutoff)))
+          .go();
+
+  /// listId → the titles of the tasks filed under it. Lets the Archived screen
+  /// find a list by something inside it, not only by its name.
+  Stream<Map<int, List<String>>> watchTaskTitlesByList() {
+    return (select(tasks)..where((t) => t.listId.isNotNull()))
+        .watch()
+        .map((rows) {
+      final Map<int, List<String>> byList = {};
+      for (final Task task in rows) {
+        final int? listId = task.listId;
+        if (listId == null) continue;
+        byList.putIfAbsent(listId, () => <String>[]).add(task.title);
+      }
+      return byList;
+    });
+  }
 
   /// One-shot fetch of a single task by id (null if it doesn't exist).
   Future<Task?> getTask(int id) =>

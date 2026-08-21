@@ -71,6 +71,17 @@ class Tasks extends Table {
   /// recoverable from the Archived screen. NULL = active.
   DateTimeColumn get archivedAt => dateTime().nullable()();
 
+  /// Set when the task was sent to Recently deleted; really removed 30 days
+  /// later. NULL = not deleted.
+  ///
+  /// INVARIANT (holds for every table carrying this column): never set without
+  /// [archivedAt]. Every active query in the app already filters
+  /// `archivedAt IS NULL`, so a trashed row is invisible everywhere for free.
+  /// Equal timestamps mean the row was live when deleted (restore puts it back
+  /// active); an earlier [archivedAt] means it was archived first (restore puts
+  /// it back in the archive). See ArchiveService.
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+
   /// Set when this task was auto-created from a note line (an "@time …" token).
   /// Points at the source [NoteBlocks] row; ON DELETE CASCADE means deleting
   /// that block — or the whole note it belongs to — deletes this task too.

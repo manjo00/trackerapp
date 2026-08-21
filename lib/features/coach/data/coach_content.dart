@@ -59,7 +59,7 @@ const List<CoachTip> kCoachTips = [
     screen: kCoachLists,
     route: '/lists',
     text:
-        "Lists hold your tasks. Anything you add without picking one "
+        'Lists hold your tasks. Anything you add without picking one '
         'lands in Captured.',
     sinceVersion: '1.15.0',
     codexTopicId: 'lists-labels',
@@ -96,7 +96,7 @@ const List<CoachTip> kCoachTips = [
     screen: kCoachToday,
     route: '/today',
     text:
-        "Today pulls together everything due now — habits, tasks and your "
+        'Today pulls together everything due now — habits, tasks and your '
         'checklists — so you can work straight down it.',
     sinceVersion: '1.15.0',
   ),
@@ -107,7 +107,7 @@ const List<CoachTip> kCoachTips = [
     screen: kCoachNotes,
     route: '/notes',
     text:
-        "Notebooks group your notes. A note is a stack of lines: text, "
+        'Notebooks group your notes. A note is a stack of lines: text, '
         'checkboxes, photos and dividers.',
     sinceVersion: '1.15.0',
     codexTopicId: 'notes-basics',
@@ -116,7 +116,7 @@ const List<CoachTip> kCoachTips = [
     id: 'notebook.templates',
     screen: kCoachNotebook,
     text:
-        "New notes can start from one of your templates — handy when every "
+        'New notes can start from one of your templates — handy when every '
         'round has the same shape.',
     sinceVersion: '1.15.0',
     codexTopicId: 'notes-templates',
@@ -158,7 +158,7 @@ const List<CoachTip> kCoachTips = [
     id: 'activeWorkout.hints',
     screen: kCoachActiveWorkout,
     text:
-        "Each row shows what you lifted last time — tap that hint to copy "
+        'Each row shows what you lifted last time — tap that hint to copy '
         "it in, and hold a row to delete the set. No '.' key? Type a comma.",
     sinceVersion: '1.15.0',
     codexTopicId: 'workout-session',
@@ -194,7 +194,7 @@ const List<CoachTip> kCoachTips = [
     screen: kCoachTrackers,
     route: '/trackers',
     text:
-        "Trackers are checklists you design — a daily one makes a perfect "
+        'Trackers are checklists you design — a daily one makes a perfect '
         'medications list, and it shows up on Today.',
     sinceVersion: '1.15.0',
     codexTopicId: 'trackers',
@@ -206,10 +206,31 @@ const List<CoachTip> kCoachTips = [
     screen: kCoachArchived,
     route: '/archived',
     text:
-        "Nothing you archive is gone — restore it here, or delete it for "
+        'Nothing you archive is gone — restore it here, or delete it for '
         'good when you are sure.',
     sinceVersion: '1.15.0',
     codexTopicId: 'archive',
+  ),
+  CoachTip(
+    id: 'archived.search',
+    screen: kCoachArchived,
+    route: '/archived',
+    target: 'archive.search',
+    text:
+        'This searches what is inside things too — type a line you remember '
+        'and the note it came from turns up.',
+    sinceVersion: '1.16.0',
+    codexTopicId: 'archive',
+  ),
+  CoachTip(
+    id: 'archived.bin',
+    screen: kCoachArchived,
+    route: '/archived',
+    text:
+        'Deleted something? It waits 30 days in Recently deleted before it '
+        'really goes, so a wrong tap is never the end of it.',
+    sinceVersion: '1.16.0',
+    codexTopicId: 'recently-deleted',
   ),
 
   // ── Codex ───────────────────────────────────────────────────────────────

@@ -30,16 +30,40 @@ class TrackersDao extends DatabaseAccessor<AppDatabase>
       (select(customTrackers)..where((t) => t.archivedAt.isNull())).get();
 
   /// Archived trackers, most-recently-archived first (Archived screen).
+  /// Deleted rows are excluded — they belong to the Recently deleted tab.
   Stream<List<CustomTracker>> watchArchivedTrackers() =>
       (select(customTrackers)
-            ..where((t) => t.archivedAt.isNotNull())
+            ..where((t) => t.archivedAt.isNotNull() & t.deletedAt.isNull())
             ..orderBy([(t) => OrderingTerm.desc(t.archivedAt)]))
           .watch();
+
+  /// Trackers in Recently deleted, most-recently-deleted first.
+  Stream<List<CustomTracker>> watchDeletedTrackers() => (select(customTrackers)
+        ..where((t) => t.deletedAt.isNotNull())
+        ..orderBy([(t) => OrderingTerm.desc(t.deletedAt)]))
+      .watch();
 
   /// Sets/clears a tracker's archived state ([at] = null unarchives).
   Future<void> setTrackerArchived(int id, DateTime? at) =>
       (update(customTrackers)..where((t) => t.id.equals(id)))
           .write(CustomTrackersCompanion(archivedAt: Value(at)));
+
+  /// One-shot fetch of a single tracker (null if it doesn't exist). Restore
+  /// reads it to see whether it was live or already archived when deleted.
+  Future<CustomTracker?> getTracker(int id) =>
+      (select(customTrackers)..where((t) => t.id.equals(id))).getSingleOrNull();
+
+  /// Sets/clears a tracker's deleted state ([at] = null restores it).
+  Future<void> setTrackerDeleted(int id, DateTime? at) =>
+      (update(customTrackers)..where((t) => t.id.equals(id)))
+          .write(CustomTrackersCompanion(deletedAt: Value(at)));
+
+  /// Really removes trackers binned before [cutoff] (CASCADE takes their items
+  /// and logs with them). Runs on launch.
+  Future<int> purgeTrackersDeletedBefore(DateTime cutoff) =>
+      (delete(customTrackers)
+            ..where((t) => t.deletedAt.isSmallerThanValue(cutoff)))
+          .go();
 
   Future<void> deleteTracker(int id) =>
       (delete(customTrackers)..where((t) => t.id.equals(id))).go();

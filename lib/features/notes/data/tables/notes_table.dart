@@ -23,6 +23,11 @@ class Notes extends Table {
   /// NULL = active; non-null = archived.
   DateTimeColumn get archivedAt => dateTime().nullable()();
 
+  /// Sent to Recently deleted; really removed 30 days later (photo files go
+  /// with it, not before). NULL = not deleted. Never set without [archivedAt]
+  /// — see ArchiveService.
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+
   /// True = a reusable template (hidden from notebooks; lives in the Templates
   /// area). Its blocks are copied into a new/target note when "used". Templates
   /// carry notebookId NULL. Default false = an ordinary note.

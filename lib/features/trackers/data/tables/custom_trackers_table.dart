@@ -42,4 +42,9 @@ class CustomTrackers extends Table {
   /// When set, the tracker is archived — hidden from active views but
   /// recoverable from the Archived screen. NULL = active.
   DateTimeColumn get archivedAt => dateTime().nullable()();
+
+  /// Sent to Recently deleted; really removed 30 days later. NULL = not
+  /// deleted. Because the row survives until then, its logs (CASCADE children)
+  /// do too — restoring brings the whole history back. See ArchiveService.
+  DateTimeColumn get deletedAt => dateTime().nullable()();
 }

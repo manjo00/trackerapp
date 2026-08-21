@@ -10,6 +10,7 @@ import '../../domain/drag_drop.dart';
 import '../../domain/note_outline.dart';
 import '../../domain/note_text_style.dart';
 import '../../domain/section_fold.dart';
+import '../../../archive/presentation/archive_providers.dart';
 import '../providers/notes_providers.dart';
 import '../widgets/checkbox_block_view.dart';
 import '../widgets/divider_block_view.dart';
@@ -26,8 +27,9 @@ import '../../../coach/presentation/coach_target.dart';
 /// per-line chrome. Reordering and deleting whole lines happen in "Edit lines"
 /// mode (AppBar ⋮). A text/checkbox line can also be removed by backspacing on
 /// an empty line. Auto-saves (blocks on focus-loss, title on focus-loss + on
-/// leaving); an empty note is deleted on exit; ⋮ → Delete note removes it
-/// (cascading its tasks + auto-list).
+/// leaving); an empty note is deleted on exit. ⋮ → Archive note puts it away
+/// (Undo in the snackbar); ⋮ → Delete note sends it to Recently deleted, where
+/// it waits 30 days before its rows, photos and auto-list are really gone.
 class NoteEditorScreen extends ConsumerStatefulWidget {
   const NoteEditorScreen({required this.noteId, super.key});
 
@@ -201,13 +203,31 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     }
   }
 
+  /// Puts the note away without asking — archiving is reversible, so the
+  /// snackbar's Undo is a better answer than a confirm dialog. The messenger is
+  /// captured before the pop so the snackbar survives leaving this screen.
+  Future<void> _archiveNote() async {
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    final ArchiveService svc = ref.read(archiveServiceProvider);
+    _deleted = true; // stops the empty-note cleanup from also firing on exit
+    await svc.archiveNote(widget.noteId, DateTime.now());
+    messenger.showSnackBar(SnackBar(
+      content: const Text('Note archived'),
+      duration: const Duration(seconds: 3),
+      action: SnackBarAction(
+          label: 'Undo', onPressed: () => svc.restoreNote(widget.noteId)),
+    ));
+    if (mounted) Navigator.of(context).pop();
+  }
+
   Future<void> _deleteNote() async {
     final bool? confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Delete note?'),
         content: const Text(
-          'The note, its photos, and any tasks it created are deleted.',
+          'The note and its photos move to Recently deleted — you can restore '
+          'them for 30 days.',
         ),
         actions: [
           TextButton(
@@ -223,7 +243,9 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     );
     if (confirmed != true) return;
     _deleted = true;
-    await ref.read(notesRepositoryProvider).deleteNoteWithPhotos(widget.noteId);
+    await ref
+        .read(archiveServiceProvider)
+        .trashNote(widget.noteId, DateTime.now());
     if (mounted) Navigator.of(context).pop();
   }
 
@@ -479,6 +501,8 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
                   _pickTemplateToInsert();
                 case 'save_template':
                   _saveAsTemplate();
+                case 'archive':
+                  _archiveNote();
                 case 'delete':
                   _deleteNote();
               }
@@ -501,6 +525,10 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
               const PopupMenuItem(
                 value: 'save_template',
                 child: Text('Save as template'),
+              ),
+              const PopupMenuItem(
+                value: 'archive',
+                child: Text('Archive note'),
               ),
               const PopupMenuItem(value: 'delete', child: Text('Delete note')),
             ],

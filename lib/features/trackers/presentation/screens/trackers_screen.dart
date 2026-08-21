@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/trackers_providers.dart';
 import '../widgets/tracker_progress_card.dart';
+import '../../../archive/presentation/archive_providers.dart';
 import '../../../coach/data/coach_tip.dart';
 import '../../../coach/presentation/coach_controller.dart';
 
@@ -10,6 +11,21 @@ import '../../../coach/presentation/coach_controller.dart';
 /// progress, and provides a FAB to add a new one.
 class TrackersScreen extends ConsumerWidget {
   const TrackersScreen({super.key});
+
+  /// Swipe puts a tracker in the archive with its logs intact, and offers Undo.
+  /// Deleting one lives on its detail screen.
+  static Future<void> _archive(
+      BuildContext context, WidgetRef ref, int id, String name) async {
+    final ArchiveService svc = ref.read(archiveServiceProvider);
+    await svc.archiveTracker(id, DateTime.now());
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('"$name" archived'),
+      duration: const Duration(seconds: 3),
+      action: SnackBarAction(
+          label: 'Undo', onPressed: () => svc.restoreTracker(id)),
+    ));
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -54,9 +70,7 @@ class TrackersScreen extends ConsumerWidget {
                       'trackerType': t.trackerType,
                     },
                   ),
-                  onDelete: () => ref
-                      .read(deleteTrackerProvider.notifier)
-                      .delete(t.trackerId),
+                  onArchive: () => _archive(context, ref, t.trackerId, t.name),
                 ),
               );
             },

@@ -17,6 +17,10 @@ class TaskLists extends Table {
   /// (they show as "no list"/Captured) until the list is restored.
   DateTimeColumn get archivedAt => dateTime().nullable()();
 
+  /// Sent to Recently deleted; really removed 30 days later. NULL = not
+  /// deleted. Never set without [archivedAt] — see ArchiveService.
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+
   /// Set when this list was auto-created to hold a note's "@time" tasks. Points
   /// at the owning [Notes] row; ON DELETE CASCADE removes the list when the
   /// note is deleted. NULL = an ordinary, user-made list.

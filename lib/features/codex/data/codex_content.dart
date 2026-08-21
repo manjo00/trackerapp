@@ -264,16 +264,112 @@ const List<CodexTopic> kCodexTopics = [
     id: 'archive',
     title: 'Archive and restore',
     category: CodexCategory.tasks,
-    summary: 'Nothing is really gone until you say so.',
-    keywords: ['delete', 'undo', 'trash', 'recover'],
+    summary: 'Put something away without losing it.',
+    keywords: ['archive', 'hide', 'restore', 'recover', 'put away', 'undo'],
+    sinceVersion: kCurrentRelease,
     body: [
       CodexBlock.p(
-          'Archiving hides something without deleting it — swipe a task, or '
-          'use a list\'s ⋮ menu.'),
+          'Archiving hides something from the app without deleting it. It '
+          'stays archived for as long as you like.'),
+      CodexBlock.heading('How to archive'),
+      CodexBlock.bullet('Task, habit or tracker — swipe the card to the left.'),
+      CodexBlock.bullet('List — its ⋮ menu → Archive.'),
+      CodexBlock.bullet('Note or notebook — the ⋮ menu → Archive.'),
+      CodexBlock.p(
+          'Each one offers Undo in the bar that appears at the bottom, so a '
+          'mis-swipe costs you nothing.'),
+      CodexBlock.heading('Getting it back'),
       CodexBlock.step('Open the drawer → Archived.'),
-      CodexBlock.step(
-          'Find the item under its section (tasks, lists, habits, trackers).'),
-      CodexBlock.step('Restore it, or Delete forever if you are sure.'),
+      CodexBlock.step('Stay on the Archived tab and find your item.'),
+      CodexBlock.step('Tap the restore arrow.'),
+      CodexBlock.tip(
+          'Restoring repairs the way back in: if you restore a note whose '
+          'notebook was archived, the notebook comes back too — so the note '
+          'never returns somewhere you cannot see it.'),
+      CodexBlock.p(
+          'Archiving a notebook takes its notes with it, and restoring brings '
+          'back exactly those notes. Anything you had archived separately '
+          'stays archived.'),
+    ],
+  ),
+
+  CodexTopic(
+    id: 'recently-deleted',
+    title: 'Recently deleted',
+    category: CodexCategory.tasks,
+    summary: 'Deleted things wait 30 days before they really go.',
+    keywords: [
+      'delete',
+      'deleted',
+      'trash',
+      'bin',
+      'recycle',
+      '30 days',
+      'gone',
+      'permanently',
+      'recover',
+      'undo delete',
+    ],
+    sinceVersion: kCurrentRelease,
+    body: [
+      CodexBlock.p(
+          'Deleting never destroys anything straight away. It goes to '
+          'Recently deleted and sits there for 30 days first.'),
+      CodexBlock.heading('How to delete'),
+      CodexBlock.bullet('Habit — open it (hold the card) → ⋮ → Delete habit.'),
+      CodexBlock.bullet('Tracker — open it → ⋮ → Delete tracker.'),
+      CodexBlock.bullet('Note or notebook — the ⋮ menu → Delete.'),
+      CodexBlock.bullet(
+          'Anything already in the Archived tab — the bin icon next to it.'),
+      CodexBlock.heading('Getting it back'),
+      CodexBlock.step('Drawer → Archived → the Recently deleted tab.'),
+      CodexBlock.step('Each row tells you how many days it has left.'),
+      CodexBlock.step('Tap the restore arrow.'),
+      CodexBlock.tip(
+          'Restore puts things back where they came from: something you '
+          'deleted while you were using it returns to the app, and something '
+          'you deleted out of the archive returns to the archive.'),
+      CodexBlock.p(
+          'A tracker keeps its whole log history while it waits, and a note '
+          'keeps its photos — nothing is thinned out early.'),
+      CodexBlock.p(
+          'In a hurry for the space? The sweep icon in the top bar of that '
+          'tab empties it immediately. That one really is permanent.'),
+    ],
+  ),
+
+  CodexTopic(
+    id: 'archive-search',
+    title: 'Find an archived thing by what is inside it',
+    category: CodexCategory.tasks,
+    summary: 'The archive search reads contents, not just names.',
+    keywords: [
+      'search archive',
+      'find deleted',
+      'search inside',
+      'find old note',
+      'cannot find',
+      'lost note',
+    ],
+    hidden: true,
+    sinceVersion: kCurrentRelease,
+    body: [
+      CodexBlock.p(
+          'The search bar on the Archived screen looks inside things. You do '
+          'not have to remember what a note was called — a line from the '
+          'middle of it is enough.'),
+      CodexBlock.heading('What it reads'),
+      CodexBlock.bullet('A note — every line you wrote in it.'),
+      CodexBlock.bullet('A notebook — the names of the notes inside it.'),
+      CodexBlock.bullet('A list — the names of the tasks inside it.'),
+      CodexBlock.bullet('A task — its note.'),
+      CodexBlock.tip(
+          'When a result matched on contents, the line that matched is shown '
+          'underneath it — so you can see why it turned up before opening '
+          'anything.'),
+      CodexBlock.p(
+          'The search covers both tabs, so switching between Archived and '
+          'Recently deleted keeps whatever you typed.'),
     ],
   ),
 
@@ -344,7 +440,12 @@ const List<CodexTopic> kCodexTopics = [
       CodexBlock.heading('Tile gestures'),
       CodexBlock.bullet('Tap — tick it off for today.'),
       CodexBlock.bullet('Long-press — open it for editing.'),
-      CodexBlock.bullet('Swipe left — delete the habit.'),
+      CodexBlock.bullet(
+          'Swipe left — archive it (with Undo). Your streak is kept, and '
+          'restoring brings it back untouched.'),
+      CodexBlock.p(
+          'To delete a habit, open it and use ⋮ → Delete habit. It waits 30 '
+          'days in Recently deleted first.'),
     ],
   ),
   CodexTopic(
@@ -365,7 +466,9 @@ const List<CodexTopic> kCodexTopics = [
           'Daily checklists show inline on the Today screen, so you can tick '
           'items without opening the tracker.'),
       CodexBlock.p(
-          'Swipe a tracker card left to delete it — it asks first.'),
+          'Swipe a tracker card left to archive it — logs and all — with an '
+          'Undo in the bar that appears. To delete one, open it and use ⋮ → '
+          'Delete tracker; it waits 30 days in Recently deleted first.'),
       CodexBlock.tip(
           'There is no separate medications feature — a daily checklist IS '
           'the medication tracker. Make one called "Meds" with an item per '

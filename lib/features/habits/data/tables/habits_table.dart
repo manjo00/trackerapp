@@ -35,4 +35,8 @@ class Habits extends Table {
   /// When set, the habit is archived — hidden from every active view but
   /// recoverable from the Archived screen. NULL = active.
   DateTimeColumn get archivedAt => dateTime().nullable()();
+
+  /// Sent to Recently deleted; really removed 30 days later. NULL = not
+  /// deleted. Never set without [archivedAt] — see ArchiveService.
+  DateTimeColumn get deletedAt => dateTime().nullable()();
 }

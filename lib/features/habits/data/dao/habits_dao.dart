@@ -32,10 +32,19 @@ class HabitsDao extends DatabaseAccessor<AppDatabase> with _$HabitsDaoMixin {
   }
 
   /// Archived habits, most-recently-archived first (Archived screen).
+  /// Deleted rows are excluded — they belong to the Recently deleted tab.
   Stream<List<Habit>> watchArchivedHabits() {
     return (select(habits)
-          ..where((h) => h.archivedAt.isNotNull())
+          ..where((h) => h.archivedAt.isNotNull() & h.deletedAt.isNull())
           ..orderBy([(h) => OrderingTerm.desc(h.archivedAt)]))
+        .watch();
+  }
+
+  /// Habits in Recently deleted, most-recently-deleted first.
+  Stream<List<Habit>> watchDeletedHabits() {
+    return (select(habits)
+          ..where((h) => h.deletedAt.isNotNull())
+          ..orderBy([(h) => OrderingTerm.desc(h.deletedAt)]))
         .watch();
   }
 
@@ -43,6 +52,22 @@ class HabitsDao extends DatabaseAccessor<AppDatabase> with _$HabitsDaoMixin {
   Future<void> setHabitArchived(int habitId, DateTime? at) =>
       (update(habits)..where((h) => h.id.equals(habitId)))
           .write(HabitsCompanion(archivedAt: Value(at)));
+
+  /// One-shot fetch of a single habit (null if it doesn't exist). Restore reads
+  /// it to see whether the habit was live or already archived when deleted.
+  Future<Habit?> getHabit(int id) =>
+      (select(habits)..where((h) => h.id.equals(id))).getSingleOrNull();
+
+  /// Sets/clears a habit's deleted state ([at] = null restores it from the bin).
+  Future<void> setHabitDeleted(int habitId, DateTime? at) =>
+      (update(habits)..where((h) => h.id.equals(habitId)))
+          .write(HabitsCompanion(deletedAt: Value(at)));
+
+  /// Really removes habits binned before [cutoff] (CASCADE takes their
+  /// completions with them). Runs on launch.
+  Future<int> purgeHabitsDeletedBefore(DateTime cutoff) =>
+      (delete(habits)..where((h) => h.deletedAt.isSmallerThanValue(cutoff)))
+          .go();
 
   /// Inserts a new habit row and returns its auto-assigned [id].
   Future<int> insertHabit(HabitsCompanion companion) =>

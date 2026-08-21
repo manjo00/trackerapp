@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../domain/note_preview.dart';
+import '../../../archive/presentation/archive_providers.dart';
 import '../providers/notes_providers.dart';
 import '../widgets/note_grid_card.dart';
 import '../widgets/notebook_form_dialog.dart';
@@ -42,6 +43,7 @@ class NotebookDetailScreen extends ConsumerWidget {
               itemBuilder: (context) => const [
                 PopupMenuItem(
                     value: 'rename', child: Text('Rename / recolor')),
+                PopupMenuItem(value: 'archive', child: Text('Archive')),
                 PopupMenuItem(value: 'delete', child: Text('Delete')),
               ],
             ),
@@ -140,12 +142,28 @@ class NotebookDetailScreen extends ConsumerWidget {
               .read(notesDaoProvider)
               .renameNotebook(nb.id, result.$1, result.$2, result.$3);
         }
+      // Archiving takes the notebook's notes with it (same timestamp), so a
+      // full notebook doesn't scatter its notes into Unfiled — and restoring
+      // brings back exactly what went in.
+      case 'archive':
+        final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+        final ArchiveService svc = ref.read(archiveServiceProvider);
+        await svc.archiveNotebook(nb.id, DateTime.now());
+        messenger.showSnackBar(SnackBar(
+          content: Text('"${nb.name}" archived'),
+          duration: const Duration(seconds: 3),
+          action: SnackBarAction(
+              label: 'Undo', onPressed: () => svc.restoreNotebook(nb.id)),
+        ));
+        if (context.mounted) context.pop();
       case 'delete':
         final bool? confirmed = await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
             title: Text('Delete "${nb.name}"?'),
-            content: const Text('Its notes move to Unfiled (not deleted).'),
+            content: const Text(
+                'The notebook and its notes move to Recently deleted — you '
+                'can restore them for 30 days.'),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
@@ -159,7 +177,9 @@ class NotebookDetailScreen extends ConsumerWidget {
           ),
         );
         if (confirmed == true) {
-          await ref.read(notesDaoProvider).deleteNotebook(nb.id);
+          await ref
+              .read(archiveServiceProvider)
+              .trashNotebook(nb.id, DateTime.now());
           if (context.mounted) context.pop();
         }
     }

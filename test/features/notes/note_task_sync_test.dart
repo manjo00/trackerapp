@@ -3,7 +3,9 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:life_tracker/core/database/app_database.dart';
 import 'package:life_tracker/features/archive/presentation/archive_providers.dart';
+import 'package:life_tracker/core/images/image_storage_service.dart';
 import 'package:life_tracker/features/notes/data/dao/notes_dao.dart';
+import 'package:life_tracker/features/notes/data/repositories/notes_repository.dart';
 import 'package:life_tracker/features/notes/data/models/note_block_type.dart';
 import 'package:life_tracker/features/tasks/data/dao/tasks_dao.dart';
 
@@ -16,8 +18,9 @@ void main() {
 
   setUp(() {
     db = AppDatabase.forTesting(NativeDatabase.memory());
-    archive = ArchiveService(db);
     notes = NotesDao(db);
+    archive =
+        ArchiveService(db, NotesRepository(notes, ImageStorageService()));
     tasks = TasksDao(db);
   });
   tearDown(() async => db.close());
@@ -46,7 +49,7 @@ void main() {
   test('deleting a note-linked task deletes the note line and the task',
       () async {
     final (blockId, taskId) = await seed('@0900 draw');
-    await archive.deleteTask(taskId);
+    await archive.destroyTask(taskId);
 
     expect(await tasks.getTask(taskId), isNull);
     expect(await notes.getBlock(blockId), isNull);
@@ -55,7 +58,7 @@ void main() {
   test('deleting an ordinary task leaves notes untouched', () async {
     final int taskId = await db.into(db.tasks).insert(
         TasksCompanion.insert(title: 'plain', createdAt: now));
-    await archive.deleteTask(taskId);
+    await archive.destroyTask(taskId);
     expect(await tasks.getTask(taskId), isNull);
   });
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../../archive/presentation/archive_providers.dart';
 import '../../data/models/tracker_item_model.dart';
 import '../../data/models/tracker_log_model.dart';
 import '../../data/models/tracker_model.dart';
@@ -22,6 +23,34 @@ class TrackerDetailScreen extends ConsumerWidget {
   final String trackerIcon;
   final TrackerType trackerType;
 
+  /// Sends the tracker (and its whole log history) to Recently deleted, then
+  /// leaves the screen. It stays restorable for 30 days.
+  Future<void> _confirmDeleteTracker(
+      BuildContext context, WidgetRef ref) async {
+    final bool? yes = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Delete "$trackerName"?'),
+        content: const Text(
+            'The tracker and its logs move to Recently deleted — you can '
+            'restore them for 30 days.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Delete')),
+        ],
+      ),
+    );
+    if (yes != true || !context.mounted) return;
+    await ref
+        .read(archiveServiceProvider)
+        .trashTracker(trackerId, DateTime.now());
+    if (context.mounted) context.pop();
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final logsAsync = ref.watch(trackerLogsProvider(trackerId));
@@ -36,6 +65,16 @@ class TrackerDetailScreen extends ConsumerWidget {
             Flexible(child: Text(trackerName)),
           ],
         ),
+        actions: [
+          // Deleting lives here rather than on the card: a swipe archives, so
+          // the destructive action takes a deliberate trip into the tracker.
+          PopupMenuButton<String>(
+            onSelected: (_) => _confirmDeleteTracker(context, ref),
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 'delete', child: Text('Delete tracker')),
+            ],
+          ),
+        ],
       ),
       floatingActionButton: itemsAsync.when(
         data: (items) => FloatingActionButton.extended(

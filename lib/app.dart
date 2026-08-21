@@ -10,6 +10,7 @@ import 'features/codex/presentation/widgets/patch_notes_dialog.dart';
 import 'core/update/update_service.dart';
 import 'core/theme/app_theme.dart';
 import 'core/widget/home_widget_service.dart';
+import 'features/archive/presentation/archive_providers.dart';
 import 'features/habits/presentation/providers/habits_providers.dart';
 import 'features/tasks/presentation/providers/lists_providers.dart';
 import 'features/tasks/presentation/providers/tasks_providers.dart';
@@ -132,6 +133,10 @@ class _LifeTrackerAppState extends ConsumerState<LifeTrackerApp>
       tasks: tasks,
       trackers: trackers,
     );
+
+    // Anything whose 30 days in Recently deleted are up goes now. A plain
+    // query on launch — no background worker, and nothing to schedule.
+    await ref.read(archiveServiceProvider).purgeExpired(DateTime.now());
 
     // Seed the home-screen widget with today's snapshot on launch, and
     // bring up the live dashboard notification if the user enabled it.

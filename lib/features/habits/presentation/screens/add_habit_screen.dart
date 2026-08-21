@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/notifications/notification_service.dart';
+import '../../../archive/presentation/archive_providers.dart';
 import '../../data/models/habit_model.dart';
 import '../providers/habits_providers.dart';
 
@@ -56,6 +57,32 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
   void dispose() {
     _nameCtrl.dispose();
     super.dispose();
+  }
+
+  /// Sends the habit to Recently deleted and closes the editor. Nothing is
+  /// destroyed here — "for good" only exists in the Archive screen.
+  Future<void> _confirmDelete() async {
+    final HabitModel? habit = widget.habit;
+    if (habit == null) return;
+    final bool? yes = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Delete "${habit.name}"?'),
+        content: const Text(
+            'It moves to Recently deleted — you can restore it for 30 days.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Delete')),
+        ],
+      ),
+    );
+    if (yes != true) return;
+    await ref.read(archiveServiceProvider).trashHabit(habit.id, DateTime.now());
+    if (mounted) context.pop();
   }
 
   // ── Reminder helpers ──────────────────────────────────────────────────────
@@ -144,6 +171,17 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
           icon: const Icon(Icons.close_rounded),
           onPressed: () => context.pop(),
         ),
+        actions: [
+          // Deleting lives here rather than on the tile: a swipe archives, so
+          // the destructive action needs a deliberate trip into the editor.
+          if (_isEditing)
+            PopupMenuButton<String>(
+              onSelected: (_) => _confirmDelete(),
+              itemBuilder: (_) => const [
+                PopupMenuItem(value: 'delete', child: Text('Delete habit')),
+              ],
+            ),
+        ],
       ),
       body: Form(
         key: _formKey,

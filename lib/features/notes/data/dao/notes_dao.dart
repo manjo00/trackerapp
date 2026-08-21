@@ -62,6 +62,55 @@ class NotesDao extends DatabaseAccessor<AppDatabase> with _$NotesDaoMixin {
       (update(notebooks)..where((n) => n.id.equals(id)))
           .write(NotebooksCompanion(archivedAt: Value(at)));
 
+  Future<void> setNotebookDeleted(int id, DateTime? at) =>
+      (update(notebooks)..where((n) => n.id.equals(id)))
+          .write(NotebooksCompanion(deletedAt: Value(at)));
+
+  /// Archived notebooks, most-recently-archived first (Archived screen).
+  Stream<List<Notebook>> watchArchivedNotebooks() => (select(notebooks)
+        ..where((n) => n.archivedAt.isNotNull() & n.deletedAt.isNull())
+        ..orderBy([(n) => OrderingTerm.desc(n.archivedAt)]))
+      .watch();
+
+  /// Notebooks in Recently deleted, most-recently-deleted first.
+  Stream<List<Notebook>> watchDeletedNotebooks() => (select(notebooks)
+        ..where((n) => n.deletedAt.isNotNull())
+        ..orderBy([(n) => OrderingTerm.desc(n.deletedAt)]))
+      .watch();
+
+  /// Really removes notebooks binned before [cutoff]. Their notes fall back to
+  /// Unfiled (notebookId SET NULL) — but since the notes were binned alongside
+  /// the notebook, they are normally purged in the same sweep.
+  Future<int> purgeNotebooksDeletedBefore(DateTime cutoff) =>
+      (delete(notebooks)..where((n) => n.deletedAt.isSmallerThanValue(cutoff)))
+          .go();
+
+  /// Archives every still-active note in a notebook with the notebook's own
+  /// timestamp. The shared stamp is what lets [restoreNotesArchivedWith] bring
+  /// back exactly the notes that went in together — no extra column needed.
+  Future<int> archiveNotesInNotebook(int notebookId, DateTime at) =>
+      (update(notes)
+            ..where((n) => n.notebookId.equals(notebookId) & n.archivedAt.isNull()))
+          .write(NotesCompanion(archivedAt: Value(at)));
+
+  /// Un-archives the notes that were archived in the same action as their
+  /// notebook (matched by identical timestamp). Notes the user had archived
+  /// separately, earlier, stay archived.
+  Future<int> restoreNotesArchivedWith(int notebookId, DateTime stamp) =>
+      (update(notes)
+            ..where((n) =>
+                n.notebookId.equals(notebookId) & n.archivedAt.equals(stamp)))
+          .write(const NotesCompanion(archivedAt: Value(null)));
+
+  /// Bins/unbins every note in a notebook that isn't already in the state
+  /// being set — used when a notebook is deleted or restored as a unit.
+  Future<int> setNotesDeletedInNotebook(int notebookId, DateTime? at) =>
+      (update(notes)
+            ..where((n) => at == null
+                ? n.notebookId.equals(notebookId) & n.deletedAt.isNotNull()
+                : n.notebookId.equals(notebookId) & n.deletedAt.isNull()))
+          .write(NotesCompanion(deletedAt: Value(at)));
+
   /// Deletes a notebook; its notes fall back to Unfiled (notebookId SET NULL).
   Future<void> deleteNotebook(int id) =>
       (delete(notebooks)..where((n) => n.id.equals(id))).go();
@@ -126,6 +175,85 @@ class NotesDao extends DatabaseAccessor<AppDatabase> with _$NotesDaoMixin {
   Future<void> setNoteArchived(int id, DateTime? at) =>
       (update(notes)..where((n) => n.id.equals(id)))
           .write(NotesCompanion(archivedAt: Value(at)));
+
+  Future<void> setNoteDeleted(int id, DateTime? at) =>
+      (update(notes)..where((n) => n.id.equals(id)))
+          .write(NotesCompanion(deletedAt: Value(at)));
+
+  /// One-shot fetch of a notebook (null if it doesn't exist). Restore uses it
+  /// to check whether a note's notebook is itself archived.
+  Future<Notebook?> getNotebook(int id) =>
+      (select(notebooks)..where((n) => n.id.equals(id))).getSingleOrNull();
+
+  /// Archived notes (templates included), most-recently-archived first.
+  Stream<List<Note>> watchArchivedNotes() => (select(notes)
+        ..where((n) => n.archivedAt.isNotNull() & n.deletedAt.isNull())
+        ..orderBy([(n) => OrderingTerm.desc(n.archivedAt)]))
+      .watch();
+
+  /// Notes in Recently deleted, most-recently-deleted first.
+  Stream<List<Note>> watchDeletedNotes() => (select(notes)
+        ..where((n) => n.deletedAt.isNotNull())
+        ..orderBy([(n) => OrderingTerm.desc(n.deletedAt)]))
+      .watch();
+
+  /// Really removes notes binned before [cutoff] (CASCADE takes their blocks).
+  /// Photo FILES are deleted by NotesRepository before this runs — the DB row
+  /// is the only thing that goes here.
+  Future<int> purgeNotesDeletedBefore(DateTime cutoff) =>
+      (delete(notes)..where((n) => n.deletedAt.isSmallerThanValue(cutoff)))
+          .go();
+
+  /// Notes whose time in the bin is up. The purge walks these one by one so
+  /// each note's photo files can be deleted before its row is.
+  Future<List<Note>> notesDeletedBefore(DateTime cutoff) =>
+      (select(notes)..where((n) => n.deletedAt.isSmallerThanValue(cutoff)))
+          .get();
+
+  /// notebookId → the titles of the notes filed in it. Lets the Archived screen
+  /// find a notebook by something inside it, not only by its name.
+  Stream<Map<int, List<String>>> watchNoteTitlesByNotebook() {
+    return (select(notes)..where((n) => n.notebookId.isNotNull()))
+        .watch()
+        .map((rows) {
+      final Map<int, List<String>> byNotebook = {};
+      for (final Note note in rows) {
+        final int? id = note.notebookId;
+        if (id == null) continue;
+        byNotebook.putIfAbsent(id, () => <String>[]).add(note.title);
+      }
+      return byNotebook;
+    });
+  }
+
+  /// The binned notes belonging to a notebook — what "delete the notebook
+  /// forever" has to take with it.
+  Future<List<Note>> deletedNotesInNotebook(int notebookId) => (select(notes)
+        ..where((n) => n.notebookId.equals(notebookId) & n.deletedAt.isNotNull()))
+      .get();
+
+  /// The written content of every archived or binned note, joined per note —
+  /// the "search inside an archived thing" body. Filtering happens in SQL so
+  /// the whole block table never comes into memory. Photo blocks are skipped
+  /// (their content is a filename, not prose).
+  Stream<Map<int, String>> watchArchivedNoteText() {
+    final query = select(noteBlocks).join(
+      [innerJoin(notes, notes.id.equalsExp(noteBlocks.noteId))],
+    )
+      ..where(notes.archivedAt.isNotNull())
+      ..orderBy([OrderingTerm.asc(noteBlocks.orderIndex)]);
+    return query.watch().map((rows) {
+      final Map<int, List<String>> byNote = {};
+      for (final row in rows) {
+        final NoteBlock b = row.readTable(noteBlocks);
+        if (b.type == 'photo' || b.type == 'divider') continue;
+        final String text = (b.content ?? '').trim();
+        if (text.isEmpty) continue;
+        byNote.putIfAbsent(b.noteId, () => <String>[]).add(text);
+      }
+      return byNote.map((k, v) => MapEntry(k, v.join('\n')));
+    });
+  }
 
   /// One-shot fetch of a note's blocks, in order.
   Future<List<NoteBlock>> getBlocks(int noteId) => (select(noteBlocks)

@@ -131,8 +131,11 @@ class AppDatabase extends _$AppDatabase {
   ///        the DB (per-block config + rides in backups)
   /// v22 → personal workout templates: isTemplate flag on programs (a saved
   ///        copy of the user's own program, copied back out on use)
+  /// v23 → Recently deleted: deletedAt on the six archivable tables. Deleting
+  ///        stamps a tombstone instead of removing the row; a purge on launch
+  ///        removes it for real 30 days later (see ArchiveService)
   @override
-  int get schemaVersion => 22;
+  int get schemaVersion => 23;
 
   /// The old vs. new default rotation-label colour (see v8 migration).
   static const int _oldRotationColor = 0xFFFFB347;
@@ -319,6 +322,16 @@ class AppDatabase extends _$AppDatabase {
             // Personal workout templates. Existing programs stay real programs
             // (isTemplate = false) — nothing to backfill.
             await m.addColumn(programs, programs.isTemplate);
+          }
+          if (from < 23) {
+            // Recently deleted (soft delete). NULL = not deleted, which is
+            // true of every existing row — nothing to backfill.
+            await m.addColumn(tasks, tasks.deletedAt);
+            await m.addColumn(taskLists, taskLists.deletedAt);
+            await m.addColumn(habits, habits.deletedAt);
+            await m.addColumn(customTrackers, customTrackers.deletedAt);
+            await m.addColumn(notes, notes.deletedAt);
+            await m.addColumn(notebooks, notebooks.deletedAt);
           }
         },
         beforeOpen: (details) async {

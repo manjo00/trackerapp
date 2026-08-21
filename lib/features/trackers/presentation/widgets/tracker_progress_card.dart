@@ -4,18 +4,19 @@ import '../../data/models/tracker_log_model.dart';
 /// Card shown in the tracker list.
 ///
 /// Displays the tracker icon, name, and a progress bar / count for today.
-/// Tapping the card navigates to the detail screen.
+/// Tapping the card navigates to the detail screen; swiping it left archives
+/// the tracker (with Undo) rather than destroying it and its whole log history.
 class TrackerProgressCard extends StatelessWidget {
   const TrackerProgressCard({
     super.key,
     required this.tracker,
     required this.onTap,
-    required this.onDelete,
+    required this.onArchive,
   });
 
   final TrackerWithProgress tracker;
   final VoidCallback onTap;
-  final VoidCallback onDelete;
+  final VoidCallback onArchive;
 
   @override
   Widget build(BuildContext context) {
@@ -40,37 +41,14 @@ class TrackerProgressCard extends StatelessWidget {
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20),
         decoration: BoxDecoration(
-          color: cs.errorContainer,
+          color: cs.tertiaryContainer,
           borderRadius: BorderRadius.circular(16),
         ),
-        child: Icon(Icons.delete_outline, color: cs.onErrorContainer),
+        child: Icon(Icons.archive_rounded, color: cs.onTertiaryContainer),
       ),
-      confirmDismiss: (_) async {
-        return await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Delete tracker?'),
-            content: Text(
-              '"${tracker.name}" and all its logs will be permanently deleted.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('Cancel'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                style: FilledButton.styleFrom(
-                  backgroundColor: cs.error,
-                  foregroundColor: cs.onError,
-                ),
-                child: const Text('Delete'),
-              ),
-            ],
-          ),
-        );
-      },
-      onDismissed: (_) => onDelete(),
+      // No confirm dialog: archiving is reversible and the snackbar offers
+      // Undo, so a swipe never needs to stop and ask.
+      onDismissed: (_) => onArchive(),
       child: Card(
         clipBehavior: Clip.antiAlias,
         child: InkWell(

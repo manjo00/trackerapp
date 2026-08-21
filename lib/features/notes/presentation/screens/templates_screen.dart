@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/database/app_database.dart';
+import '../../../archive/presentation/archive_providers.dart';
 import '../providers/notes_providers.dart';
 
 /// Lists the user's note templates. Each opens in the normal block editor
@@ -78,7 +79,8 @@ class TemplatesScreen extends ConsumerWidget {
       context: context,
       builder: (c) => AlertDialog(
         title: Text('Delete "${t.title.trim().isEmpty ? 'Untitled' : t.title}"?'),
-        content: const Text('The template is removed. Notes made from it stay.'),
+        content: const Text('The template moves to Recently deleted for 30 days. '
+            'Notes made from it stay.'),
         actions: [
           TextButton(
               onPressed: () => Navigator.of(c).pop(false),
@@ -90,7 +92,7 @@ class TemplatesScreen extends ConsumerWidget {
       ),
     );
     if (ok == true) {
-      await ref.read(notesRepositoryProvider).deleteNoteWithPhotos(t.id);
+      await ref.read(archiveServiceProvider).trashNote(t.id, DateTime.now());
     }
   }
 }

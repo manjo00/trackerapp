@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../archive/presentation/archive_providers.dart';
 import '../../data/models/habit_with_status.dart';
 import '../providers/habits_providers.dart';
 import 'streak_badge.dart';
@@ -9,8 +10,9 @@ import 'streak_badge.dart';
 ///
 /// Interactions:
 ///   • Tap anywhere   → toggle today's completion
-///   • Long-press     → open edit screen (pre-filled)
-///   • Swipe left     → delete with snackbar confirmation
+///   • Long-press     → open edit screen (pre-filled, and where Delete lives)
+///   • Swipe left     → archive, with Undo. Nothing is destroyed by a swipe:
+///                      a mis-swipe can't cost you months of streak.
 class HabitTile extends ConsumerWidget {
   const HabitTile({required this.item, super.key});
 
@@ -24,17 +26,17 @@ class HabitTile extends ConsumerWidget {
     return Dismissible(
       key: ValueKey(item.habit.id),
       direction: DismissDirection.endToStart,
-      // Red background with trash icon revealed on left-swipe.
+      // Amber background with an archive icon revealed on left-swipe.
       background: Container(
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 24),
         decoration: BoxDecoration(
-          color: cs.errorContainer,
+          color: cs.tertiaryContainer,
           borderRadius: BorderRadius.circular(16),
         ),
-        child: Icon(Icons.delete_rounded, color: cs.onErrorContainer),
+        child: Icon(Icons.archive_rounded, color: cs.onTertiaryContainer),
       ),
-      onDismissed: (_) => _delete(context, ref),
+      onDismissed: (_) => _archive(context, ref),
       child: Card(
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
@@ -105,13 +107,18 @@ class HabitTile extends ConsumerWidget {
         .toggle(item.habit.id);
   }
 
-  Future<void> _delete(BuildContext context, WidgetRef ref) async {
-    await ref.read(deleteHabitProvider.notifier).delete(item.habit.id);
+  Future<void> _archive(BuildContext context, WidgetRef ref) async {
+    final ArchiveService svc = ref.read(archiveServiceProvider);
+    await svc.archiveHabit(item.habit.id, DateTime.now());
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('"${item.habit.name}" deleted'),
-          duration: const Duration(seconds: 2),
+          content: Text('"${item.habit.name}" archived'),
+          duration: const Duration(seconds: 3),
+          action: SnackBarAction(
+            label: 'Undo',
+            onPressed: () => svc.restoreHabit(item.habit.id),
+          ),
         ),
       );
     }

@@ -25,7 +25,7 @@ Future<void> maybeShowPatchNotes(
   await showDialog<void>(
     context: context,
     builder: (ctx) => AlertDialog(
-      title: Text("What's new in v$kCurrentRelease"),
+      title: const Text("What's new in v$kCurrentRelease"),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
