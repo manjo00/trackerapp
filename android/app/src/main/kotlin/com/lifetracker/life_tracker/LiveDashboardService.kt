@@ -171,9 +171,13 @@ class LiveDashboardService : Service() {
 
     private fun buildNotification(): Notification {
         val prefs = getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-        val date = prefs.getString("today_date", "") ?: ""
-        val shift = prefs.getString("today_shift", "") ?: ""
-        val counts = prefs.getString("today_counts", "Open Uplan to sync") ?: ""
+        // Derived from the clock, not from strings Dart composed earlier: this
+        // notification can sit on screen for days, so a baked date would go on
+        // claiming yesterday until the app was next opened.
+        val today = WidgetDates.todayKey()
+        val date = WidgetDates.headerText()
+        val shift = WidgetDates.shiftFor(prefs, today).first
+        val counts = WidgetDates.countsFor(prefs, today)
         val header = if (shift.isEmpty()) "$counts  ·  $date"
         else "$counts  ·  $shift  ·  $date"
 

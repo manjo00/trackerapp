@@ -6,14 +6,13 @@ import android.graphics.Color
 import android.widget.RemoteViews
 import android.widget.RemoteViewsService
 import org.json.JSONArray
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
-import java.time.temporal.ChronoUnit
 
 /// Builds the combined month widget's side list as Todoist-style date headlines
 /// with their tasks beneath. The selected day's group is moved to the top and
 /// highlighted. Reads "combined_tasks" ({ title, date, label, color }) and the
-/// selected day ("selected_date" → "widget_today") from the home_widget prefs.
+/// selected day ("selected_date") from the home_widget prefs. Date headlines
+/// are derived from the clock at draw time (see WidgetDates) so the list never
+/// keeps calling yesterday "Today".
 class CombinedTasksRemoteViewsFactory(
     private val context: Context
 ) : RemoteViewsService.RemoteViewsFactory {
@@ -29,7 +28,6 @@ class CombinedTasksRemoteViewsFactory(
     private data class Task(
         val title: String,
         val date: String,
-        val label: String,
         val color: String,
     )
 
@@ -44,8 +42,16 @@ class CombinedTasksRemoteViewsFactory(
     override fun onDataSetChanged() {
         val prefs =
             context.getSharedPreferences("HomeWidgetPreferences", Context.MODE_PRIVATE)
-        val selected = prefs.getString("selected_date", null)
-            ?: prefs.getString("widget_today", "") ?: ""
+        // Fall back to the clock, not to the pushed "widget_today" — that
+        // string is only as fresh as the last time the app ran. A selected day
+        // that has since gone by is dropped for the same reason.
+        val today = WidgetDates.todayKey()
+        val picked = prefs.getString("selected_date", null)
+        val selected = if (picked == null || (WidgetDates.daysFromToday(picked) ?: 0L) < 0L) {
+            today
+        } else {
+            picked
+        }
 
         val tasks = mutableListOf<Task>()
         try {
@@ -56,7 +62,6 @@ class CombinedTasksRemoteViewsFactory(
                     Task(
                         title = o.optString("title", ""),
                         date = o.optString("date", ""),
-                        label = o.optString("label", ""),
                         color = o.optString("color", "#80FFFFFF"),
                     )
                 )
@@ -66,10 +71,8 @@ class CombinedTasksRemoteViewsFactory(
 
         // Group by date, preserving the (date-sorted) order tasks arrive in.
         val groups = LinkedHashMap<String, MutableList<Task>>()
-        val labels = HashMap<String, String>()
         for (t in tasks) {
             groups.getOrPut(t.date) { mutableListOf() }.add(t)
-            labels[t.date] = t.label
         }
 
         // Ordered dates: selected day first (even if it has no tasks), then the rest.
@@ -79,28 +82,14 @@ class CombinedTasksRemoteViewsFactory(
 
         val list = mutableListOf<Item>()
         for (d in orderedDates) {
-            val label = labels[d] ?: labelFor(d)
+            // Always derived from today's date, never from the pushed label.
+            val label = WidgetDates.dateHeadline(d)
             list.add(Item(true, label, d == selected, "", ""))
             groups[d]?.forEach { t ->
                 list.add(Item(false, "", d == selected, t.title, t.color))
             }
         }
         items = list
-    }
-
-    /// Headline label for a date that has no tasks (e.g. an empty selected day).
-    private fun labelFor(dateStr: String): String {
-        return try {
-            val d = LocalDate.parse(dateStr)
-            val base = d.format(DateTimeFormatter.ofPattern("EEE, d MMM"))
-            when (ChronoUnit.DAYS.between(LocalDate.now(), d)) {
-                0L -> "$base • Today"
-                1L -> "$base • Tomorrow"
-                else -> base
-            }
-        } catch (_: Exception) {
-            dateStr
-        }
     }
 
     override fun onDestroy() {

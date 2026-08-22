@@ -965,7 +965,18 @@ const List<CodexTopic> kCodexTopics = [
     title: 'The home-screen widget',
     category: CodexCategory.reminders,
     summary: 'A month calendar and your task list, on your launcher.',
-    keywords: ['widget', 'launcher', 'shortcut', 'quick add'],
+    keywords: [
+      'widget',
+      'launcher',
+      'shortcut',
+      'quick add',
+      'wrong day',
+      'yesterday',
+      'not updating',
+      'out of date',
+      'stale',
+    ],
+    sinceVersion: kCurrentRelease,
     body: [
       CodexBlock.p(
           'Long-press your phone\'s home screen → Widgets → Uplan. The widget '
@@ -979,6 +990,15 @@ const List<CodexTopic> kCodexTopics = [
       CodexBlock.p(
           'Settings → Widget appearance changes its background colour and '
           'transparency.'),
+      CodexBlock.heading('It keeps up with the date on its own'),
+      CodexBlock.p(
+          'The widget rolls over to the new day by itself, even if you have '
+          'not opened Uplan for a while — the highlighted day, the "Today" '
+          'headings and the counts are all worked out fresh each time it '
+          'draws.'),
+      CodexBlock.p(
+          'What it cannot know is anything you changed elsewhere while the app '
+          'was closed. Open Uplan and it catches up immediately.'),
     ],
   ),
 

@@ -7,6 +7,7 @@ import '../../features/shifts/data/models/work_shift_model.dart';
 import '../../features/tasks/data/dao/tasks_dao.dart';
 import '../database/app_database.dart';
 import '../utils/week_utils.dart';
+import 'widget_payload.dart';
 
 /// Pushes a "Today" snapshot to the native home-screen widget.
 ///
@@ -40,25 +41,14 @@ class HomeWidgetService {
   ];
 
   // Agenda row colours (read on the widget's dark background).
-  static const int _overdueColor = 0xFFE57373; // red
-  static const int _todayColor = 0xFF8AB4F8; // blue
-  static const int _laterColor = 0xFFB0B8C4; // muted
-
-  /// How many days ahead the agenda widget looks.
-  static const int _agendaHorizonDays = 7;
+  /// How many days ahead the agenda widget looks. Generous on purpose — the
+  /// rows have to stay useful on days the app never runs — and the list is
+  /// capped at 25 nearest rows anyway.
+  static const int _agendaHorizonDays = 30;
 
   // Light accent colours that read on the widget's dark background.
   static const int _dayColor = 0xFF5FC6D8; // cyan
   static const int _nightColor = 0xFFA6ABEC; // periwinkle
-  static const int _restColor = 0xFFBFC4CC; // muted grey
-
-  static const List<String> _weekdays = [
-    '', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun',
-  ];
-  static const List<String> _months = [
-    '', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-  ];
 
   static String _dateKey(DateTime d) =>
       '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
@@ -75,20 +65,6 @@ class HomeWidgetService {
       final DateTime now = DateTime.now();
       final String today = _dateKey(now);
 
-      // ── Shift for today ────────────────────────────────────────────────
-      final shiftRow = await ShiftsDao(db).getShiftForDate(today);
-      final String shiftText;
-      final int shiftColor;
-      if (shiftRow == null) {
-        shiftText = 'Rest day';
-        shiftColor = _restColor;
-      } else {
-        final ShiftType type = ShiftType.fromString(shiftRow.shiftType);
-        shiftText =
-            '${type.label} · ${shiftRow.startTime}–${shiftRow.endTime}';
-        shiftColor = type == ShiftType.day ? _dayColor : _nightColor;
-      }
-
       // ── Habits remaining today ─────────────────────────────────────────
       final HabitsDao habitsDao = HabitsDao(db);
       final habits = await habitsDao.getAllHabits();
@@ -98,9 +74,9 @@ class HomeWidgetService {
       }
 
       // ── Tasks due today (incomplete) ───────────────────────────────────
+      // Tasks due today are counted natively from `combined_tasks` (every row
+      // carries its date), so no count for them is pushed.
       final tasks = await TasksDao(db).getAllTasks();
-      final int tasksDue =
-          tasks.where((t) => t.dueDate == today && !t.isCompleted).length;
 
       // ── Agenda list (overdue + next week) for the agenda widget ────────
       final List<Map<String, dynamic>> agenda = _buildAgenda(tasks, now);
@@ -110,6 +86,19 @@ class HomeWidgetService {
       final Map<String, String> shiftTypeByDate = {
         for (final s in allShifts) s.date: s.shiftType,
       };
+      // Shifts keyed by date over a short window, so the glance can show the
+      // right one on any day it is read rather than only the day it was built.
+      final Map<String, Map<String, String>> shiftByDate = {};
+      for (int off = -1; off <= 14; off++) {
+        final String key = _dateKey(now.add(Duration(days: off)));
+        final row = allShifts.where((s) => s.date == key).firstOrNull;
+        if (row == null) continue;
+        final ShiftType type = ShiftType.fromString(row.shiftType);
+        shiftByDate[key] = {
+          't': '${type.label} \u00B7 ${row.startTime}\u2013${row.endTime}',
+          'c': argbToHex(type == ShiftType.day ? _dayColor : _nightColor),
+        };
+      }
       // Rotation label per date (for the month widget tiles).
       final Map<String, String> rotationByDate = {
         for (final s in allShifts)
@@ -132,7 +121,6 @@ class HomeWidgetService {
       };
       // Build a range of months (last month → +3) so the widget arrows can
       // navigate without re-querying. Keyed by "yyyy-MM".
-      final String todayKey = _dateKey(DateTime(now.year, now.month, now.day));
       // Read the week-start setting straight from prefs — this also runs in
       // the headless background isolate where no provider scope exists.
       final bool sundayStart = (await SharedPreferences.getInstance())
@@ -145,7 +133,7 @@ class HomeWidgetService {
         final String key =
             '${m.year}-${m.month.toString().padLeft(2, '0')}';
         monthCellsMap[key] = _buildMonthCells(
-            m, todayKey, shiftTypeByDate, dotsByDate, rotationByDate,
+            m, shiftTypeByDate, dotsByDate, rotationByDate,
             sundayStart: sundayStart);
         monthTitlesMap[key] = '${_fullMonths[m.month]} ${m.year}';
       }
@@ -158,40 +146,47 @@ class HomeWidgetService {
       final List<Map<String, dynamic>> combinedTasks =
           _buildCombinedTasks(tasks, now);
 
-      final String counts;
-      if (habitsLeft == 0 && tasksDue == 0) {
-        counts = 'All done for today 🎉';
-      } else {
-        counts = '$habitsLeft habit${habitsLeft == 1 ? '' : 's'} left'
-            ' · $tasksDue task${tasksDue == 1 ? '' : 's'} due';
+      // Nothing below is phrased relative to today. Every date-dependent thing
+      // the widgets show - the ring on the calendar, "Today"/"Overdue", the
+      // header, the shift, the counts - is worked out natively while drawing
+      // (WidgetDates.kt), so the display stays right on a day the app never
+      // ran. `snapshot_date` records when this data was gathered, which is how
+      // the native side knows a habit count belongs to an older day.
+      final Map<String, Object> payload = {
+        'shift_by_date': jsonEncode(shiftByDate),
+        'habits_left': habitsLeft,
+        'habits_total': habits.length,
+        'snapshot_date': today,
+        'agenda_items': jsonEncode(agenda),
+        'month_title': '${_fullMonths[now.month]} ${now.year}',
+        'month_cells': jsonEncode(monthCells),
+        'month_cells_map': jsonEncode(monthCellsMap),
+        'month_titles_map': jsonEncode(monthTitlesMap),
+        // Weekday header letters in display order, so the native header row
+        // tracks the Sunday/Monday-start setting (was hardcoded Monday-start,
+        // which shifted the dates under the wrong columns on Sunday-start).
+        'month_dow': weekdayHeaderLetters(sundayStart: sundayStart).join(','),
+        'combined_tasks': jsonEncode(combinedTasks),
+      };
+
+      // Say nothing when there is nothing new to say. sync() runs on launch, on
+      // every resume and on every pause, so most calls carry an identical
+      // payload - and a push costs a dozen preference commits plus three widget
+      // redraws, each of which re-runs its collection factories from scratch.
+      final String stamp = payloadChecksum(jsonEncode(payload));
+      final String? previous =
+          await HomeWidget.getWidgetData<String>('widget_payload_stamp');
+      if (previous == stamp) return;
+
+      for (final MapEntry<String, Object> entry in payload.entries) {
+        final Object value = entry.value;
+        if (value is int) {
+          await HomeWidget.saveWidgetData<int>(entry.key, value);
+        } else {
+          await HomeWidget.saveWidgetData<String>(entry.key, value as String);
+        }
       }
-
-      final String dateText =
-          '${_weekdays[now.weekday]}, ${_months[now.month]} ${now.day}';
-
-      // ── Hand the values to the native widget ───────────────────────────
-      await HomeWidget.saveWidgetData<String>('today_date', dateText);
-      await HomeWidget.saveWidgetData<String>('today_shift', shiftText);
-      await HomeWidget.saveWidgetData<int>('today_shift_color', shiftColor);
-      await HomeWidget.saveWidgetData<String>('today_counts', counts);
-      await HomeWidget.saveWidgetData<String>(
-          'agenda_items', jsonEncode(agenda));
-      await HomeWidget.saveWidgetData<String>(
-          'month_title', '${_fullMonths[now.month]} ${now.year}');
-      await HomeWidget.saveWidgetData<String>(
-          'month_cells', jsonEncode(monthCells));
-      await HomeWidget.saveWidgetData<String>(
-          'month_cells_map', jsonEncode(monthCellsMap));
-      await HomeWidget.saveWidgetData<String>(
-          'month_titles_map', jsonEncode(monthTitlesMap));
-      // Weekday header letters in display order — so the native header row
-      // tracks the Sunday/Monday-start setting (was hardcoded Monday-start,
-      // which shifted the dates under the wrong columns on Sunday-start).
-      await HomeWidget.saveWidgetData<String>(
-          'month_dow', weekdayHeaderLetters(sundayStart: sundayStart).join(','));
-      await HomeWidget.saveWidgetData<String>('widget_today', today);
-      await HomeWidget.saveWidgetData<String>(
-          'combined_tasks', jsonEncode(combinedTasks));
+      await HomeWidget.saveWidgetData<String>('widget_payload_stamp', stamp);
 
       await HomeWidget.updateWidget(qualifiedAndroidName: _androidProvider);
       await HomeWidget.updateWidget(qualifiedAndroidName: _agendaProvider);
@@ -202,7 +197,9 @@ class HomeWidgetService {
   }
 
   /// Builds the agenda widget's rows: incomplete tasks that are overdue or due
-  /// within the next [_agendaHorizonDays], sorted by date (overdue first).
+  /// within the next [_agendaHorizonDays], sorted by date (overdue first). Each
+  /// row carries its raw date; the relative line ("Today", "Overdue") and its
+  /// colour are worked out natively at draw time.
   static List<Map<String, dynamic>> _buildAgenda(
       List<dynamic> tasks, DateTime now) {
     final DateTime today = DateTime(now.year, now.month, now.day);
@@ -224,33 +221,18 @@ class HomeWidgetService {
     }
     raw.sort((a, b) => a.date.compareTo(b.date));
 
-    return raw.take(25).map((it) {
-      final int diff = it.date.difference(today).inDays;
-      final String sub;
-      final int color;
-      if (diff < 0) {
-        sub = 'Overdue · ${it.date.day} ${_months[it.date.month]}';
-        color = _overdueColor;
-      } else if (diff == 0) {
-        sub = 'Today';
-        color = _todayColor;
-      } else if (diff == 1) {
-        sub = 'Tomorrow';
-        color = _laterColor;
-      } else {
-        sub = '${_weekdays[it.date.weekday]} ${it.date.day} ${_months[it.date.month]}';
-        color = _laterColor;
-      }
-      return {'title': it.title, 'sub': sub, 'color': color};
-    }).toList();
+    return raw
+        .take(25)
+        .map((it) => {'title': it.title, 'date': _dateKey(it.date)})
+        .toList();
   }
 
-  /// All incomplete tasks that have a due date, as { title, date, label },
-  /// sorted by date. The native side re-sorts the selected day to the top.
+  /// All incomplete tasks that have a due date, as { title, date, color },
+  /// sorted by date. The native side re-sorts the selected day to the top and
+  /// writes each date's headline ("Today", "Overdue") itself, so the list keeps
+  /// reading correctly on a day the app never ran.
   static List<Map<String, dynamic>> _buildCombinedTasks(
       List<dynamic> tasks, DateTime now) {
-    final DateTime today = DateTime(now.year, now.month, now.day);
-
     final List<({String title, DateTime date, String color})> raw = [];
     for (final t in tasks) {
       if (t.isCompleted || t.dueDate == null) continue;
@@ -268,34 +250,25 @@ class HomeWidgetService {
     }
     raw.sort((a, b) => a.date.compareTo(b.date));
 
-    return raw.map((it) {
-      final int diff = it.date.difference(today).inDays;
-      final String label;
-      if (diff < 0) {
-        label = 'Overdue · ${it.date.day} ${_months[it.date.month]}';
-      } else if (diff == 0) {
-        label = 'Today';
-      } else if (diff == 1) {
-        label = 'Tomorrow';
-      } else {
-        label =
-            '${_weekdays[it.date.weekday]} ${it.date.day} ${_months[it.date.month]}';
-      }
-      return {
-        'title': it.title,
-        'date': _dateKey(it.date),
-        'label': label,
-        'color': it.color,
-      };
-    }).toList();
+    return raw
+        .map((it) => {
+              'title': it.title,
+              'date': _dateKey(it.date),
+              'color': it.color,
+            })
+        .toList();
   }
 
   /// Builds the month-grid cells for the current month: leading blanks, then
   /// one cell per day with shift colours + a task dot. Colours are hex strings
   /// (parsed natively) to avoid 32-bit int overflow over the platform channel.
+  ///
+  /// Deliberately says nothing about which day is *today*: the native factory
+  /// decides that against the clock as it draws (see WidgetDates.kt). Baking it
+  /// here left the ring on yesterday whenever the app hadn't run since
+  /// midnight.
   static List<Map<String, dynamic>> _buildMonthCells(
     DateTime month,
-    String todayStr,
     Map<String, String> shiftTypeByDate,
     Map<String, List<String>> dotsByDate,
     Map<String, String> rotationByDate, {
@@ -320,8 +293,6 @@ class HomeWidgetService {
       } else if (type == 'night') {
         kind = 'night';
         fg = _monthNightFg;
-      } else if (ds == todayStr) {
-        kind = 'today';
       }
       cells.add({
         'day': d,

@@ -33,8 +33,10 @@ class AgendaRemoteViewsFactory(
                 parsed.add(
                     Item(
                         title = o.optString("title", ""),
-                        sub = o.optString("sub", ""),
-                        color = o.optInt("color", 0xB0FFFFFF.toInt())
+                        // Derived here, not pushed: "Today"/"Overdue" have
+                        // to mean today whenever the row is drawn.
+                        sub = WidgetDates.agendaSub(o.optString("date", "")),
+                        color = WidgetDates.agendaColor(o.optString("date", ""))
                     )
                 )
             }

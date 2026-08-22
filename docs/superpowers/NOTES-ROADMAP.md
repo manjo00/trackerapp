@@ -241,3 +241,28 @@ clinical use is **A7 (collapse under headings) + A8 (fast reorder) + A1/D1
   drop point; the entered-bed expansion is an instant rebuild rather than an
   eased reveal; the lifted tile doesn't scale/tilt. User called these
   "not important".
+- **G4. Exact vs inexact alarms, and Google Play policy** · RESEARCH ·
+  *user asked for this to be revisited later (2026-08-22)*. The widget's
+  date-rollover refresh (v1.16.0) uses an **inexact**
+  `AlarmManager.setAndAllowWhileIdle` on purpose: it can land a few minutes
+  after midnight, which is invisible because the widgets now resolve "today"
+  while drawing. Two things to look into before a Play submission:
+  - Uplan already declares **`USE_EXACT_ALARM`** for reminders. Google Play
+    restricts that permission to alarm-clock and calendar apps, and a
+    submission has to justify it. Worth checking whether the reminder path can
+    fall back to `SCHEDULE_EXACT_ALARM` (user-grantable) instead, and what that
+    costs on One UI — the whole reason NotificationService v3 moved to
+    android_alarm_manager_plus was that inexact/scheduled delivery failed
+    silently on Samsung.
+  - Measure whether the inexact midnight alarm actually fires close enough to
+    midnight in practice on the Z Flip 6 (Doze maintenance windows can be
+    generous). If it drifts badly, the options are `setWindow` with a tight
+    window, or accepting the drift since any user interaction redraws
+    correctly anyway.
+- **G5. Live-notification cards go stale the same way** · M — v1.16.0 fixed the
+  live dashboard's *header* (date, shift, counts are now derived at draw time),
+  but its **cards** are still pre-rendered by Dart in `syncCards`: an overdue
+  task that only became overdue overnight won't be shown as such until the app
+  runs. The fix is the same shape — push dates, decide the wording natively —
+  but it touches the card renderer and the ✓/snooze payloads, so it wants its
+  own pass.

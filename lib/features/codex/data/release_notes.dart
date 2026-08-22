@@ -23,4 +23,7 @@ const List<String> kReleaseHighlights = [
       'its notes with it, and brings them all back together.',
   'The Archive screen searches inside things: type a line you remember and '
       'the note it came from turns up, with the matching line shown.',
+  'The home-screen widget no longer gets stuck on yesterday. It rolls over to '
+      'the new day by itself, even if you have not opened Uplan since — and '
+      'the same fix applies to the live notification.',
 ];

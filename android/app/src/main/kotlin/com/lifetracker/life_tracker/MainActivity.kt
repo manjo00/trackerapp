@@ -23,6 +23,11 @@ class MainActivity : FlutterActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+
+        // Re-book the widgets' date-rollover refresh on every launch, so a
+        // dropped alarm (force stop, reboot, OS cleanup) heals itself.
+        MidnightRefreshReceiver.schedule(this)
+        MidnightRefreshReceiver.clearStaleSelection(this)
         methodChannel = MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
             channelName,

@@ -144,6 +144,20 @@
             </intent-filter>
         </receiver>
 
+        <!-- Redraws the widgets when the date rolls over. ACTION_DATE_CHANGED
+             is NOT on Android's implicit-broadcast exemption list, so a
+             manifest receiver never sees it - hence the alarm in
+             MidnightRefreshReceiver. TIME_SET and TIMEZONE_CHANGED *are*
+             exempt, and cover a manual clock change or crossing a timezone. -->
+        <receiver
+            android:name=".MidnightRefreshReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+            </intent-filter>
+        </receiver>
+
         <!-- Uplan "Today" home-screen widget. Exported so the launcher (a
              separate process) can host it. -->
         <receiver

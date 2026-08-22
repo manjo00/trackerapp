@@ -20,7 +20,7 @@ class MonthRemoteViewsFactory(
     private data class Cell(
         val day: Int,
         val date: String,
-        val kind: String, // "day" | "night" | "today" | ""
+        val kind: String, // "day" | "night" | "" (shift only)
         val fg: String,
         val rot: String,
         val dots: List<String>,
@@ -88,7 +88,12 @@ class MonthRemoteViewsFactory(
             }
 
             // Rounded tile background + sun/moon icon, by shift kind.
-            when (cell.kind) {
+            // "today" is decided HERE, against the clock, rather than being
+            // baked into the payload — otherwise the ring stays on yesterday
+            // until the app next runs. A shift still wins the tile, exactly as
+            // before.
+            val isToday = cell.date.isNotEmpty() && cell.date == WidgetDates.todayKey()
+            when (if (cell.kind.isEmpty() && isToday) "today" else cell.kind) {
                 "day" -> {
                     rv.setInt(R.id.cell_root, "setBackgroundResource", R.drawable.uplan_cell_day)
                     rv.setViewVisibility(R.id.cell_icon, View.VISIBLE)

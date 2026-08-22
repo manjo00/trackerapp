@@ -14,6 +14,9 @@ import es.antonborri.home_widget.HomeWidgetProvider
 /// a SharedPreferences populated by the Flutter side via HomeWidget.saveWidgetData.
 /// We read those values, fill the RemoteViews layout, and wire a tap to open
 /// the app. Defaults keep the widget readable before Flutter has written data.
+///
+/// Anything that depends on *which day it is* is worked out here, at draw time,
+/// rather than read back as a string Dart composed earlier — see [WidgetDates].
 class UplanWidgetProvider : HomeWidgetProvider() {
     override fun onUpdate(
         context: Context,
@@ -25,12 +28,10 @@ class UplanWidgetProvider : HomeWidgetProvider() {
           try {
             val views = RemoteViews(context.packageName, R.layout.uplan_widget)
 
-            val date = widgetData.getString("today_date", "") ?: ""
-            val shift = widgetData.getString("today_shift", "Rest day") ?: "Rest day"
-            val counts = widgetData.getString("today_counts", "Tap to open") ?: "Tap to open"
-            // home_widget stores Dart ints as Long, so read as Long then narrow.
-            val shiftColor =
-                widgetData.getLong("today_shift_color", 0xFFFFFFFF).toInt()
+            val today = WidgetDates.todayKey()
+            val date = WidgetDates.headerText()
+            val (shift, shiftColor) = WidgetDates.shiftFor(widgetData, today)
+            val counts = WidgetDates.countsFor(widgetData, today)
 
             views.setTextViewText(R.id.widget_date, date)
             views.setTextViewText(R.id.widget_shift, shift)
