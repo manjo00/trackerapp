@@ -287,15 +287,19 @@ class _DayCell extends ConsumerWidget {
     final String? rotLabel = shift?.rotationLabel;
     final int? rotColor = shift?.rotationColor;
 
-    // Selected day gets a bold, filled highlight. Today is marked by a filled
-    // chip on its number (below), so it stays obvious even when another day is
-    // selected — no reliance on a border that the selection would out-shout.
+    // Today and the selected day are both rings around the tile, at different
+    // weights — a ring sits over any shift fill without hiding it, and (unlike
+    // the filled chip this used to draw on the day number) it can't land on top
+    // of the rotation label. All three widths are equal so nothing reflows as
+    // the selection moves.
     final Color cellBg = isSelected && !hasShift
         ? cs.primary.withAlpha(45)
         : (hasShift ? ShiftStyle.fill(shift!.type) : Colors.transparent);
     final BoxBorder border = isSelected
         ? Border.all(color: cs.primary, width: 2.5)
-        : Border.all(color: Colors.transparent, width: 2);
+        : isToday
+            ? Border.all(color: cs.primary.withAlpha(160), width: 2.5)
+            : Border.all(color: Colors.transparent, width: 2.5);
 
     return GestureDetector(
       onTap: onTap,
@@ -309,36 +313,23 @@ class _DayCell extends ConsumerWidget {
         ),
         child: Stack(
           children: [
-            // Day number (top-left). Today is a filled primary chip so it's
-            // unmistakable even when another day is selected.
+            // Day number (top-left). Today is bold — and accent-coloured on a
+            // day with no shift fill to sit on — which reads clearly without
+            // taking any more room than an ordinary day.
             Positioned(
               top: 2,
               left: 3,
-              child: isToday
-                  ? Container(
-                      width: 19,
-                      height: 19,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: cs.primary,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Text(
-                        '$day',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: cs.onPrimary,
-                        ),
-                      ),
-                    )
-                  : Padding(
-                      padding: const EdgeInsets.only(top: 1, left: 2),
-                      child: Text(
-                        '$day',
-                        style: TextStyle(fontSize: 12, color: fg),
-                      ),
-                    ),
+              child: Padding(
+                padding: const EdgeInsets.only(top: 1, left: 2),
+                child: Text(
+                  '$day',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: isToday ? FontWeight.w800 : FontWeight.normal,
+                    color: isToday && !hasShift ? cs.primary : fg,
+                  ),
+                ),
+              ),
             ),
             // Sun/moon (top-right)
             if (hasShift)

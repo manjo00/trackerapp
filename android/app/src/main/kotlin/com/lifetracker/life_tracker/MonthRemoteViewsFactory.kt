@@ -88,28 +88,42 @@ class MonthRemoteViewsFactory(
             }
 
             // Rounded tile background + sun/moon icon, by shift kind.
-            // "today" is decided HERE, against the clock, rather than being
-            // baked into the payload — otherwise the ring stays on yesterday
-            // until the app next runs. A shift still wins the tile, exactly as
-            // before.
+            //
+            // "today" is decided HERE, against the clock, rather than baked
+            // into the payload — otherwise the ring stays on yesterday until
+            // the app next runs. It is drawn as a RING AROUND the tile, so a
+            // working day still shows its shift fill and its sun/moon: marking
+            // today only on days with no shift left it invisible almost every
+            // day for anyone who works most days.
             val isToday = cell.date.isNotEmpty() && cell.date == WidgetDates.todayKey()
-            when (if (cell.kind.isEmpty() && isToday) "today" else cell.kind) {
+            when (cell.kind) {
                 "day" -> {
-                    rv.setInt(R.id.cell_root, "setBackgroundResource", R.drawable.uplan_cell_day)
+                    rv.setInt(R.id.cell_root, "setBackgroundResource",
+                        if (isToday) R.drawable.uplan_cell_day_today
+                        else R.drawable.uplan_cell_day)
                     rv.setViewVisibility(R.id.cell_icon, View.VISIBLE)
                     rv.setImageViewResource(R.id.cell_icon, R.drawable.ic_widget_sun)
                 }
                 "night" -> {
-                    rv.setInt(R.id.cell_root, "setBackgroundResource", R.drawable.uplan_cell_night)
+                    rv.setInt(R.id.cell_root, "setBackgroundResource",
+                        if (isToday) R.drawable.uplan_cell_night_today
+                        else R.drawable.uplan_cell_night)
                     rv.setViewVisibility(R.id.cell_icon, View.VISIBLE)
                     rv.setImageViewResource(R.id.cell_icon, R.drawable.ic_widget_moon)
                 }
+                // Only reachable from a payload written by an older build,
+                // which still baked "today" into the cell.
                 "today" -> {
                     rv.setInt(R.id.cell_root, "setBackgroundResource", R.drawable.uplan_cell_today)
                     rv.setViewVisibility(R.id.cell_icon, View.GONE)
                 }
                 else -> {
-                    rv.setInt(R.id.cell_root, "setBackgroundColor", Color.TRANSPARENT)
+                    if (isToday) {
+                        rv.setInt(R.id.cell_root, "setBackgroundResource",
+                            R.drawable.uplan_cell_today)
+                    } else {
+                        rv.setInt(R.id.cell_root, "setBackgroundColor", Color.TRANSPARENT)
+                    }
                     rv.setViewVisibility(R.id.cell_icon, View.GONE)
                 }
             }

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Day-shift tile that is ALSO today: the same fill, with the accent ring
+     around it. Today has to stay visible on a working day — marking it only
+     when the day had no shift meant it was invisible most of the time. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#FFB7E4EC" />
+    <stroke android:width="2dp" android:color="#DDB39DDB" />
+    <corners android:radius="10dp" />
+</shape>

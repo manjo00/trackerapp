@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Night-shift tile that is ALSO today: the same fill, with the accent ring
+     around it. See uplan_cell_day_today.xml. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#FFC4C9EC" />
+    <stroke android:width="2dp" android:color="#DDB39DDB" />
+    <corners android:radius="10dp" />
+</shape>
