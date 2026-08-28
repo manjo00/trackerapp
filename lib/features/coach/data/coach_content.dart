@@ -113,6 +113,17 @@ const List<CoachTip> kCoachTips = [
     codexTopicId: 'notes-basics',
   ),
   CoachTip(
+    id: 'notes.search',
+    screen: kCoachNotes,
+    route: '/notes',
+    target: 'notes.search',
+    text:
+        'This reads what is written inside your notes, not just their titles '
+        '— so a half-remembered line is enough to find one.',
+    sinceVersion: '1.17.0',
+    codexTopicId: 'notes-search',
+  ),
+  CoachTip(
     id: 'notebook.templates',
     screen: kCoachNotebook,
     text:
@@ -183,8 +194,9 @@ const List<CoachTip> kCoachTips = [
     screen: kCoachHabits,
     route: '/habits',
     text:
-        'Tap to tick a habit off, hold to edit it, swipe to delete it.',
-    sinceVersion: '1.15.0',
+        'Tap to tick a habit off, hold to edit it, swipe to archive it — '
+        'your streak is kept either way.',
+    sinceVersion: '1.17.0',
     codexTopicId: 'habits',
   ),
 

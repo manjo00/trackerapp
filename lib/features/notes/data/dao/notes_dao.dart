@@ -234,25 +234,41 @@ class NotesDao extends DatabaseAccessor<AppDatabase> with _$NotesDaoMixin {
 
   /// The written content of every archived or binned note, joined per note —
   /// the "search inside an archived thing" body. Filtering happens in SQL so
-  /// the whole block table never comes into memory. Photo blocks are skipped
-  /// (their content is a filename, not prose).
+  /// the whole block table never comes into memory.
   Stream<Map<int, String>> watchArchivedNoteText() {
     final query = select(noteBlocks).join(
       [innerJoin(notes, notes.id.equalsExp(noteBlocks.noteId))],
     )
       ..where(notes.archivedAt.isNotNull())
       ..orderBy([OrderingTerm.asc(noteBlocks.orderIndex)]);
-    return query.watch().map((rows) {
-      final Map<int, List<String>> byNote = {};
-      for (final row in rows) {
-        final NoteBlock b = row.readTable(noteBlocks);
-        if (b.type == 'photo' || b.type == 'divider') continue;
-        final String text = (b.content ?? '').trim();
-        if (text.isEmpty) continue;
-        byNote.putIfAbsent(b.noteId, () => <String>[]).add(text);
-      }
-      return byNote.map((k, v) => MapEntry(k, v.join('\n')));
-    });
+    return query.watch().map(_joinBlockText);
+  }
+
+  /// The written content of every ACTIVE, non-template note, joined per note.
+  /// Feeds the Notes search, which looks inside notes rather than only at
+  /// their titles.
+  Stream<Map<int, String>> watchNoteText() {
+    final query = select(noteBlocks).join(
+      [innerJoin(notes, notes.id.equalsExp(noteBlocks.noteId))],
+    )
+      ..where(notes.archivedAt.isNull() & notes.isTemplate.equals(false))
+      ..orderBy([OrderingTerm.asc(noteBlocks.orderIndex)]);
+    return query.watch().map(_joinBlockText);
+  }
+
+  /// Folds joined block rows into noteId → the note's prose, one line per
+  /// block. Photo blocks are skipped (their content is a filename, not text)
+  /// and so are dividers.
+  Map<int, String> _joinBlockText(List<TypedResult> rows) {
+    final Map<int, List<String>> byNote = {};
+    for (final TypedResult row in rows) {
+      final NoteBlock b = row.readTable(noteBlocks);
+      if (b.type == 'photo' || b.type == 'divider') continue;
+      final String text = (b.content ?? '').trim();
+      if (text.isEmpty) continue;
+      byNote.putIfAbsent(b.noteId, () => <String>[]).add(text);
+    }
+    return byNote.map((k, v) => MapEntry(k, v.join('\n')));
   }
 
   /// One-shot fetch of a note's blocks, in order.

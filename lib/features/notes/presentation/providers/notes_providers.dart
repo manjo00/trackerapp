@@ -6,6 +6,7 @@ import '../../../../core/images/image_storage_service.dart';
 import '../../../tasks/data/dao/lists_dao.dart';
 import '../../../tasks/data/dao/tasks_dao.dart';
 import '../../data/dao/notes_dao.dart';
+import '../../domain/note_search.dart';
 import '../../data/repositories/notes_repository.dart';
 import '../../domain/note_task_linker.dart';
 
@@ -46,6 +47,38 @@ final templatesProvider = StreamProvider<List<Note>>(
 /// The blocks of one note, in order.
 final noteBlocksProvider = StreamProvider.family<List<NoteBlock>, int>(
     (ref, noteId) => ref.watch(notesDaoProvider).watchBlocks(noteId));
+
+/// Every active, non-template note (newest edited first).
+final allNotesProvider = StreamProvider<List<Note>>(
+    (ref) => ref.watch(notesDaoProvider).watchAllNotes());
+
+/// noteId -> everything written in that note. Only watched while a search is
+/// on screen, so the join isn't paid for during ordinary browsing.
+final noteTextProvider = StreamProvider<Map<int, String>>(
+    (ref) => ref.watch(notesDaoProvider).watchNoteText());
+
+/// Every active note flattened for searching — title, contents, and the
+/// notebook it lives in.
+final noteSearchItemsProvider = Provider<List<NoteSearchItem>>((ref) {
+  final List<Note> notes = ref.watch(allNotesProvider).valueOrNull ?? const [];
+  final Map<int, String> text =
+      ref.watch(noteTextProvider).valueOrNull ?? const {};
+  final List<Notebook> notebooks =
+      ref.watch(notebooksProvider).valueOrNull ?? const [];
+  final Map<int, String> names = {for (final Notebook n in notebooks) n.id: n.name};
+  return [
+    for (final Note n in notes)
+      NoteSearchItem(
+        id: n.id,
+        title: n.title,
+        text: text[n.id] ?? '',
+        notebookId: n.notebookId,
+        // A note with no notebook, or one whose notebook has since gone,
+        // reads as Unfiled — which is exactly where it is.
+        notebookName: names[n.notebookId] ?? 'Unfiled',
+      ),
+  ];
+});
 
 /// Latest note-edit time per notebook (notebookId → max note updatedAt).
 final lastNoteEditByNotebookProvider = StreamProvider<Map<int, DateTime>>(

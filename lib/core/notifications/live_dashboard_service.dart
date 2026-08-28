@@ -22,11 +22,23 @@ class LiveDashboardService {
   /// Prefs key — read by the settings screen and the launch/resume hooks.
   static const String _enabledKey = 'live_enabled';
 
-  /// Slideshow payload the native service pages through.
-  static const String _cardsKey = 'live_cards';
+  /// Slideshow payload: every pending task and habit as raw data, each with
+  /// its own date. The native service buckets, words and colours them as it
+  /// draws (see LiveCards.kt), so the notification stays right on a day the
+  /// app never ran.
+  static const String _itemsKey = 'live_items';
+
+  /// Habit ids already ticked on [_snapshotDateKey]. Paired with that date so
+  /// the native side can tell "ticked today" from "ticked on an older day",
+  /// where the honest answer is that nothing has been ticked yet.
+  static const String _habitsDoneKey = 'live_habits_done';
+
+  /// The day [_itemsKey] describes ("yyyy-MM-dd").
+  static const String _snapshotDateKey = 'live_snapshot_date';
 
   /// Snoozed card ids ("task:12" → hide-until epoch ms). Written by the
-  /// notification's snooze action (phase 3); filtered here on every sync.
+  /// notification's snooze action; expired entries are pruned here, and
+  /// whether a live one still hides its card is judged natively.
   static const String _snoozesKey = 'live_snoozes';
 
   /// Whether the user has turned the live notification on.
@@ -101,112 +113,68 @@ class LiveDashboardService {
 
   // ── Slideshow cards ──────────────────────────────────────────────────────
 
-  /// Task priority (0 low / 1 med / 2 high) → accent hex (matches the
-  /// home-screen widget's priority dots).
-  static String _priorityHex(int p) => switch (p) {
-        2 => '#FFE07070', // high — soft red
-        0 => '#FF8E9AAF', // low — muted slate
-        _ => '#FFFFB347', // medium — warm amber
-      };
-
-  static const String _habitHex = '#FFA6ABEC'; // periwinkle
-  static const String _inboxHex = '#FF8E9AAF'; // slate
-
   static String _dateKey(DateTime d) =>
       '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
   /// Rebuilds the slideshow payload from the database and hands it to the
   /// native service. Cheap one-shot queries — called from the same
   /// launch/resume/background hooks as the home-screen widget sync.
+  ///
+  /// What goes across is deliberately RAW: every pending task and habit with
+  /// its own date, and nothing phrased relative to today. The native side
+  /// decides which bucket each one falls in (overdue / due today / habit /
+  /// captured), what it says and what colour it is, at the moment it draws.
+  ///
+  /// That matters because this notification can sit on screen for days. When
+  /// the wording *and the bucketing* were baked here, a task became overdue
+  /// overnight and the card went on saying "Due today" — or stayed in Captured
+  /// — until the app happened to run again.
   static Future<void> syncCards(AppDatabase db) async {
     try {
       final DateTime now = DateTime.now();
       final String today = _dateKey(DateTime(now.year, now.month, now.day));
 
-      // Live snoozes: drop expired entries, keep active ones for filtering.
+      // Live snoozes: drop entries that have already expired. Which of the
+      // survivors are still hiding a card is judged natively, against the
+      // clock, so a snooze running out brings its card back on its own.
       final Map<String, dynamic> snoozes = _decodeMap(
           await HomeWidget.getWidgetData<String>(_snoozesKey));
       snoozes.removeWhere((_, until) =>
           until is! num || until <= now.millisecondsSinceEpoch);
 
-      final List<Map<String, dynamic>> cards = [];
+      final List<Map<String, dynamic>> items = [];
 
-      // ── Tasks: overdue first, then due today, then inbox (undated) ──────
+      // Every pending task, with its date rather than a verdict about it.
       final tasks = await TasksDao(db).getAllTasks();
-      final pending = tasks.where((t) => !t.isCompleted).toList();
-
-      final overdue = pending
-          .where((t) => t.dueDate != null && (t.dueDate as String) != today)
-          .where((t) => (t.dueDate as String).compareTo(today) < 0)
-          .toList()
-        ..sort((a, b) =>
-            (a.dueDate as String).compareTo(b.dueDate as String));
-      for (final t in overdue) {
-        final int days = DateTime.parse(today)
-            .difference(DateTime.parse(t.dueDate as String))
-            .inDays;
-        cards.add({
+      for (final t in tasks.where((t) => !t.isCompleted)) {
+        items.add({
           'type': 'task',
           'id': t.id,
           'title': t.title,
-          'sub': '${days}d overdue',
-          'color': '#FFE57373', // overdue red beats priority colour
+          'date': t.dueDate,
+          'time': t.dueTime,
+          'prio': t.priority,
+          // Captured means "filed nowhere" — listId NULL, no row for it.
+          'listed': t.listId != null,
         });
       }
 
-      final dueToday = pending.where((t) => t.dueDate == today).toList()
-        ..sort((a, b) => b.priority.compareTo(a.priority));
-      for (final t in dueToday) {
-        final String time =
-            t.dueTime == null ? '' : ' · ${t.dueTime as String}';
-        cards.add({
-          'type': 'task',
-          'id': t.id,
-          'title': t.title,
-          'sub': 'Due today$time',
-          'color': _priorityHex(t.priority),
-        });
-      }
-
-      // ── Habits not yet checked off today ────────────────────────────────
+      // Every active habit. Which ones are already ticked is a fact about
+      // *today*, so it travels separately, stamped with the day it describes:
+      // on any later day nothing has been ticked yet and they all come back.
       final HabitsDao habitsDao = HabitsDao(db);
+      final List<int> doneToday = [];
       for (final h in await habitsDao.getAllHabits()) {
-        if (await habitsDao.isCompletedOn(h.id, today)) continue;
-        cards.add({
-          'type': 'habit',
-          'id': h.id,
-          'title': h.name,
-          'sub': 'Habit',
-          'color': _habitHex,
-        });
+        items.add({'type': 'habit', 'id': h.id, 'title': h.name});
+        if (await habitsDao.isCompletedOn(h.id, today)) doneToday.add(h.id);
       }
-
-      // ── Captured: tasks not filed under any list ────────────────────────
-      // (card type stays 'inbox' — the background complete/snooze action
-      // works on the tasks table either way, and renaming the type would
-      // orphan snooze entries saved before the Lists update.)
-      final captured = pending
-          .where((t) => t.listId == null)
-          .where((t) =>
-              t.dueDate == null || (t.dueDate as String).compareTo(today) > 0)
-          .toList()
-        ..sort((a, b) => b.priority.compareTo(a.priority));
-      for (final t in captured) {
-        cards.add({
-          'type': 'inbox',
-          'id': t.id,
-          'title': t.title,
-          'sub': 'Captured',
-          'color': _inboxHex,
-        });
-      }
-
-      // Hide snoozed cards.
-      cards.removeWhere((c) => snoozes.containsKey('${c['type']}:${c['id']}'));
 
       await HomeWidget.saveWidgetData<String>(
           _snoozesKey, jsonEncode(snoozes));
-      await HomeWidget.saveWidgetData<String>(_cardsKey, jsonEncode(cards));
+      await HomeWidget.saveWidgetData<String>(_itemsKey, jsonEncode(items));
+      await HomeWidget.saveWidgetData<String>(
+          _habitsDoneKey, jsonEncode(doneToday));
+      await HomeWidget.saveWidgetData<String>(_snapshotDateKey, today);
 
       // Re-render only if the dashboard is on — refresh() would otherwise
       // start the service for a user who turned it off.

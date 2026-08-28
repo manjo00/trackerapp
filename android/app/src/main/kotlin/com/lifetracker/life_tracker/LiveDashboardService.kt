@@ -14,7 +14,6 @@ import android.os.IBinder
 import android.view.View
 import android.widget.RemoteViews
 import es.antonborri.home_widget.HomeWidgetBackgroundIntent
-import org.json.JSONArray
 
 /**
  * Foreground service that owns the persistent "Live dashboard" notification.
@@ -76,7 +75,10 @@ class LiveDashboardService : Service() {
      */
     private val prefsListener =
         SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-            if (key == "live_cards") {
+            // The card list is derived, so any of its inputs changing means
+            // the notification needs redrawing.
+            if (key == "live_items" || key == "live_habits_done" ||
+                key == "live_snoozes") {
                 getSystemService(NotificationManager::class.java)
                     .notify(NOTIFICATION_ID, buildNotification())
             }
@@ -125,41 +127,13 @@ class LiveDashboardService : Service() {
         }
     }
 
-    /** One parsed slideshow card (pre-rendered by the Dart side). */
-    private data class Card(
-        val type: String,
-        val id: Int,
-        val title: String,
-        val sub: String,
-        val color: Int,
-    )
-
-    private fun loadCards(): List<Card> {
-        val prefs = getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-        val json = prefs.getString("live_cards", "[]") ?: "[]"
-        return try {
-            val arr = JSONArray(json)
-            (0 until arr.length()).map { i ->
-                val o = arr.getJSONObject(i)
-                Card(
-                    type = o.optString("type", "task"),
-                    id = o.optInt("id", 0),
-                    title = o.optString("title", ""),
-                    sub = o.optString("sub", ""),
-                    color = parseColor(o.optString("color", "#FF8E9AAF")),
-                )
-            }
-        } catch (_: Exception) {
-            emptyList()
-        }
-    }
-
-    private fun parseColor(hex: String): Int =
-        try {
-            Color.parseColor(hex)
-        } catch (_: IllegalArgumentException) {
-            0xFF8E9AAF.toInt()
-        }
+    /**
+     * The cards to show right now. Derived on every render (see LiveCards) so
+     * a notification that has been on screen since yesterday re-buckets and
+     * re-words itself rather than repeating what Dart decided back then.
+     */
+    private fun loadCards(): List<LiveCards.Card> =
+        LiveCards.build(this, System.currentTimeMillis())
 
     private fun servicePendingIntent(action: String, requestCode: Int): PendingIntent =
         PendingIntent.getService(

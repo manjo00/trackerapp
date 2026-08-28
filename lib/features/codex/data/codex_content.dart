@@ -478,6 +478,41 @@ const List<CodexTopic> kCodexTopics = [
 
   // ── Notes ───────────────────────────────────────────────────────────────
   CodexTopic(
+    id: 'notes-search',
+    title: 'Finding a note by what is in it',
+    category: CodexCategory.notes,
+    summary: 'Search reads the writing inside every note, not just titles.',
+    keywords: [
+      'search notes',
+      'find note',
+      'cannot find',
+      'lost note',
+      'look inside',
+      'find text',
+    ],
+    sinceVersion: kCurrentRelease,
+    body: [
+      CodexBlock.p(
+          'The search box at the top of Notes looks inside your notes. You do '
+          'not have to remember what a note was called — a line from the '
+          'middle of it is enough.'),
+      CodexBlock.p(
+          'That matters because most notes never get a title: you open one and '
+          'start writing. Searching titles alone would find almost nothing.'),
+      CodexBlock.heading('Reading the results'),
+      CodexBlock.bullet(
+          'A note with no title is listed by its first line, so there are no '
+          'blank rows.'),
+      CodexBlock.bullet(
+          'Under each result you get the notebook it lives in, and — when '
+          'the match was inside the note — the line that matched.'),
+      CodexBlock.bullet('Tap a result to open that note.'),
+      CodexBlock.tip(
+          'Notes you have archived are not in these results. Search for those '
+          'in the drawer under Archived, which works the same way.'),
+    ],
+  ),
+  CodexTopic(
     id: 'notes-basics',
     title: 'Notebooks and notes',
     category: CodexCategory.notes,
@@ -941,7 +976,16 @@ const List<CodexTopic> kCodexTopics = [
     category: CodexCategory.reminders,
     hidden: true,
     summary: 'Tick tasks off without opening the app.',
-    keywords: ['live', 'ongoing', 'shade', 'snooze', 'lock screen'],
+    keywords: [
+      'live',
+      'ongoing',
+      'shade',
+      'snooze',
+      'lock screen',
+      'wrong day',
+      'out of date',
+    ],
+    sinceVersion: kCurrentRelease,
     body: [
       CodexBlock.p(
           'Settings → Live notification turns on a permanent notification '
@@ -954,6 +998,12 @@ const List<CodexTopic> kCodexTopics = [
       CodexBlock.p(
           'You choose what Snooze means in that settings screen: hide for an '
           'hour, or push the due date to tomorrow.'),
+      CodexBlock.heading('It keeps up on its own'),
+      CodexBlock.p(
+          'The cards re-sort themselves as the day turns over, even if you '
+          'have not opened Uplan. Something that falls due overnight moves to '
+          'the front as overdue, and your habits come back unticked for the '
+          'new day — you never have to open the app to make it honest.'),
       CodexBlock.tip(
           'If the notification vanishes overnight, set Uplan to '
           '"Unrestricted" battery and add it to your phone\'s never-sleeping '

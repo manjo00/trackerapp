@@ -61,7 +61,7 @@ Per-notebook sort: **Edited (default) · Created · Title A–Z · Manual**.
   manual. `watchNotes` takes a sort param. A ⋮ "Sort" menu in NotebookDetail.
   Manual sort needs drag-reorder of cards (relates to bulk/reorder).
 
-### A6. Search inside notes  ·  M
+### A6. Search inside notes  ·  SHIPPED 2026-08-25 (v1.17.0)
 Find notes by **title + block content**; ideally in-note find-and-highlight too.
 - Approach: a search screen/bar; query joins `notes` + `note_blocks` on
   `content LIKE`. Drift FTS5 (`fts5`) virtual table for speed on large sets, or
@@ -259,7 +259,9 @@ clinical use is **A7 (collapse under headings) + A8 (fast reorder) + A1/D1
     generous). If it drifts badly, the options are `setWindow` with a tight
     window, or accepting the drift since any user interaction redraws
     correctly anyway.
-- **G5. Live-notification cards go stale the same way** · M — v1.16.0 fixed the
+- **G5. Live-notification cards go stale the same way** · SHIPPED 2026-08-25
+  (v1.17.0) — Dart pushes raw `live_items`; `LiveCards.kt` buckets and words
+  them at draw time. Original note: — v1.16.0 fixed the
   live dashboard's *header* (date, shift, counts are now derived at draw time),
   but its **cards** are still pre-rendered by Dart in `syncCards`: an overdue
   task that only became overdue overnight won't be shown as such until the app

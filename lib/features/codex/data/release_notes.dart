@@ -9,7 +9,7 @@
 /// area and listed under "What's new" at the top of the Codex. The moment
 /// [kCurrentRelease] moves on, those topics drop back into their own sections
 /// automatically — nothing else to clean up.
-const String kCurrentRelease = '1.16.0';
+const String kCurrentRelease = '1.17.0';
 
 /// One line per change, in plain language — this is what the after-update
 /// popup shows, so keep it short and say what the user can now DO.
@@ -26,4 +26,10 @@ const List<String> kReleaseHighlights = [
   'The home-screen widget no longer gets stuck on yesterday. It rolls over to '
       'the new day by itself, even if you have not opened Uplan since — and '
       'the same fix applies to the live notification.',
+  'Notes search now reads what is written inside every note, not just the '
+      'titles — and shows you the line that matched. Most notes never get a '
+      'title, so searching them used to find almost nothing.',
+  'The live notification keeps itself honest across midnight: anything that '
+      'falls due overnight moves to the front as overdue, and habits come '
+      'back unticked for the new day without opening the app.',
 ];
