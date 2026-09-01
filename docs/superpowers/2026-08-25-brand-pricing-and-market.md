@@ -55,31 +55,80 @@ this comes from aggregators quoting it):
 Benchmarks: freemium converts **2–5%** (5–10% good); hard paywalls convert far
 better short-term but shrink the funnel badly.
 
-## 4. Monetisation
+## 4. Monetisation (revised 2026-08-25 after user pushback)
 
-**The principle — charge for what costs money to run, never for what runs on
-the phone.** Honest, explainable in one sentence, and it cannot drift, because
-it is a cost decision rather than a marketing one.
+> *"either we add more value behind the pay wall or something, its not enough
+> to rely on donations and cloud payment, but i also want for the free version
+> to offer a better experiance than other payed app"*
 
-- **Free, permanently:** everything shipped today — tasks/lists/labels, notes +
-  photos + templates, habits, trackers, workouts, shift rota, widget, live
-  notification, archive + 30-day bin, JSON backup, Codex, guided tour.
-- **Uplan Plus — $2.49/mo · $17.99/yr** (deliberately ~half TickTick): cloud
-  sync, cloud backup with history, photo sync (the one thing JSON backup can't
-  carry), later web access + shared lists. Regional pricing on.
-- **Supporter tip ~$4.99 one-time**, unlocks nothing but a badge — a way to pay
-  for the majority who will never need sync.
+Those two goals only conflict if the paywall works by **taking things away**.
 
-### Two open decisions (flagged to the user, not decided for them)
-1. **No lifetime plan for sync.** Lifetime converts brilliantly and users love
-   it, but a one-off price against a permanent server bill is a cost carried
-   forever with no further revenue. Structured can do it because its costs are
-   local; ours would not be. Any one-time option must cover local-only extras.
-2. **Revenue doesn't start until sync ships**, and only converts multi-device
-   users — a small slice. The alternatives are worse: paywalling local features
-   is the exact trap people quit over, and paid-upfront kills growth.
-   Recommendation: accept the slow start, ship the tip jar early, treat Plus as
-   funding the servers rather than funding the developer.
+### The promise (put this on the store listing)
+> **Nothing that works in Uplan today ever moves behind a paywall. Everything
+> paid is something that did not exist before.**
+
+It is the exact inverse of what people quit TickTick/Todoist over, and no
+competitor can copy it without unwinding their own business. It is also
+protection against our own future self: every one of these apps drifted because
+moving one existing feature across the line is always the cheapest way to raise
+the number.
+
+### Three tiers, split by what the feature costs US
+| Tier | Price | Contains | Why this pricing model |
+|---|---|---|---|
+| **Uplan** | Free forever | Everything shipped through v1.17 | — |
+| **Uplan Pro** | **$29.99 one-time** | Themes/icons/widget skins · multiple Home dashboards · smart lists (saved filters) · Insights (habit/workout/shift history) · export PDF/CSV/ICS | Local: costs build time, then nothing. A one-time price is honest, and it is NOT the lifetime-vs-server-bill trap. |
+| **Uplan Plus** | **$3.49/mo · $29.99/yr** | Everything in Pro + cloud sync, cloud backup history, photo sync; later web, shared lists, AI | Costs servers and per-use compute → must recur |
+| *Supporter tip* | $4.99 one-time | A badge, nothing else | Catches people who need none of the above |
+
+**Pro is the answer to the objection.** A sync-only paywall converts one slice
+— people with 2+ devices. Most users have one phone and would never pay under
+that model.
+
+### Correction to earlier advice
+Previously recommended **$17.99/yr to undercut TickTick**. That was wrong.
+Undercutting is how you compete when your free tier takes hostages and the bill
+breeds resentment — ours doesn't. With a complete free tier, a payer is a
+willing power user, not a captive. Halving the price sacrifices half the
+revenue for no strategic gain, while Plus still funds servers for every free
+user. **Price at parity: $29.99/yr.** Enable Play regional pricing.
+
+### Build order, if the goal is revenue
+| Feature | Tier | Build | Why it converts |
+|---|---|---|---|
+| Themes & icons | Pro | S | Cheapest on the list; Habitica's entire sub is cosmetic |
+| Insights | Pro | M | Months of habit/workout/shift history already stored and never shown back — value sitting unspent in the DB |
+| Smart lists | Pro | M | What power users ask for and pay to stop rebuilding by hand |
+| **Rota photo → shifts (OCR)** | Plus | L | **Sharpest differentiator.** Shift workers get printed/photographed rotas; nothing on the market turns that into a filled calendar. Needs OCR → earns its subscription honestly |
+| Calendar sync | Plus | L | Most-requested integration in the category; a standing reason people won't switch |
+
+**Ship Themes + Insights BEFORE cloud sync** — no server needed, so the app can
+earn this year rather than whenever Supabase is done, and it tests whether
+anyone pays at all before we commit to running infrastructure.
+
+## 5. Revenue reality (honest arithmetic)
+
+Play takes **15%** of the first $1M/yr. Freemium converts **2–5%**; with a free
+tier this complete, plan for the **bottom** of that range — that is the real
+cost of the strategy (more goodwill and installs, lower % paying).
+
+| MAU | Payers @2% | Gross/yr @ $29.99 | After Play |
+|---|---|---|---|
+| 5,000 | 100 | $3,000 | ≈ $2,550 |
+| 25,000 | 500 | $15,000 | ≈ $12,750 |
+| 100,000 | 2,000 | $60,000 | ≈ $51,000 |
+
+**The lever is users, not price.** $17.99 → $29.99 is +67%; 5k → 25k users is
++400%. That is precisely why a free tier beating paid rivals is a *revenue*
+strategy, not charity.
+
+**Said plainly:** at a realistic first-year solo scale with no marketing budget
+this is server money, not an income. Only two things move that ceiling:
+1. **Reach** — everything scales with installs. Honest and slow.
+2. **Sell to workplaces** — shared rotas and shift swaps for a ward/restaurant/
+   store, per seat, where $60/user/yr is unremarkable. We already have the rota
+   engine nobody else has. Different product, different support burden — a fork
+   in the road, not a feature.
 
 ### Blocking work before any of this goes live
 - Privacy policy + Play data-safety form (cloud sync collects everything).
