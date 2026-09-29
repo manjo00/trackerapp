@@ -65,6 +65,7 @@ class AppSettings {
     this.startupTab = AppTab.home,
     this.plannerDayView = 'list',
     this.notesSort = 'edited',
+    this.notebooksSort = 'edited',
   });
 
   final ThemeMode themeMode;
@@ -112,6 +113,11 @@ class AppSettings {
   /// per-notebook setting is more to manage than it is worth.
   final String notesSort;
 
+  /// How the Notes overview orders notebooks (a NoteSort key). Separate from
+  /// [notesSort]: notebooks by name with notes by last edited is a perfectly
+  /// sensible pair.
+  final String notebooksSort;
+
   /// Convenience getter — the reminder as a Flutter [TimeOfDay].
   TimeOfDay get reminderTime => TimeOfDay(hour: reminderHour, minute: reminderMinute);
 
@@ -143,6 +149,7 @@ class AppSettings {
     AppTab? startupTab,
     String? plannerDayView,
     String? notesSort,
+    String? notebooksSort,
   }) =>
       AppSettings(
         themeMode: themeMode ?? this.themeMode,
@@ -157,5 +164,6 @@ class AppSettings {
         startupTab: startupTab ?? this.startupTab,
         plannerDayView: plannerDayView ?? this.plannerDayView,
         notesSort: notesSort ?? this.notesSort,
+        notebooksSort: notebooksSort ?? this.notebooksSort,
       );
 }

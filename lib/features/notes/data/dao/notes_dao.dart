@@ -62,6 +62,11 @@ class NotesDao extends DatabaseAccessor<AppDatabase> with _$NotesDaoMixin {
       (update(notebooks)..where((n) => n.id.equals(id)))
           .write(NotebooksCompanion(archivedAt: Value(at)));
 
+  /// Stars / un-stars a notebook. Not an edit — nothing else changes.
+  Future<void> setNotebookFavorite(int id, bool favorite) =>
+      (update(notebooks)..where((n) => n.id.equals(id)))
+          .write(NotebooksCompanion(isFavorite: Value(favorite)));
+
   Future<void> setNotebookDeleted(int id, DateTime? at) =>
       (update(notebooks)..where((n) => n.id.equals(id)))
           .write(NotebooksCompanion(deletedAt: Value(at)));

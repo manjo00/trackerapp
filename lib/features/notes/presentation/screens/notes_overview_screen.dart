@@ -3,7 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/database/app_database.dart';
+import '../../../../core/settings/settings_provider.dart';
 import '../../domain/note_search.dart';
+import '../../domain/note_sort.dart';
+import '../../../archive/presentation/archive_providers.dart';
 import '../providers/notes_providers.dart';
 import '../widgets/notebook_form_dialog.dart';
 import '../widgets/notebook_tile.dart';
@@ -17,6 +20,10 @@ import '../../../coach/presentation/coach_target.dart';
 /// Typing in the search field replaces the list with results from **inside**
 /// every note, not just their titles — most notes are written straight into
 /// the body, so titles alone would find almost nothing.
+///
+/// Notebooks sort the same four ways notes do (the sort button), and holding a
+/// notebook row opens its action sheet — the same gesture as holding a note
+/// card, so one habit covers both screens.
 class NotesOverviewScreen extends ConsumerStatefulWidget {
   const NotesOverviewScreen({super.key});
 
@@ -39,12 +46,36 @@ class _NotesOverviewScreenState extends ConsumerState<NotesOverviewScreen> {
     final ColorScheme cs = Theme.of(context).colorScheme;
     final String query = _search.text;
     final bool searching = query.trim().isNotEmpty;
+    final NoteSort sort =
+        NoteSort.fromKey(ref.watch(settingsProvider).notebooksSort);
 
     return CoachMarks(
       screen: kCoachNotes,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Notes'),
+          actions: [
+            if (!searching)
+              CoachTarget(
+                id: 'notes.sort',
+                child: PopupMenuButton<NoteSort>(
+                  icon: const Icon(Icons.sort_rounded),
+                  tooltip: 'Sort notebooks',
+                  initialValue: sort,
+                  onSelected: (NoteSort s) => ref
+                      .read(settingsProvider.notifier)
+                      .setNotebooksSort(s.key),
+                  itemBuilder: (BuildContext context) => [
+                    for (final NoteSort s in NoteSort.values)
+                      CheckedPopupMenuItem<NoteSort>(
+                        value: s,
+                        checked: s == sort,
+                        child: Text(s.label),
+                      ),
+                  ],
+                ),
+              ),
+          ],
           bottom: PreferredSize(
             preferredSize: const Size.fromHeight(56),
             child: Padding(
@@ -74,7 +105,7 @@ class _NotesOverviewScreenState extends ConsumerState<NotesOverviewScreen> {
             ),
           ),
         ),
-        body: searching ? _results(query, cs) : _browse(cs),
+        body: searching ? _results(query, cs) : _browse(cs, sort),
         floatingActionButton: searching
             ? null
             : FloatingActionButton(
@@ -88,9 +119,12 @@ class _NotesOverviewScreenState extends ConsumerState<NotesOverviewScreen> {
 
   // ── Browsing ───────────────────────────────────────────────────────────────
 
-  Widget _browse(ColorScheme cs) {
-    final List<Notebook> notebooks =
-        ref.watch(notebooksProvider).valueOrNull ?? const [];
+  Widget _browse(ColorScheme cs, NoteSort sort) {
+    final List<Notebook> notebooks = sortNotebooks(
+      ref.watch(notebooksProvider).valueOrNull ?? const [],
+      sort,
+      ref.watch(lastNoteEditByNotebookProvider).valueOrNull ?? const {},
+    );
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
@@ -136,10 +170,117 @@ class _NotesOverviewScreenState extends ConsumerState<NotesOverviewScreen> {
               icon: nb.icon,
               name: nb.name,
               color: Color(nb.colorValue),
+              starred: nb.isFavorite,
               onTap: () => context.push('/notes/notebook/${nb.id}'),
+              onLongPress: () => _showNotebookActions(nb),
             )),
       ],
     );
+  }
+
+  // ── Notebook action sheet ──────────────────────────────────────────────────
+
+  Future<void> _showNotebookActions(Notebook nb) async {
+    final String? action = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (BuildContext ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  nb.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+              ),
+            ),
+            ListTile(
+              leading: Icon(nb.isFavorite
+                  ? Icons.star_rounded
+                  : Icons.star_outline_rounded),
+              title: Text(nb.isFavorite ? 'Unstar' : 'Star'),
+              onTap: () => Navigator.of(ctx).pop('favorite'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.edit_outlined),
+              title: const Text('Rename / recolor'),
+              onTap: () => Navigator.of(ctx).pop('rename'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.archive_outlined),
+              title: const Text('Archive'),
+              onTap: () => Navigator.of(ctx).pop('archive'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline_rounded),
+              title: const Text('Delete'),
+              onTap: () => Navigator.of(ctx).pop('delete'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (action == null || !mounted) return;
+
+    final dao = ref.read(notesDaoProvider);
+    switch (action) {
+      case 'favorite':
+        await dao.setNotebookFavorite(nb.id, !nb.isFavorite);
+      case 'rename':
+        final (String, int, String)? result = await showNotebookFormDialog(
+          context,
+          title: 'Edit notebook',
+          initialName: nb.name,
+          initialColor: nb.colorValue,
+          initialIcon: nb.icon,
+        );
+        if (result != null) {
+          await dao.renameNotebook(nb.id, result.$1, result.$2, result.$3);
+        }
+      // Takes the notebook's notes with it (shared timestamp) and brings
+      // exactly those back on Undo — see ArchiveService.archiveNotebook.
+      case 'archive':
+        final ArchiveService svc = ref.read(archiveServiceProvider);
+        await svc.archiveNotebook(nb.id, DateTime.now());
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('"${nb.name}" archived'),
+          duration: const Duration(seconds: 3),
+          action: SnackBarAction(
+              label: 'Undo', onPressed: () => svc.restoreNotebook(nb.id)),
+        ));
+      case 'delete':
+        final bool? confirmed = await showDialog<bool>(
+          context: context,
+          builder: (BuildContext c) => AlertDialog(
+            title: Text('Delete "${nb.name}"?'),
+            content: const Text(
+                'The notebook and its notes move to Recently deleted — you '
+                'can restore them for 30 days.'),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.of(c).pop(false),
+                  child: const Text('Cancel')),
+              FilledButton(
+                  onPressed: () => Navigator.of(c).pop(true),
+                  child: const Text('Delete')),
+            ],
+          ),
+        );
+        if (confirmed == true) {
+          await ref
+              .read(archiveServiceProvider)
+              .trashNotebook(nb.id, DateTime.now());
+        }
+    }
   }
 
   // ── Searching ──────────────────────────────────────────────────────────────

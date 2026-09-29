@@ -113,6 +113,17 @@ const List<CoachTip> kCoachTips = [
     codexTopicId: 'notes-basics',
   ),
   CoachTip(
+    id: 'notes.sort',
+    screen: kCoachNotes,
+    route: '/notes',
+    target: 'notes.sort',
+    text:
+        'Sort your notebooks here — and hold one to star it, rename it, '
+        'archive it or delete it.',
+    sinceVersion: '1.18.0',
+    codexTopicId: 'notes-organise',
+  ),
+  CoachTip(
     id: 'notes.search',
     screen: kCoachNotes,
     route: '/notes',

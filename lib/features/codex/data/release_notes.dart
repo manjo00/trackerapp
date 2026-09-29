@@ -34,7 +34,8 @@ const List<String> kReleaseHighlights = [
       'back unticked for the new day without opening the app.',
   'Hold a note card for its actions: star it, move it to another notebook, '
       'duplicate it, or archive it. Sort any notebook by last edited, created, '
-      'name or starred first.',
+      'name or starred first — and notebooks themselves the same way, from '
+      'the Notes screen.',
   'Pick which photo a note card shows: open the photo full-screen and tap '
       'the star. Starred templates float to the top of the picker.',
 ];

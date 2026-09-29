@@ -236,7 +236,11 @@ clinical use is **A7 (collapse under headings) + A8 (fast reorder) + A1/D1
   still leans clinical ("Bed 9", "take bloods", "ICU1"). The user accepted it
   as-is for now. Keep clinical shorthand ONLY where it explains real behaviour
   (why the date parser must not read "bed 7" as a date). One pass over
-  `codex_content.dart` + `coach_content.dart`.
+  `codex_content.dart` + `coach_content.dart`. **Also (found 2026-09-29):** the
+  notebook icon picker (`notebook_form_dialog.dart`) offers a stethoscope,
+  pill, heart, brain, bone and test tube — half the choices are clinical.
+  Replace with general ones (home, work, travel, money, food, study, ideas,
+  health) and keep at most one medical icon.
 - **G3. Coach-mark polish** · S — no reflow animation as rows part around the
   drop point; the entered-bed expansion is an instant rebuild rather than an
   eased reveal; the lifted tile doesn't scale/tilt. User called these

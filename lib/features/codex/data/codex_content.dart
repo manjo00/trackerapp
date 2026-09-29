@@ -527,6 +527,13 @@ const List<CodexTopic> kCodexTopics = [
       CodexBlock.p(
           'Starred templates float to the top of the Templates screen and of '
           'the picker when you start a new note.'),
+      CodexBlock.heading('Notebooks work the same way'),
+      CodexBlock.p(
+          'On the Notes screen, hold a notebook for its own sheet — star, '
+          'rename or recolour, archive, delete — and use the sort button to '
+          'order notebooks by last edited, created, name or starred first. '
+          '"Last edited" means the newest edit to any note inside it, so the '
+          'notebook you are actually using floats to the top.'),
     ],
   ),
   CodexTopic(

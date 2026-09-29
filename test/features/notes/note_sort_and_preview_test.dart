@@ -80,6 +80,60 @@ void main() {
     });
   });
 
+  group('sortNotebooks', () {
+    Notebook nb({
+      required int id,
+      required String name,
+      bool starred = false,
+      int createdHoursAgo = 0,
+    }) =>
+        Notebook(
+          id: id,
+          name: name,
+          colorValue: 0,
+          icon: '📓',
+          orderIndex: id,
+          createdAt: t0.subtract(Duration(hours: createdHoursAgo)),
+          archivedAt: null,
+          deletedAt: null,
+          isFavorite: starred,
+        );
+
+    // Created order: work (newest), home, ideas (oldest). Activity differs:
+    // "ideas" had a note edited just now, "home" is starred.
+    final Notebook work = nb(id: 1, name: 'Work', createdHoursAgo: 1);
+    final Notebook home = nb(id: 2, name: 'home', createdHoursAgo: 5, starred: true);
+    final Notebook ideas = nb(id: 3, name: 'Ideas', createdHoursAgo: 48);
+    final Map<int, DateTime> lastEdit = {3: t0}; // ideas edited most recently
+    final List<Notebook> shuffled = [home, ideas, work];
+
+    test('last edited counts a note edit inside the notebook as activity', () {
+      // ideas is the oldest notebook but has the freshest note.
+      expect(sortNotebooks(shuffled, NoteSort.edited, lastEdit).map((n) => n.id),
+          [3, 1, 2]);
+    });
+
+    test('an empty notebook falls back to its own creation time', () {
+      expect(sortNotebooks(shuffled, NoteSort.edited, const {}).map((n) => n.id),
+          [1, 2, 3]);
+    });
+
+    test('date created ignores note activity', () {
+      expect(sortNotebooks(shuffled, NoteSort.created, lastEdit).map((n) => n.id),
+          [1, 2, 3]);
+    });
+
+    test('name is case-insensitive', () {
+      expect(sortNotebooks(shuffled, NoteSort.name, lastEdit).map((n) => n.id),
+          [2, 3, 1]);
+    });
+
+    test('starred first, then by activity', () {
+      expect(sortNotebooks(shuffled, NoteSort.starred, lastEdit).map((n) => n.id),
+          [2, 3, 1]);
+    });
+  });
+
   group('notePreview cover photo', () {
     final List<NoteBlock> blocks = [
       block(10, 'text', 'Shopping for the weekend'),

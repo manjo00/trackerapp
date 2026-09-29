@@ -137,8 +137,10 @@ class AppDatabase extends _$AppDatabase {
   /// v24 → notes.isFavorite (starring / "Starred first" sort) and
   ///        notes.coverBlockId (a chosen card cover; plain id, not an FK — the
   ///        preview falls back to the first photo if that block is gone)
+  /// v25 → notebooks.isFavorite — the same star + sort system on the Notes
+  ///        overview, one level up
   @override
-  int get schemaVersion => 24;
+  int get schemaVersion => 25;
 
   /// The old vs. new default rotation-label colour (see v8 migration).
   static const int _oldRotationColor = 0xFFFFB347;
@@ -341,6 +343,10 @@ class AppDatabase extends _$AppDatabase {
             // (false / NULL) are exactly right for every existing note.
             await m.addColumn(notes, notes.isFavorite);
             await m.addColumn(notes, notes.coverBlockId);
+          }
+          if (from < 25) {
+            // Starred notebooks. Default false; nothing to backfill.
+            await m.addColumn(notebooks, notebooks.isFavorite);
           }
         },
         beforeOpen: (details) async {

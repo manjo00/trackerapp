@@ -22,4 +22,8 @@ class Notebooks extends Table {
   /// Sent to Recently deleted; really removed 30 days later. NULL = not
   /// deleted. Never set without [archivedAt] — see ArchiveService.
   DateTimeColumn get deletedAt => dateTime().nullable()();
+
+  /// Starred by the user — drives the "Starred first" sort on the Notes
+  /// overview and a ★ on the tile. Default false.
+  BoolColumn get isFavorite => boolean().withDefault(const Constant(false))();
 }

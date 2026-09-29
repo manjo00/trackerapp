@@ -23,6 +23,47 @@ enum NoteSort {
       );
 }
 
+/// Orders [notebooks] by [sort] — the same four modes as notes, so the two
+/// screens read alike. "Last edited" for a notebook means the most recent
+/// edit to any note inside it ([lastEdit], notebookId → time), falling back
+/// to when the notebook was made for one that is still empty. Pure.
+List<Notebook> sortNotebooks(
+  List<Notebook> notebooks,
+  NoteSort sort,
+  Map<int, DateTime> lastEdit,
+) {
+  final List<Notebook> out = List<Notebook>.of(notebooks);
+  DateTime activity(Notebook n) {
+    final DateTime? edit = lastEdit[n.id];
+    return edit != null && edit.isAfter(n.createdAt) ? edit : n.createdAt;
+  }
+
+  int byActivity(Notebook a, Notebook b) =>
+      activity(b).compareTo(activity(a));
+
+  switch (sort) {
+    case NoteSort.edited:
+      out.sort(byActivity);
+    case NoteSort.created:
+      out.sort((Notebook a, Notebook b) {
+        final int c = b.createdAt.compareTo(a.createdAt);
+        return c != 0 ? c : byActivity(a, b);
+      });
+    case NoteSort.name:
+      out.sort((Notebook a, Notebook b) {
+        final int c =
+            a.name.trim().toLowerCase().compareTo(b.name.trim().toLowerCase());
+        return c != 0 ? c : byActivity(a, b);
+      });
+    case NoteSort.starred:
+      out.sort((Notebook a, Notebook b) {
+        if (a.isFavorite != b.isFavorite) return a.isFavorite ? -1 : 1;
+        return byActivity(a, b);
+      });
+  }
+  return out;
+}
+
 /// Orders [notes] by [sort]. Pure — unit-tested without a database.
 ///
 /// Ties inside every mode break on "most recently edited first", which is
