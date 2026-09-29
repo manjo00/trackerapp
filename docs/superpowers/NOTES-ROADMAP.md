@@ -245,7 +245,28 @@ clinical use is **A7 (collapse under headings) + A8 (fast reorder) + A1/D1
   drop point; the entered-bed expansion is an instant rebuild rather than an
   eased reveal; the lifted tile doesn't scale/tilt. User called these
   "not important".
-- **G4. Exact vs inexact alarms, and Google Play policy** · RESEARCH ·
+- **G4. Exact vs inexact alarms, and Google Play policy** · RESEARCHED 2026-09-29,
+  decision pending · **Findings:** the manifest declares BOTH `USE_EXACT_ALARM`
+  and `SCHEDULE_EXACT_ALARM`; reminders schedule with `exact: true,
+  allowWhileIdle: true` (android_alarm_manager_plus); NotificationService
+  already tracks `_canUseExact` and calls `requestExactAlarmsPermission()`,
+  and Diagnostics has an "exact alarms" row with a Fix button.
+  **Play policy:** `USE_EXACT_ALARM` is a *restricted* permission — allowed only
+  when exact timing is the core function (alarm clocks, calendars; "reminder"
+  apps are borderline) and it triggers manual review; apps outside the
+  criteria are refused publication. `SCHEDULE_EXACT_ALARM` is the
+  user-grantable one, **denied by default on Android 14+ for new installs
+  targeting API 33+**, and when revoked the system cancels every exact alarm.
+  **Recommendation:** (1) drop `USE_EXACT_ALARM` before any Play submission —
+  it is the review risk and buys nothing the app does not already handle;
+  (2) add a graceful fallback so a reminder scheduled while the permission is
+  denied uses an inexact `allowWhileIdle` alarm instead of throwing
+  SecurityException and silently dying; (3) listen for
+  `ACTION_SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED` and reschedule when
+  the user grants it. **Open question that needs a device test, not a
+  search:** whether inexact alarms fire acceptably on One UI — the whole
+  reason NotificationService v3 went exact was that scheduled delivery
+  failed silently there. Original note:
   *user asked for this to be revisited later (2026-08-22)*. The widget's
   date-rollover refresh (v1.16.0) uses an **inexact**
   `AlarmManager.setAndAllowWhileIdle` on purpose: it can land a few minutes
