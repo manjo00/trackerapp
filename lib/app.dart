@@ -87,6 +87,7 @@ class _LifeTrackerAppState extends ConsumerState<LifeTrackerApp>
       // writes — re-subscribing picks them up. Cheap one-shot rebuilds.
       _refreshDateSensitiveProviders();
       _syncWidget();
+      _upgradeRemindersIfExactChanged();
     } else if (state == AppLifecycleState.paused) {
       // Backgrounded — refresh the home-screen widget with the latest state.
       _syncWidget();
@@ -117,7 +118,10 @@ class _LifeTrackerAppState extends ConsumerState<LifeTrackerApp>
     ref.invalidate(todaysSuggestedSessionProvider);
   }
 
-  Future<void> _reschedule() async {
+  /// Re-registers every reminder from the database — the same call the launch
+  /// path makes, split out so it can also run when the exact-alarm grant
+  /// changes.
+  Future<void> _rescheduleReminders() async {
     // Fetch current data from each repository.  We use .read (not .watch)
     // because this is a one-shot call, not a reactive subscription.
     final habitsRepo = ref.read(habitsRepositoryProvider);
@@ -133,6 +137,21 @@ class _LifeTrackerAppState extends ConsumerState<LifeTrackerApp>
       tasks: tasks,
       trackers: trackers,
     );
+  }
+
+  /// The user may have just come back from Settings having granted (or
+  /// revoked) exact alarms. Reminders already booked keep whatever precision
+  /// they were booked with, so when the grant flips, re-book them all so they
+  /// pick up the new one. Cheap when nothing changed: one read of the flag.
+  Future<void> _upgradeRemindersIfExactChanged() async {
+    final NotificationService svc = NotificationService.instance;
+    final bool before = svc.canUseExactAlarms;
+    final bool now = await svc.checkExactAlarms();
+    if (before != now) await _rescheduleReminders();
+  }
+
+  Future<void> _reschedule() async {
+    await _rescheduleReminders();
 
     // Anything whose 30 days in Recently deleted are up goes now. A plain
     // query on launch — no background worker, and nothing to schedule.

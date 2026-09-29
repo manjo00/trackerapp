@@ -245,8 +245,11 @@ clinical use is **A7 (collapse under headings) + A8 (fast reorder) + A1/D1
   drop point; the entered-bed expansion is an instant rebuild rather than an
   eased reveal; the lifted tile doesn't scale/tilt. User called these
   "not important".
-- **G4. Exact vs inexact alarms, and Google Play policy** · RESEARCHED 2026-09-29,
-  decision pending · **Findings:** the manifest declares BOTH `USE_EXACT_ALARM`
+- **G4. Exact vs inexact alarms, and Google Play policy** · SHIPPED 2026-09-29
+  (v1.18.0): `USE_EXACT_ALARM` dropped, inexact `allowWhileIdle` fallback +
+  re-book on grant change. **Owed:** timing the inexact path on the Flip —
+  the first run was an exact alarm because a battery-exempt app is exempt
+  from the permission (STATUS has the recipe). Research notes: **Findings:** the manifest declares BOTH `USE_EXACT_ALARM`
   and `SCHEDULE_EXACT_ALARM`; reminders schedule with `exact: true,
   allowWhileIdle: true` (android_alarm_manager_plus); NotificationService
   already tracks `_canUseExact` and calls `requestExactAlarmsPermission()`,
@@ -293,3 +296,11 @@ clinical use is **A7 (collapse under headings) + A8 (fast reorder) + A1/D1
   runs. The fix is the same shape — push dates, decide the wording natively —
   but it touches the card renderer and the ✓/snooze payloads, so it wants its
   own pass.
+
+- **G6. Stale "Coming in Phase 2" drawer tiles** · S · found 2026-09-29 during the
+  G4 device run: the drawer still shows greyed **"Export data — Coming in Phase
+  2"** and **"Cloud sync — Coming in Phase 2"**. Export/import has existed under
+  Settings → Data since v1.0; a first-time user reads this as "the app is
+  unfinished". Remove the Export tile (or route it to Settings → Data) and
+  reword Cloud sync to a plain "Cloud sync — not yet" or hide it until it
+  ships. `app_drawer.dart`.

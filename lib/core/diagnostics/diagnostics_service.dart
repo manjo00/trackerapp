@@ -54,7 +54,7 @@ class DiagnosticsReport {
           title: 'Exact alarms',
           ok: exactAlarms,
           okText: 'Timed reminders fire at the exact minute',
-          failText: 'Blocked — reminders may arrive late or never',
+          failText: 'Not granted — reminders still arrive, possibly a few minutes late',
         ),
         DiagnosticCheck(
           title: 'Battery unrestricted',

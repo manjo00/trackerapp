@@ -246,7 +246,8 @@ const List<CodexTopic> kCodexTopics = [
     title: 'Task reminders',
     category: CodexCategory.tasks,
     summary: 'Get nudged a day, a few hours, or minutes before.',
-    keywords: ['notification', 'alarm', 'alert'],
+    keywords: ['notification', 'alarm', 'alert', 'late', 'permission', 'exact'],
+    sinceVersion: kCurrentRelease,
     body: [
       CodexBlock.p(
           'Turn on reminders in the task editor and choose how far ahead you '
@@ -254,6 +255,11 @@ const List<CodexTopic> kCodexTopics = [
           'available, and you can pick more than one.'),
       CodexBlock.p(
           'Reminders need a due date (and are most useful with a due time).'),
+      CodexBlock.p(
+          'Android asks separately for permission to fire alarms at an exact '
+          'minute. Without it reminders still arrive, just possibly a few '
+          'minutes late. Diagnostics shows whether it is granted and offers '
+          'the switch.'),
       CodexBlock.tip(
           'If reminders ever stop arriving, open Settings → Testing & '
           'support → Diagnostics. It checks notification permission, exact '

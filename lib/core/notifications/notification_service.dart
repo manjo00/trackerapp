@@ -378,6 +378,27 @@ class NotificationService {
     );
   }
 
+  /// Whether the next alarm may be exact — asked of the system *now*, not read
+  /// from the cached flag. The user can revoke SCHEDULE_EXACT_ALARM at any
+  /// moment in Settings, and scheduling an exact alarm without it throws, which
+  /// used to lose the reminder silently. A stale `true` is the dangerous case,
+  /// so the check is cheap on purpose and happens on every schedule.
+  Future<bool> _exactAllowedNow() async {
+    final AndroidFlutterLocalNotificationsPlugin? android =
+        _plugin.resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+    _canUseExact = await android?.canScheduleExactNotifications() ?? false;
+    return _canUseExact;
+  }
+
+  /// Schedules a one-shot alarm, exact when allowed and inexact otherwise.
+  ///
+  /// Inexact + allowWhileIdle still wakes the device in Doze; it may land a
+  /// few minutes late. That is the right trade for a reminder: late beats
+  /// never, and "never" is exactly what an unguarded exact alarm gives you
+  /// once the permission is missing. If the permission is revoked between the
+  /// check and the set (a real race), the exact attempt throws and we fall
+  /// back rather than surface the error.
   Future<void> _scheduleOneShot({
     required int id,
     required DateTime when,
@@ -386,15 +407,24 @@ class NotificationService {
     required String body,
   }) async {
     await _stash(id, channelId, title, body, repeat: false);
-    await AndroidAlarmManager.oneShotAt(
-      when,
-      id,
-      alarmNotificationCallback,
-      exact: true,
-      wakeup: true,
-      allowWhileIdle: true,
-      rescheduleOnReboot: true,
-    );
+    final bool exact = await _exactAllowedNow();
+    Future<void> set(bool exact) => AndroidAlarmManager.oneShotAt(
+          when,
+          id,
+          alarmNotificationCallback,
+          exact: exact,
+          wakeup: true,
+          allowWhileIdle: true,
+          rescheduleOnReboot: true,
+        );
+    try {
+      await set(exact);
+    } catch (e) {
+      if (!exact) rethrow;
+      debugPrint('[Notifications] exact alarm refused ($e) — falling back');
+      _canUseExact = false;
+      await set(false);
+    }
   }
 
   Future<bool> _scheduleDaily({
@@ -409,16 +439,25 @@ class NotificationService {
     DateTime next =
         DateTime(now.year, now.month, now.day, time.hour, time.minute);
     if (!next.isAfter(now)) next = next.add(const Duration(days: 1));
-    return AndroidAlarmManager.periodic(
-      const Duration(days: 1),
-      id,
-      alarmNotificationCallback,
-      startAt: next,
-      exact: true,
-      wakeup: true,
-      allowWhileIdle: true,
-      rescheduleOnReboot: true,
-    );
+    final bool exact = await _exactAllowedNow();
+    Future<bool> set(bool exact) => AndroidAlarmManager.periodic(
+          const Duration(days: 1),
+          id,
+          alarmNotificationCallback,
+          startAt: next,
+          exact: exact,
+          wakeup: true,
+          allowWhileIdle: true,
+          rescheduleOnReboot: true,
+        );
+    try {
+      return await set(exact);
+    } catch (e) {
+      if (!exact) rethrow;
+      debugPrint('[Notifications] exact daily alarm refused ($e) — falling back');
+      _canUseExact = false;
+      return set(false);
+    }
   }
 
   Future<void> _cancel(int id) async {

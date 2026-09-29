@@ -38,4 +38,7 @@ const List<String> kReleaseHighlights = [
       'the Notes screen.',
   'Pick which photo a note card shows: open the photo full-screen and tap '
       'the star. Starred templates float to the top of the picker.',
+  'Reminders no longer depend on the "Alarms & reminders" permission. '
+      'Without it they still arrive, possibly a few minutes late, instead '
+      'of never — Diagnostics still offers the switch for exact timing.',
 ];

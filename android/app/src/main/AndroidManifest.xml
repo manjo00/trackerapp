@@ -8,11 +8,13 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Re-schedule notifications after a device reboot. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-    <!-- Exact alarms. SCHEDULE_EXACT_ALARM is user-revocable and denied by
-         default on API 33+. USE_EXACT_ALARM is AUTO-GRANTED (no user toggle)
-         and is appropriate here because this is a sideloaded personal app, not
-         a Play Store release — so reminders are always exact and fire in Doze. -->
-    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <!-- Exact alarms: SCHEDULE_EXACT_ALARM only. It is user-grantable, denied
+         by default on Android 14+ for new installs, and Diagnostics offers the
+         grant. USE_EXACT_ALARM was removed on purpose (G4, 2026-09-29): Google
+         Play restricts it to alarm-clock and calendar apps and refuses others.
+         When the grant is missing, NotificationService schedules inexact
+         allowWhileIdle alarms instead — reminders still arrive, possibly a
+         few minutes late — rather than throwing and silently losing them. -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <!-- android_alarm_manager_plus: wake the device to run alarm callbacks. -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
