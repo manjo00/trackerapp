@@ -26,7 +26,7 @@ Future<(String, int, String)?> showNotebookFormDialog(
 
 /// A small curated set of notebook emojis (tap to pick; free typing also works).
 const List<String> _kEmojiPresets = [
-  '📓', '📔', '🩺', '💊', '🫀', '🧠', '🦴', '🧪', '📚', '⭐', '📝', '🔖',
+  '📓', '📔', '🏠', '💼', '🎓', '💡', '✈️', '🍳', '💪', '💰', '📷', '⭐',
 ];
 
 class _NotebookFormDialog extends StatefulWidget {

@@ -104,8 +104,8 @@ const List<CodexTopic> kCodexTopics = [
     body: [
       CodexBlock.p(
           'The drawer has a quick light/dark toggle. Uplan follows Material '
-          'colours, so both themes stay readable in a bright ward or a dark '
-          'on-call room.'),
+          'colours, so both themes stay readable in bright daylight or a dark '
+          'room at night.'),
       CodexBlock.p(
           'Settings → Appearance → "Week starts on Sunday" changes every '
           'calendar in the app at once: the planner strip, the shift month '
@@ -127,7 +127,7 @@ const List<CodexTopic> kCodexTopics = [
       CodexBlock.bullet('Due date and time — when it should happen.'),
       CodexBlock.bullet('Priority — Low, Medium or High (colours the dot).'),
       CodexBlock.bullet('List and section — where it is filed.'),
-      CodexBlock.bullet('Labels — cross-cutting tags like "ward" or "home".'),
+      CodexBlock.bullet('Labels — cross-cutting tags like "errands" or "home".'),
       CodexBlock.bullet('Note — any detail you want with it.'),
       CodexBlock.p(
           'A task with no list lands in Captured — the catch-all for things '
@@ -155,8 +155,9 @@ const List<CodexTopic> kCodexTopics = [
           '"12th" on its own means the 12th of the current month. Both a date '
           'and a time can appear together, in any order.'),
       CodexBlock.tip(
-          'It is deliberately strict so clinical shorthand is never mistaken '
-          'for a date — "bed 7", "O2 30" and "35flow" stay as plain text.'),
+          'It is deliberately strict so short codes and readings are never '
+          'mistaken for a date — "room 7", "bed 7", "O2 30" and "35flow" '
+          'stay as plain text.'),
     ],
   ),
   CodexTopic(
@@ -450,7 +451,7 @@ const List<CodexTopic> kCodexTopics = [
   ),
   CodexTopic(
     id: 'trackers',
-    title: 'Trackers (and medications)',
+    title: 'Trackers (checklists and logs)',
     category: CodexCategory.daily,
     summary: 'Custom checklists and session logs you design yourself.',
     keywords: ['medication', 'meds', 'checklist', 'log', 'custom'],
@@ -470,9 +471,9 @@ const List<CodexTopic> kCodexTopics = [
           'Undo in the bar that appears. To delete one, open it and use ⋮ → '
           'Delete tracker; it waits 30 days in Recently deleted first.'),
       CodexBlock.tip(
-          'There is no separate medications feature — a daily checklist IS '
-          'the medication tracker. Make one called "Meds" with an item per '
-          'tablet and tick them off each day.'),
+          'A daily checklist covers anything you tick off each day — a morning '
+          'routine, vitamins, watering the plants. Make one with an item per '
+          'step and tick them off as you go.'),
     ],
   ),
 
@@ -578,10 +579,10 @@ const List<CodexTopic> kCodexTopics = [
     summary: 'Notebooks hold notes; notes are a stack of lines.',
     body: [
       CodexBlock.p(
-          'Drawer → Notes. Notebooks group your notes (a site, a rotation, a '
-          'project); notes that belong nowhere sit under Unfiled.'),
+          'Drawer → Notes. Notebooks group your notes (a project, a trip, a '
+          'course); notes that belong nowhere sit under Unfiled.'),
       CodexBlock.p(
-          'Inside a notebook, notes appear as photo cards — the first photo '
+          'Inside a notebook, notes appear as photo cards — the cover photo '
           'becomes the cover, with a snippet of text under it — newest edited '
           'first.'),
       CodexBlock.p(
@@ -646,7 +647,7 @@ const List<CodexTopic> kCodexTopics = [
           'Each photo has a crop button to trim it, and an ✕ to remove it.'),
       CodexBlock.p(
           'Opened full screen, a photo can be pinched to zoom in (up to 5×) '
-          'and dragged around — useful for reading a vent screen.'),
+          'and dragged around — useful for reading small print or a whiteboard.'),
       CodexBlock.tip(
           'Photos live in the app\'s own storage, not your gallery — and they '
           'are NOT inside the JSON backup file. Keep that in mind before '
@@ -663,22 +664,23 @@ const List<CodexTopic> kCodexTopics = [
       'auto time placing',
       'auto task',
       'at time',
-      'rounds',
+      'time in note',
       'linked task'
     ],
     body: [
       CodexBlock.p(
-          'While writing rounds, you often note something that must happen at '
+          'While writing a note, you often jot something that must happen at '
           'a time. Write it as a checkbox line beginning with a time and '
           'Uplan creates a real task for it — automatically.'),
       CodexBlock.heading('How'),
       CodexBlock.step('Add a checkbox line (☑ in the toolbar).'),
       CodexBlock.step('Start it with a time, then what to do.'),
       CodexBlock.step(
-          'Example: "@1450pm take bloods" or "at 12:50pm july 12 review CT".'),
+          'Example: "@1450pm call the landlord" or "at 12:50pm july 12 pick up '
+          'the parcel".'),
       CodexBlock.p(
           'The task is filed into a list named after the note, so everything '
-          'from one round stays together.'),
+          'from one note stays together.'),
       CodexBlock.heading('They stay in step'),
       CodexBlock.bullet(
           'Tick the note line → the task completes. Tick the task → the note '
@@ -709,7 +711,7 @@ const List<CodexTopic> kCodexTopics = [
           'looks the way you left it.'),
       CodexBlock.tip(
           'The note\'s ⋮ menu has Collapse all / Expand all — the fastest way '
-          'to get an overview of a six-bed round.'),
+          'to get an overview of a long note.'),
     ],
   ),
   CodexTopic(
@@ -748,10 +750,10 @@ const List<CodexTopic> kCodexTopics = [
     title: 'Note templates',
     category: CodexCategory.notes,
     summary: 'Build a note once, reuse its shape forever.',
-    keywords: ['reuse', 'preset', 'boilerplate', 'icu', 'beds'],
+    keywords: ['reuse', 'preset', 'boilerplate', 'checklist', 'weekly'],
     body: [
       CodexBlock.p(
-          'If your notes follow a shape — a heading per bed, the same '
+          'If your notes follow a shape — a heading per day, the same '
           'checkboxes each time — save that shape once.'),
       CodexBlock.step('Build the note the way you want it.'),
       CodexBlock.step('Tap ⋮ → Save as template.'),
@@ -832,7 +834,7 @@ const List<CodexTopic> kCodexTopics = [
     title: 'A note that lives on Home',
     category: CodexCategory.home,
     summary: 'Write in a note without opening it.',
-    keywords: ['pin', 'handover', 'scratchpad'],
+    keywords: ['pin', 'running list', 'scratchpad'],
     body: [
       CodexBlock.p(
           'The Pinned note block is not a shortcut — it is the note itself. '
@@ -844,7 +846,7 @@ const List<CodexTopic> kCodexTopics = [
           'live. A long note scrolls inside its card.'),
       CodexBlock.tip(
           'Pin as many notes as you like — one block each. Perfect for a '
-          'handover note you touch all shift.'),
+          'running list you touch all day.'),
     ],
   ),
   CodexTopic(
@@ -993,7 +995,7 @@ const List<CodexTopic> kCodexTopics = [
           'sets each muscle should get per week and Uplan keeps score from '
           'the sets you actually log.'),
       CodexBlock.p(
-          'It reads your shift rota to know how many free days you have, and '
+          'It reads your work schedule to know how many free days you have, and '
           'adjusts targets on a short week. Quick-start sessions (Push, Pull, '
           'Upper, Full) let you train without a program at all.'),
       CodexBlock.p(
@@ -1008,16 +1010,16 @@ const List<CodexTopic> kCodexTopics = [
     title: 'Your shift calendar',
     category: CodexCategory.shifts,
     summary: 'Mark day/night shifts and label them with your own codes.',
-    keywords: ['rota', 'roster', 'schedule', 'icu', 'night'],
+    keywords: ['rota', 'roster', 'schedule', 'shift', 'night'],
     body: [
       CodexBlock.p(
           'Drawer → Work schedule shows a month grid. Tap a day to set it as '
           'a day shift, a night shift, or off — day shifts show a sun in '
           'cyan, nights a moon in navy.'),
-      CodexBlock.heading('Your own placement codes'),
+      CodexBlock.heading('Your own shift labels'),
       CodexBlock.p(
-          'When you tap a day you can also give it a rotation label — ICU1, '
-          'ER, Ward, whatever you use. The label shows in the corner of the '
+          'When you tap a day you can also give it a label of your own — Early, '
+          'Late, Front desk, Site B, whatever you use. It shows in the corner of the '
           'tile in every calendar.'),
       CodexBlock.p(
           'Manage the codes themselves (add, rename, recolour) from the '

@@ -148,8 +148,8 @@ const List<CoachTip> kCoachTips = [
     id: 'notebook.templates',
     screen: kCoachNotebook,
     text:
-        'New notes can start from one of your templates — handy when every '
-        'round has the same shape.',
+        'New notes can start from one of your templates — handy when the '
+        'same shape keeps coming up.',
     sinceVersion: '1.15.0',
     codexTopicId: 'notes-templates',
   ),
@@ -204,7 +204,7 @@ const List<CoachTip> kCoachTips = [
     target: 'shifts.calendar',
     text:
         'Tap a day to set a day or night shift and label it with your own '
-        'code (ICU1, ER…). Hold a day instead to add a task to it.',
+        'label (Early, Late, Front desk…). Hold a day instead to add a task to it.',
     sinceVersion: '1.15.0',
     codexTopicId: 'shifts',
   ),
@@ -227,8 +227,8 @@ const List<CoachTip> kCoachTips = [
     screen: kCoachTrackers,
     route: '/trackers',
     text:
-        'Trackers are checklists you design — a daily one makes a perfect '
-        'medications list, and it shows up on Today.',
+        'Trackers are checklists you design — a daily one is perfect for a '
+        'morning routine or vitamins, and it shows up on Today.',
     sinceVersion: '1.15.0',
     codexTopicId: 'trackers',
   ),

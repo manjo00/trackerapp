@@ -15,7 +15,9 @@ void main() {
     });
 
     test('finds a topic by body text', () {
-      final hits = searchCodex(kCodexTopics, 'take bloods');
+      // A phrase that carries the topic's meaning, not an incidental example
+      // -- examples get rewritten; the promise of the feature does not.
+      final hits = searchCodex(kCodexTopics, 'creates a real task');
       expect(hits.map((t) => t.id), contains('notes-time-tasks'));
     });
 

@@ -78,7 +78,7 @@ class RotationsEditorScreen extends ConsumerWidget {
                 controller: ctrl,
                 autofocus: true,
                 textCapitalization: TextCapitalization.characters,
-                decoration: const InputDecoration(hintText: 'Label, e.g. ICU1'),
+                decoration: const InputDecoration(hintText: 'Label, e.g. Early'),
               ),
               const SizedBox(height: 16),
               Wrap(

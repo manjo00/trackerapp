@@ -230,7 +230,7 @@ clinical use is **A7 (collapse under headings) + A8 (fast reorder) + A1/D1
   Widget route is **ruled out** — see
   `specs/2026-08-04-flip-cover-screen-feasibility.md`. **User parked this
   2026-08-04**; brainstorm the content before building.
-- **G2. De-clinicalise existing user-facing copy** · S — Working Style #11 now
+- **G2. De-clinicalise existing user-facing copy** · SHIPPED 2026-09-29 (v1.18.0) — original note: Working Style #11 now
   requires **general** examples in the Codex, coach tips and release notes
   ("Groceries", "Call the landlord"), but content written before that rule
   still leans clinical ("Bed 9", "take bloods", "ICU1"). The user accepted it
