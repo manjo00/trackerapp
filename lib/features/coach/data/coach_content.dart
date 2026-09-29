@@ -124,6 +124,16 @@ const List<CoachTip> kCoachTips = [
     codexTopicId: 'notes-search',
   ),
   CoachTip(
+    id: 'notebook.sort',
+    screen: kCoachNotebook,
+    target: 'notebook.sort',
+    text:
+        'Sort this notebook by last edited, created, name or starred first. '
+        'And hold any card for star, move, duplicate and archive.',
+    sinceVersion: '1.18.0',
+    codexTopicId: 'notes-organise',
+  ),
+  CoachTip(
     id: 'notebook.templates',
     screen: kCoachNotebook,
     text:

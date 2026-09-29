@@ -64,6 +64,7 @@ class AppSettings {
     this.homeBlocks = HomeBlockType.defaults,
     this.startupTab = AppTab.home,
     this.plannerDayView = 'list',
+    this.notesSort = 'edited',
   });
 
   final ThemeMode themeMode;
@@ -106,6 +107,11 @@ class AppSettings {
   /// Default layout for the Planner's day panel: 'list' or 'grid'.
   final String plannerDayView;
 
+  /// How notebooks order their notes: a NoteSort key ('edited' | 'created'
+  /// | 'name' | 'starred'). One value for every notebook on purpose — a
+  /// per-notebook setting is more to manage than it is worth.
+  final String notesSort;
+
   /// Convenience getter — the reminder as a Flutter [TimeOfDay].
   TimeOfDay get reminderTime => TimeOfDay(hour: reminderHour, minute: reminderMinute);
 
@@ -136,6 +142,7 @@ class AppSettings {
     List<HomeBlockType>? homeBlocks,
     AppTab? startupTab,
     String? plannerDayView,
+    String? notesSort,
   }) =>
       AppSettings(
         themeMode: themeMode ?? this.themeMode,
@@ -149,5 +156,6 @@ class AppSettings {
         homeBlocks: homeBlocks ?? this.homeBlocks,
         startupTab: startupTab ?? this.startupTab,
         plannerDayView: plannerDayView ?? this.plannerDayView,
+        notesSort: notesSort ?? this.notesSort,
       );
 }

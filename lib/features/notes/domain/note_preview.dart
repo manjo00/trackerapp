@@ -19,10 +19,14 @@ class NotePreview {
 /// Derives a [NotePreview] from a note's ordered [blocks].
 ///
 /// - snippet = the first non-empty text/checkbox block, trimmed.
-/// - firstPhotoFilename = the first photo block's stored filename (or null).
+/// - firstPhotoFilename = the photo the user chose as cover ([coverBlockId]),
+///   or else the first photo block's stored filename (or null). A chosen cover
+///   whose block no longer exists — the photo was removed — is ignored, so the
+///   card quietly falls back rather than showing a broken image.
 /// - photoCount = number of photo blocks.
-NotePreview notePreview(List<NoteBlock> blocks) {
+NotePreview notePreview(List<NoteBlock> blocks, {int? coverBlockId}) {
   String? firstPhoto;
+  String? chosenCover;
   String snippet = '';
   int photoCount = 0;
 
@@ -32,6 +36,7 @@ NotePreview notePreview(List<NoteBlock> blocks) {
     if (kind == NoteBlockType.photo) {
       photoCount++;
       firstPhoto ??= b.content;
+      if (coverBlockId != null && b.id == coverBlockId) chosenCover = b.content;
     } else if (snippet.isEmpty) {
       final String text = (b.content ?? '').trim();
       if (text.isNotEmpty) snippet = text;
@@ -39,7 +44,7 @@ NotePreview notePreview(List<NoteBlock> blocks) {
   }
 
   return NotePreview(
-    firstPhotoFilename: firstPhoto,
+    firstPhotoFilename: chosenCover ?? firstPhoto,
     snippet: snippet,
     photoCount: photoCount,
   );

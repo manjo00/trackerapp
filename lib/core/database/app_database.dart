@@ -134,8 +134,11 @@ class AppDatabase extends _$AppDatabase {
   /// v23 → Recently deleted: deletedAt on the six archivable tables. Deleting
   ///        stamps a tombstone instead of removing the row; a purge on launch
   ///        removes it for real 30 days later (see ArchiveService)
+  /// v24 → notes.isFavorite (starring / "Starred first" sort) and
+  ///        notes.coverBlockId (a chosen card cover; plain id, not an FK — the
+  ///        preview falls back to the first photo if that block is gone)
   @override
-  int get schemaVersion => 23;
+  int get schemaVersion => 24;
 
   /// The old vs. new default rotation-label colour (see v8 migration).
   static const int _oldRotationColor = 0xFFFFB347;
@@ -332,6 +335,12 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(customTrackers, customTrackers.deletedAt);
             await m.addColumn(notes, notes.deletedAt);
             await m.addColumn(notebooks, notebooks.deletedAt);
+          }
+          if (from < 24) {
+            // Notes quick wins: starring + a chosen cover photo. Defaults
+            // (false / NULL) are exactly right for every existing note.
+            await m.addColumn(notes, notes.isFavorite);
+            await m.addColumn(notes, notes.coverBlockId);
           }
         },
         beforeOpen: (details) async {

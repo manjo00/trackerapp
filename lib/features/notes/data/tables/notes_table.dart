@@ -32,4 +32,14 @@ class Notes extends Table {
   /// area). Its blocks are copied into a new/target note when "used". Templates
   /// carry notebookId NULL. Default false = an ordinary note.
   BoolColumn get isTemplate => boolean().withDefault(const Constant(false))();
+
+  /// Starred by the user. Drives the "Starred first" sort in a notebook and
+  /// puts starred templates at the top of the picker. Default false.
+  BoolColumn get isFavorite => boolean().withDefault(const Constant(false))();
+
+  /// The photo block the user chose as the card's cover, or NULL for "the
+  /// first photo". Kept as a plain id rather than a foreign key on purpose:
+  /// if that photo is later removed, `notePreview` simply no longer finds the
+  /// block and falls back to the first photo — no cleanup, no dangling state.
+  IntColumn get coverBlockId => integer().nullable()();
 }

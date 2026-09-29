@@ -35,7 +35,7 @@ per-note or global "compact photos" default.
 - Pairs well with **A2** and **D (gallery block)**.
 </details>
 
-### A2. Choose the grid-card cover photo (not just the first)  ·  S–M
+### A2. Choose the grid-card cover photo  ·  SHIPPED 2026-09-29 (v1.18.0)
 Today the notebook grid card always shows the note's **first** photo. Let the
 user **pick which photo is the cover** — e.g. a photo block ⋮ → "Set as cover",
 or a star on the photo.
@@ -43,19 +43,19 @@ or a star on the photo.
   `notes.coverImageFilename`. `notePreview`/NoteGridCard prefer the cover, fall
   back to first photo. Small schema + a photo action + preview tweak.
 
-### A3. Favourite templates  ·  S
+### A3. Favourite templates  ·  SHIPPED 2026-09-29 (v1.18.0)
 Star a template so it floats to the top of the picker (and the notebook ＋
 sheet), and could be a per-notebook default.
 - Approach: `notes.isFavorite` bool (shared with A4). `watchTemplates()` orders
   favourites first. Star toggle in TemplatesScreen + editor ⋮.
 
-### A4. Favourite / pin notes  ·  S–M
+### A4. Favourite / pin notes  ·  SHIPPED 2026-09-29 (v1.18.0, as a "Starred first" sort + ★ badge)
 Star notes; show a **Favourites** section (or pin-to-top within a notebook).
 - Approach: reuse `notes.isFavorite`. NotebookDetail shows starred notes first
   (or a pinned row); a Favourites tile on the overview. Star on the grid card +
   editor ⋮. (Pin-within-notebook vs a global Favourites view is a design Q.)
 
-### A5. Sort notes  ·  S
+### A5. Sort notes  ·  SHIPPED 2026-09-29 (v1.18.0, one global setting; no Manual mode)
 Per-notebook sort: **Edited (default) · Created · Title A–Z · Manual**.
 - Approach: `AppSettings`/prefs per-notebook sort, or a `notes.orderIndex` for
   manual. `watchNotes` takes a sort param. A ⋮ "Sort" menu in NotebookDetail.
@@ -137,17 +137,17 @@ layout upgrade for dense clinical notes.
 
 ## B. Brainstormed — findability & organisation
 
-- **B1. Move note to another notebook**  ·  S — editor/card ⋮ → notebook picker
+- **B1. Move note to another notebook**  ·  SHIPPED 2026-09-29 (v1.18.0) — editor/card ⋮ → notebook picker
   (`notes.notebookId` update). Common need; currently only delete-notebook
   reshuffles.
-- **B2. Duplicate note**  ·  S — reuse the template copy path
+- **B2. Duplicate note**  ·  SHIPPED 2026-09-29 (v1.18.0) — reuse the template copy path
   (`_copyCompanions`) to clone a note in place. One ⋮ action.
 - **B3. Bulk select on the grid**  ·  M — long-press a card → selection mode →
   archive / move / delete / favourite many at once.
 - **B4. Note tags / colours**  ·  M — lightweight labels for cross-notebook
   grouping (a `note_tags` table or reuse the tasks `labels`), filter the grid by
   tag. Overlaps with Favourites/pinning — decide the taxonomy.
-- **B5. Swipe actions on note cards**  ·  S — swipe a grid card to archive/
+- **B5. Swipe actions on note cards**  ·  SHIPPED 2026-09-29 (v1.18.0) as a HOLD-the-card action sheet, not a swipe — swipe a grid card to archive/
   favourite (mirrors the tasks swipe-to-archive).
 - **B6. Recently-deleted / restore**  ·  M — notes already have `archivedAt`;
   wire notes+notebooks into the existing **Archived** screen (was deferred in

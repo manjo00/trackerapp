@@ -131,6 +131,24 @@ class NotesRepository {
     return note;
   }
 
+  /// Duplicates a note in place: same notebook, same title with " (copy)" so
+  /// the two are telling apart in the grid, every block copied and photos
+  /// duplicated so editing one never changes the other. Returns the copy's id.
+  Future<int> duplicateNote(int noteId, {required DateTime now}) async {
+    final Note? src = await _dao.getNote(noteId);
+    final int copy = await _dao.createNote(
+      notebookId: src?.notebookId,
+      isTemplate: src?.isTemplate ?? false,
+      now: now,
+    );
+    final String title = src?.title.trim() ?? '';
+    if (title.isNotEmpty) {
+      await _dao.updateNoteTitle(copy, '$title (copy)', now);
+    }
+    await _dao.insertBlocksAt(copy, 0, await _copyCompanions(noteId));
+    return copy;
+  }
+
   /// Inserts a template's blocks into an existing note, after [afterOrderIndex]
   /// (photos duplicated). Pass -1 to insert at the very top.
   Future<void> insertTemplateInto(

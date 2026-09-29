@@ -45,6 +45,7 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
   static const String _kHomeBlocks = 'home_blocks';
   static const String _kStartupTab = 'startup_tab';
   static const String _kPlannerDayView = 'planner_day_view';
+  static const String _kNotesSort = 'notes_sort';
 
   // Settings schema version — increment when defaults need to be reset.
   static const int _currentSettingsVersion = 4;
@@ -108,6 +109,7 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
       startupTab: _loadStartupTab(),
       plannerDayView:
           _prefs.getString(_kPlannerDayView) == 'grid' ? 'grid' : 'list',
+      notesSort: _prefs.getString(_kNotesSort) ?? 'edited',
     );
   }
 
@@ -213,6 +215,12 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
   void setPlannerDayView(String view) {
     state = state.copyWith(plannerDayView: view == 'grid' ? 'grid' : 'list');
     _prefs.setString(_kPlannerDayView, view == 'grid' ? 'grid' : 'list');
+  }
+
+  /// Remembers how notebooks sort their notes (a NoteSort key).
+  void setNotesSort(String key) {
+    state = state.copyWith(notesSort: key);
+    _prefs.setString(_kNotesSort, key);
   }
 
   /// Updates the reminder time and re-schedules if notifications are on.

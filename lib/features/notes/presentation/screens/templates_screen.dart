@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../../archive/presentation/archive_providers.dart';
+import '../../domain/note_sort.dart';
 import '../providers/notes_providers.dart';
 
 /// Lists the user's note templates. Each opens in the normal block editor
@@ -15,8 +16,11 @@ class TemplatesScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ColorScheme cs = Theme.of(context).colorScheme;
+    // Starred templates first — the picker in a notebook shows the same order,
+    // so the ones you reach for most are always at the top of both.
     final List<Note> templates =
-        ref.watch(templatesProvider).valueOrNull ?? const [];
+        sortNotes(ref.watch(templatesProvider).valueOrNull ?? const [],
+            NoteSort.starred);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Templates')),
@@ -50,10 +54,25 @@ class TemplatesScreen extends ConsumerWidget {
                             : null,
                       ),
                       onTap: () => context.push('/notes/${t.id}'),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.delete_outline_rounded),
-                        tooltip: 'Delete template',
-                        onPressed: () => _delete(context, ref, t),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: Icon(t.isFavorite
+                                ? Icons.star_rounded
+                                : Icons.star_outline_rounded),
+                            color: t.isFavorite ? cs.primary : null,
+                            tooltip: t.isFavorite ? 'Unstar' : 'Star',
+                            onPressed: () => ref
+                                .read(notesDaoProvider)
+                                .setNoteFavorite(t.id, !t.isFavorite),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline_rounded),
+                            tooltip: 'Delete template',
+                            onPressed: () => _delete(context, ref, t),
+                          ),
+                        ],
                       ),
                     ),
                   ),

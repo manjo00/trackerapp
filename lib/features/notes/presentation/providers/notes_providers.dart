@@ -48,6 +48,11 @@ final templatesProvider = StreamProvider<List<Note>>(
 final noteBlocksProvider = StreamProvider.family<List<NoteBlock>, int>(
     (ref, noteId) => ref.watch(notesDaoProvider).watchBlocks(noteId));
 
+/// One note, live — null once it is gone. Drives the editor's menu labels
+/// (Star / Unstar) and the cover star in the photo viewer.
+final noteByIdProvider = StreamProvider.family<Note?, int>(
+    (ref, id) => ref.watch(notesDaoProvider).watchNote(id));
+
 /// Every active, non-template note (newest edited first).
 final allNotesProvider = StreamProvider<List<Note>>(
     (ref) => ref.watch(notesDaoProvider).watchAllNotes());

@@ -84,6 +84,8 @@ void main() {
         'the bin icon next to it': 'archive: delete an archived item',
         'the sweep icon': 'recently deleted: empty it now',
         'long-press — open it for editing': 'habits: edit',
+        'hold a note card': 'notes: card action sheet',
+        'tap the ☆ in the top bar': 'notes: choose the cover photo',
       };
       final String all = kCodexTopics
           .expand((t) => t.body.map((b) => b.text))

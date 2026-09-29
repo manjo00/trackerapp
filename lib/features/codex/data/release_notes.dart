@@ -9,7 +9,7 @@
 /// area and listed under "What's new" at the top of the Codex. The moment
 /// [kCurrentRelease] moves on, those topics drop back into their own sections
 /// automatically — nothing else to clean up.
-const String kCurrentRelease = '1.17.0';
+const String kCurrentRelease = '1.18.0';
 
 /// One line per change, in plain language — this is what the after-update
 /// popup shows, so keep it short and say what the user can now DO.
@@ -32,4 +32,9 @@ const List<String> kReleaseHighlights = [
   'The live notification keeps itself honest across midnight: anything that '
       'falls due overnight moves to the front as overdue, and habits come '
       'back unticked for the new day without opening the app.',
+  'Hold a note card for its actions: star it, move it to another notebook, '
+      'duplicate it, or archive it. Sort any notebook by last edited, created, '
+      'name or starred first.',
+  'Pick which photo a note card shows: open the photo full-screen and tap '
+      'the star. Starred templates float to the top of the picker.',
 ];

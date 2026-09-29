@@ -20,12 +20,19 @@ class PhotoBlockView extends ConsumerWidget {
     required this.block,
     required this.onRemove,
     this.onCrop,
+    this.onUseAsCover,
+    this.isCover = false,
     super.key,
   });
 
   final NoteBlock block;
   final VoidCallback onRemove;
   final VoidCallback? onCrop;
+
+  /// Makes this photo the note's card cover (offered in the full-screen
+  /// viewer). Null when the note has no card to put it on, e.g. a template.
+  final VoidCallback? onUseAsCover;
+  final bool isCover;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -55,7 +62,11 @@ class PhotoBlockView extends ConsumerWidget {
                     ? GestureDetector(
                         onTap: () => Navigator.of(context).push(
                           MaterialPageRoute<void>(
-                            builder: (_) => PhotoViewScreen(path: path),
+                            builder: (_) => PhotoViewScreen(
+                              path: path,
+                              onUseAsCover: onUseAsCover,
+                              isCover: isCover,
+                            ),
                           ),
                         ),
                         child: ConstrainedBox(

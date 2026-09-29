@@ -176,6 +176,26 @@ class NotesDao extends DatabaseAccessor<AppDatabase> with _$NotesDaoMixin {
       (update(notes)..where((n) => n.id.equals(id)))
           .write(NotesCompanion(archivedAt: Value(at)));
 
+  /// Stars / un-stars a note. Deliberately does NOT touch updatedAt: starring
+  /// is not an edit, and bumping it would shove the note to the top of the
+  /// "Last edited" order for no reason the user can see.
+  Future<void> setNoteFavorite(int id, bool favorite) =>
+      (update(notes)..where((n) => n.id.equals(id)))
+          .write(NotesCompanion(isFavorite: Value(favorite)));
+
+  /// Picks which photo block is the card's cover (null = back to the first).
+  Future<void> setNoteCover(int id, int? blockId) =>
+      (update(notes)..where((n) => n.id.equals(id)))
+          .write(NotesCompanion(coverBlockId: Value(blockId)));
+
+  /// Files a note under another notebook (null = Unfiled). Counts as an edit,
+  /// so the note surfaces at the top of where it just arrived.
+  Future<void> moveNote(int id, int? notebookId, DateTime now) =>
+      (update(notes)..where((n) => n.id.equals(id))).write(NotesCompanion(
+        notebookId: Value(notebookId),
+        updatedAt: Value(now),
+      ));
+
   Future<void> setNoteDeleted(int id, DateTime? at) =>
       (update(notes)..where((n) => n.id.equals(id)))
           .write(NotesCompanion(deletedAt: Value(at)));

@@ -12,6 +12,7 @@ import '../../domain/note_text_style.dart';
 import '../../domain/section_fold.dart';
 import '../../../archive/presentation/archive_providers.dart';
 import '../providers/notes_providers.dart';
+import '../widgets/notebook_picker_sheet.dart';
 import '../widgets/checkbox_block_view.dart';
 import '../widgets/divider_block_view.dart';
 import '../widgets/heading_line_view.dart';
@@ -218,6 +219,56 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
           label: 'Undo', onPressed: () => svc.restoreNote(widget.noteId)),
     ));
     if (mounted) Navigator.of(context).pop();
+  }
+
+  bool get _isFavorite =>
+      ref.watch(noteByIdProvider(widget.noteId)).valueOrNull?.isFavorite ?? false;
+
+  bool get _isTemplate =>
+      ref.watch(noteByIdProvider(widget.noteId)).valueOrNull?.isTemplate ?? false;
+
+  Future<void> _toggleFavorite() async {
+    final Note? note = ref.read(noteByIdProvider(widget.noteId)).valueOrNull;
+    if (note == null) return;
+    await ref.read(notesDaoProvider).setNoteFavorite(note.id, !note.isFavorite);
+  }
+
+  /// Files the note under another notebook. Nothing else changes — the note
+  /// stays open, it just lives somewhere else when you go back.
+  Future<void> _moveNote() async {
+    final Note? note = ref.read(noteByIdProvider(widget.noteId)).valueOrNull;
+    final List<Notebook> notebooks =
+        ref.read(notebooksProvider).valueOrNull ?? const [];
+    final NotebookChoice? choice = await showNotebookPickerSheet(
+      context,
+      notebooks: notebooks,
+      currentNotebookId: note?.notebookId,
+    );
+    if (choice == null) return;
+    await ref
+        .read(notesDaoProvider)
+        .moveNote(widget.noteId, choice.notebookId, DateTime.now());
+    if (!mounted) return;
+    final String where = choice.notebookId == null
+        ? 'Unfiled'
+        : notebooks.where((n) => n.id == choice.notebookId).firstOrNull?.name ??
+            'that notebook';
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('Moved to $where'),
+      duration: const Duration(seconds: 2),
+    ));
+  }
+
+  /// Copies the note (photos included) and opens the copy in place of this
+  /// one, so you land straight in the thing you are about to change.
+  Future<void> _duplicateNote() async {
+    final int copy = await ref
+        .read(notesRepositoryProvider)
+        .duplicateNote(widget.noteId, now: DateTime.now());
+    if (!mounted) return;
+    Navigator.of(context).pushReplacement(MaterialPageRoute<void>(
+      builder: (_) => NoteEditorScreen(noteId: copy),
+    ));
   }
 
   Future<void> _deleteNote() async {
@@ -501,6 +552,12 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
                   _pickTemplateToInsert();
                 case 'save_template':
                   _saveAsTemplate();
+                case 'favorite':
+                  _toggleFavorite();
+                case 'move':
+                  _moveNote();
+                case 'duplicate':
+                  _duplicateNote();
                 case 'archive':
                   _archiveNote();
                 case 'delete':
@@ -526,6 +583,13 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
                 value: 'save_template',
                 child: Text('Save as template'),
               ),
+              PopupMenuItem(
+                value: 'favorite',
+                child: Text(_isFavorite ? 'Unstar' : 'Star'),
+              ),
+              if (!_isTemplate)
+                const PopupMenuItem(value: 'move', child: Text('Move to…')),
+              const PopupMenuItem(value: 'duplicate', child: Text('Duplicate')),
               const PopupMenuItem(
                 value: 'archive',
                 child: Text('Archive note'),
@@ -636,12 +700,18 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
           onBlur: () => setState(() => _focusedBlockId = null),
         );
       case NoteBlockType.photo:
+        final Note? note = ref.watch(noteByIdProvider(widget.noteId)).valueOrNull;
         return PhotoBlockView(
           block: b,
           onRemove: () => _deleteBlock(b),
           onCrop: () => ref
               .read(notesRepositoryProvider)
               .cropPhotoBlock(b, now: DateTime.now()),
+          // Templates have no grid card, so there is no cover to choose.
+          onUseAsCover: (note?.isTemplate ?? true)
+              ? null
+              : () => ref.read(notesDaoProvider).setNoteCover(widget.noteId, b.id),
+          isCover: note?.coverBlockId == b.id,
         );
       case NoteBlockType.divider:
         return const DividerBlockView();

@@ -478,6 +478,58 @@ const List<CodexTopic> kCodexTopics = [
 
   // ── Notes ───────────────────────────────────────────────────────────────
   CodexTopic(
+    id: 'notes-organise',
+    title: 'Star, sort, move and duplicate notes',
+    category: CodexCategory.notes,
+    summary: 'Hold a note card for its actions; sort a notebook your way.',
+    keywords: [
+      'favourite',
+      'favorite',
+      'star',
+      'pin',
+      'sort',
+      'order',
+      'move note',
+      'duplicate',
+      'copy note',
+      'cover photo',
+      'thumbnail',
+      'long press card',
+    ],
+    hidden: true,
+    sinceVersion: kCurrentRelease,
+    body: [
+      CodexBlock.p(
+          'Hold a note card \u2014 the same way you would hold an app on your '
+          'home screen \u2014 and a small menu appears for that note.'),
+      CodexBlock.bullet('Star \u2014 marks it with a \u2605 on the card.'),
+      CodexBlock.bullet(
+          'Move to\u2026 \u2014 files it under another notebook, or Unfiled.'),
+      CodexBlock.bullet(
+          'Duplicate \u2014 a full copy, photos included, named "\u2026 (copy)" '
+          'so the two are telling apart.'),
+      CodexBlock.bullet('Archive \u2014 puts it away, with Undo.'),
+      CodexBlock.p(
+          'The same actions are in a note\'s \u22ee menu while you have it open.'),
+      CodexBlock.heading('Sorting a notebook'),
+      CodexBlock.p(
+          'The sort button at the top of a notebook orders its notes by last '
+          'edited (the default), date created, name, or starred first. One '
+          'choice applies to every notebook, so they all read the same way.'),
+      CodexBlock.tip(
+          'Starring never changes a note\'s place in "Last edited" \u2014 it is '
+          'not an edit. Switch to "Starred first" when you want the stars on top.'),
+      CodexBlock.heading('Choosing the cover photo'),
+      CodexBlock.p(
+          'A note card shows its first photo. To use a different one, open '
+          'the photo full-screen and tap the \u2606 in the top bar. If you later '
+          'remove that photo, the card simply goes back to the first one.'),
+      CodexBlock.p(
+          'Starred templates float to the top of the Templates screen and of '
+          'the picker when you start a new note.'),
+    ],
+  ),
+  CodexTopic(
     id: 'notes-search',
     title: 'Finding a note by what is in it',
     category: CodexCategory.notes,

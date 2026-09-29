@@ -6,21 +6,25 @@ import '../../../../core/database/app_database.dart';
 import '../../../../core/images/image_storage_service.dart';
 import '../../domain/note_preview.dart';
 
-/// One note as a Samsung-style portrait card: a photo header (the note's first
+/// One note as a Samsung-style portrait card: a photo header (the note's cover
 /// photo) over a title + snippet + footer. With no usable photo it falls back to
 /// a solid cover tinted with the notebook's colour and a big faint note icon.
+/// A starred note wears a small ★ on the header. Holding the card runs
+/// [onLongPress] — the notebook uses it for the card's action sheet.
 class NoteGridCard extends StatelessWidget {
   const NoteGridCard({
     required this.note,
     required this.onTap,
     required this.preview,
     required this.accentColorValue,
+    this.onLongPress,
     this.images,
     super.key,
   });
 
   final Note note;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
   final NotePreview preview;
   final int accentColorValue;
   final ImageStorageService? images;
@@ -37,10 +41,32 @@ class NoteGridCard extends StatelessWidget {
       margin: EdgeInsets.zero,
       child: InkWell(
         onTap: onTap,
+        onLongPress: onLongPress,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(child: _header(context, accent, cs)),
+            Expanded(
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  _header(context, accent, cs),
+                  if (note.isFavorite)
+                    Positioned(
+                      top: 6,
+                      right: 6,
+                      child: Container(
+                        padding: const EdgeInsets.all(3),
+                        decoration: BoxDecoration(
+                          color: cs.surface.withAlpha(215),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(Icons.star_rounded,
+                            size: 15, color: cs.primary),
+                      ),
+                    ),
+                ],
+              ),
+            ),
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
               child: Column(
