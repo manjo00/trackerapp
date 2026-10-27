@@ -1,4 +1,22 @@
-# Habit & Life Tracker App
+# Uplan (Habit & Life Tracker App)
+
+## START HERE: state as of 2026-10-27 (after the Windows reinstall)
+Every AI working here reads this block first, then the current task (pulled in below) and the last 5 lines of
+`docs/_Task_History.md` (shown at start-up). Update them after every task.
+
+- **What this is:** Uplan, Ahmed's own Android app (Flutter) for habits, tasks, notes, workouts, work shifts and planning, which he uses daily on his Samsung Z Flip 6. Package `com.lifetracker.life_tracker`. Code in `manjo00/trackerapp`; updates ship through `manjo00/uplan-releases`.
+- **Where it stands:** the code is v1.18.0+27 (last work 2026-09-30: Play-safe alarms, G4). The last public release is **v1.15.1 (2026-08-20)**: v1.16.0, v1.17.0 and v1.18.0 are built and committed but **not released**.
+- **What's next:** `docs/_Master_Plan.md` (← we are here) and the current task below.
+- **Traps:**
+  - Flutter, the Android SDK, adb and a JDK are **not installed** since the 2026-10-26 reinstall. Nothing can be built or put on the phone until they are, and installing them needs Ahmed's OK.
+  - **Smart App Control blocks release builds** (`flutter build apk --release` fails on `gen_snapshot.exe`) whenever it is on; debug builds still work. It is in evaluation mode and may turn itself on. Never change it (STATUS, 2026-09-29).
+  - The old plans' check boxes were never ticked: `docs/_Master_Plan.md` is the record of what is done.
+  - Device, screenshot and release steps: `.claude/skills/uplan-device-release/SKILL.md`.
+- **Branches:** `master` only (the cloud branch `claude/costa-screen-recorder-issue-vh6yhx` was merged as PR #1). Work and push from `D:\projects\trackerapp`.
+- **Handover files:** `docs/_Current_Task.md` · `docs/_Task_History.md` (append only) · `docs/_Master_Plan.md` · `docs/_Decisions_Log.md` · the code map `graphify-out/GRAPH_REPORT.md` · the detailed log and hard-won gotchas in `docs/superpowers/STATUS-2026-07-28.md` (kept up to date until 2026-09-30 despite its name) · `AGENTS.md` for other AI apps.
+
+### The current task (loaded automatically from docs/_Current_Task.md)
+@docs/_Current_Task.md
 
 ## Project Goal
 A personal habit tracker, task manager, and life planner — combining Notion-like flexibility with focused, fast UX for daily use. Tracks habits, tasks, gym progress, medications, and work schedules. Long-term vision includes a Notability/GoodNotes-style stylus note-taking extension.
@@ -54,23 +72,7 @@ lib/
 - Keep widgets small; extract subwidgets liberally
 
 ## Features Roadmap
-
-### MVP — build first
-1. **Habits:** create, mark complete daily, view streaks
-2. **Tasks:** create, complete, due dates, simple priorities (low/med/high)
-3. **Today view:** today's habits + due tasks in one screen
-
-### Phase 1.5
-4. **Gym tracking:** exercises, sets / reps / weight, workout history, progress charts
-5. **Medications:** schedule, reminders, intake log
-6. **Planner:** day / week / month views with tasks + habits surfaced
-
-### Phase 2
-7. Cloud sync (Supabase)
-8. Multi-device, account auth
-
-### Phase 3 (stretch)
-9. Stylus note-taking extension with PDF annotation
+Moved on 2026-10-27 to `docs/_Master_Plan.md`, with what is done ticked (✅ done · ⬜ to do · ⏸ parked).
 
 ## Working Style — Important
 
@@ -99,6 +101,8 @@ I am a **beginner** to Flutter and mobile development. When helping me:
   necessarily the cleanest behaviour — revisit whether deleting the task should
   instead strip the token from the note (or "tombstone" the line so it doesn't
   respawn).
+  **Resolved 2026-07-22** (commit 320a871, shipped in v1.9.0): deleting the task now deletes the note line and
+  archiving it strips the token, so nothing respawns (STATUS, "DONE & SHIPPED").
 
 ## Out of Scope (for now)
 - Web build, desktop builds

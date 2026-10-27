@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=\"$CLAUDE_PROJECT_DIR/docs/_Task_History.md\"; if [ -f \"$f\" ]; then echo 'Handover (Uplan): the last 5 lines of docs/_Task_History.md, newest last. START HERE is in CLAUDE.md and the current task loads with it. After every task, update docs/_Master_Plan.md, docs/_Task_History.md and docs/_Current_Task.md.'; tail -n 5 \"$f\"; fi"
+          }
+        ]
+      }
+    ]
+  }
+}
