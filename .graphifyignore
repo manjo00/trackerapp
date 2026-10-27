@@ -1,0 +1,22 @@
+# graphify: map only the code (Dart and Kotlin), which is free.
+# Documents, images and data files would cost tokens or add noise; the handover files cover them.
+docs/
+feedback/
+*.md
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.yaml
+*.yml
+*.xml
+*.json
+*.lock
+*.properties
+build/
+.dart_tool/
+ios/
+android/.gradle/
+android/app/build/
+*.g.dart
+*.freezed.dart

@@ -49,3 +49,4 @@ feature or release, and "files" names the feature area rather than every file.
 2026-09-29 | De-clinicalised the user-facing text (G2) | files: lib/features/codex, coach | fda7ebd | -
 2026-09-30 | Play-safe exact alarms with an inexact fallback (G4) | files: lib/core notifications, android manifest | b4cabcd, ff9e928 | timing the inexact path on the Flip is still owed
 2026-10-27 | Device skill pointed at D:\projects\trackerapp after the Windows reinstall | files: .claude/skills/uplan-device-release/SKILL.md | 46c29b0 | -
+2026-10-27 | Handover files: START HERE, master plan, rebuilt history, current task, decisions log, AGENTS.md, a start-up step that shows the last 5 history lines, and a free code map (graphify) | files: CLAUDE.md, AGENTS.md, docs/_*.md, .claude/settings.json, .graphifyignore, graphify-out/GRAPH_REPORT.md | 473dffd, 05d0b2a, then the map commit | map: 281 code files, 0 tokens, docs left out; refresh with `python -m graphify update .`

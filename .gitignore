@@ -51,3 +51,7 @@ app.*.map.json
 # Windows
 desktop.ini
 Thumbs.db
+
+# graphify map: share only the summary; the rest can be rebuilt with python -m graphify update .
+graphify-out/*
+!graphify-out/GRAPH_REPORT.md
