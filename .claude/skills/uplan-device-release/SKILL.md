@@ -5,7 +5,7 @@ description: Uplan's verified device + release workflow. Use whenever deploying 
 
 # Uplan device & release workflow
 
-Project root: `C:\Projects\life_tracker` (run all flutter/git commands from there).
+Project root: `D:\projects\trackerapp` (run all flutter/git commands from there).
 Shell is Windows PowerShell 5.1 unless noted — that shapes several gotchas below.
 
 ## Devices & adb
