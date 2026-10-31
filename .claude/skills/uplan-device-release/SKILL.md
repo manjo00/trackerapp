@@ -8,11 +8,22 @@ description: Uplan's verified device + release workflow. Use whenever deploying 
 Project root: `D:\projects\trackerapp` (run all flutter/git commands from there).
 Shell is Windows PowerShell 5.1 unless noted — that shapes several gotchas below.
 
+## Tools on this PC (reinstalled 2026-10-31, all in `D:\dev`)
+
+- Flutter **3.44.9** `D:\dev\flutter` (stay on 3.44: 3.47 breaks the code generators), Java 21 `D:\dev\jdk-21`,
+  Android SDK `D:\dev\android-sdk`, Dart packages `D:\dev\pub-cache`.
+- They're on the user PATH, but a chat sees that only after the Claude app restarts. If `flutter` isn't found, start
+  the command with
+  `$env:PUB_CACHE='D:\dev\pub-cache'; $env:JAVA_HOME='D:\dev\jdk-21'; $env:ANDROID_HOME='D:\dev\android-sdk'; $flutter='D:\dev\flutter\bin\flutter.bat'`
+  and call `& $flutter ...` instead of `flutter ...`.
+- After a fresh clone, run `dart run build_runner build --delete-conflicting-outputs` first (generated files are git-ignored).
+
 ## Devices & adb
 
-- adb lives at `"$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"` (not on PATH).
-- Real device: Samsung Z Flip 6, serial `R5CX631BMJB`, screen **1080 × 2640**, One UI 8.
-- Emulator: `emulator-5554`.
+- adb: `$adb = 'D:\dev\android-sdk\platform-tools\adb.exe'` (on PATH after an app restart).
+- Real device: Samsung Z Flip 6, serial `R5CX631BMJB`, screen **1080 × 2640**, One UI 8. This PC's adb key is new,
+  so the phone asks once to allow USB debugging from it.
+- Emulator: `emulator-5554` (not set up on this PC since 2026-10-31).
 - App package id: `com.lifetracker.life_tracker` (display name "Uplan").
 - When both devices are attached, always pass `-s <serial>`.
 
@@ -20,11 +31,13 @@ Shell is Windows PowerShell 5.1 unless noted — that shapes several gotchas bel
 
 Emulator (day-to-day dev): `flutter run -d emulator-5554`.
 
-Real device (release APK — release builds are debug-signed, fine for sideload):
+Real device (release APK — release builds are debug-signed, fine for sideload). **Since 2026-10-31 the debug key
+is new** (the laptop's was lost), so the first install over the phone's current Uplan fails with
+`INSTALL_FAILED_UPDATE_INCOMPATIBLE`; see START HERE in `CLAUDE.md` before releasing.
 
 ```powershell
 flutter build apk --release
-& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" -s R5CX631BMJB install -r build\app\outputs\flutter-apk\app-release.apk
+& $adb -s R5CX631BMJB install -r build\app\outputs\flutter-apk\app-release.apk
 ```
 
 Relaunch cleanly after install (force-stop first — otherwise you may resume a stale

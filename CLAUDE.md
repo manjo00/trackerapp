@@ -5,11 +5,15 @@ Every AI working here reads this block first, then the current task (pulled in b
 `docs/_Task_History.md` (shown at start-up). Update them after every task.
 
 - **What this is:** Uplan, Ahmed's own Android app (Flutter) for habits, tasks, notes, workouts, work shifts and planning, which he uses daily on his Samsung Z Flip 6. Package `com.lifetracker.life_tracker`. Code in `manjo00/trackerapp`; updates ship through `manjo00/uplan-releases`.
-- **Where it stands:** the code is v1.18.0+27 (last work 2026-09-30: Play-safe alarms, G4). The last public release is **v1.15.1 (2026-08-20)**: v1.16.0, v1.17.0 and v1.18.0 are built and committed but **not released**.
+- **Where it stands:** the code is v1.18.0+27 (last work 2026-09-30: Play-safe alarms, G4). The last public release is **v1.15.1 (2026-08-20)**: v1.16.0, v1.17.0 and v1.18.0 are built and committed but **not released**. The build tools are back since 2026-10-31, in `D:\dev`: the code checker is clean, all 303 tests pass, and debug and release builds work on this PC.
 - **What's next:** `docs/_Master_Plan.md` (← we are here) and the current task below.
 - **Traps:**
-  - Flutter, the Android SDK, adb and a JDK are **not installed** since the 2026-10-26 reinstall. Nothing can be built or put on the phone until they are, and installing them needs Ahmed's OK.
-  - **Smart App Control blocks release builds** (`flutter build apk --release` fails on `gen_snapshot.exe`) whenever it is on; debug builds still work. It is in evaluation mode and may turn itself on. Never change it (STATUS, 2026-09-29).
+  - **The signing key changed on 2026-10-31.** Builds are debug-signed, and the laptop's debug key was lost with its C: drive (no copy on D:, OneDrive or the Recycle Bin). So a build from this PC won't install over the Uplan on the phone. Before the next release, decide with Ahmed: back up in the app (Settings > Export data), uninstall, install, restore, and make a real signing key that is backed up off C:. The new debug key is `C:\Users\kille\.android\debug.keystore`; nothing released is signed with it yet.
+  - **Build tools live in `D:\dev`** (2026-10-31): Flutter 3.44.9 `D:\dev\flutter`, Java 21 `D:\dev\jdk-21`, the Android SDK with adb `D:\dev\android-sdk`, Dart packages `D:\dev\pub-cache`. They're on the user PATH, but a chat sees that only after the Claude app restarts; until then use the full paths in the device skill. After a Windows reinstall, `D:\dev\set-user-env.cmd` puts PATH back.
+  - **Stay on Flutter 3.44** until a planned upgrade: on 3.47 the app's code generators (analyzer 7.6.0) crash. 3.47.9 waits in `D:\dev\flutter-3.47.9`.
+  - **After a fresh clone, generate the code files first:** `dart run build_runner build --delete-conflicting-outputs` (the `*.g.dart` and `*.freezed.dart` files are git-ignored).
+  - Google's Android CLI (`android.exe`, which now stands behind `sdkmanager`) sends usage counts unless you add `--no-metrics`; always add it.
+  - **Smart App Control blocks release builds** (`flutter build apk --release` fails on `gen_snapshot.exe`) whenever it is on; debug builds still work. It is in evaluation mode and may turn itself on. Never change it (STATUS, 2026-09-29). A release build worked on this PC on 2026-10-31, in evaluation mode.
   - The old plans' check boxes were never ticked: `docs/_Master_Plan.md` is the record of what is done.
   - Device, screenshot and release steps: `.claude/skills/uplan-device-release/SKILL.md`.
 - **Branches:** `master` only (the cloud branch `claude/costa-screen-recorder-issue-vh6yhx` was merged as PR #1). Work and push from `D:\projects\trackerapp`.

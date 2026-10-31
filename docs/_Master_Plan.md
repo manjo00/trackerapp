@@ -8,14 +8,17 @@ Rebuilt on 2026-10-27 from the git log, the public releases, `docs/superpowers/S
 `docs/superpowers/NOTES-ROADMAP.md`, the brand study and `feedback/app.md`. The plan files in
 `docs/superpowers/plans/` never had their own check boxes ticked, so this page is the record of what is done.
 
-## ← We are here (2026-10-27)
+## ← We are here (2026-10-31)
 - **Code:** v1.18.0+27, last changed 2026-09-30. **Last public release:** v1.15.1 (2026-08-20).
   v1.16.0, v1.17.0 and v1.18.0 are built and committed but not released.
-- **This PC:** Flutter, the Android SDK, adb and a JDK are not installed since the 2026-10-26 reinstall.
+- **This PC:** the build tools are back since 2026-10-31, in `D:\dev` (Flutter 3.44.9, Java 21, the Android SDK).
 - **Next, in order:**
-  1. ⬜ Reinstall Flutter and the Android tools, with Ahmed's OK (about 10 GB).
-  2. ⬜ Release v1.18.0 (it carries 1.16 and 1.17 too). Smart App Control blocks release builds whenever it is on.
-  3. ⬜ G4's owed check: time the inexact-alarm path on the Z Flip 6 (recipe in STATUS, G4 section).
+  1. ✅ Reinstall Flutter and the Android tools (2026-10-31, with Ahmed's OK; the laptop's Flutter 3.44 line).
+  2. ⬜ Decide how to cross the signing-key change: the laptop's debug key is lost, so v1.18.0 can't install over the
+     phone's Uplan. Likely: check the in-app backup carries everything (photos too), export it, uninstall, install,
+     restore; and make a real signing key, backed up off C: (see "Before a Play Store launch").
+  3. ⬜ Release v1.18.0 (it carries 1.16 and 1.17 too). Smart App Control blocks release builds whenever it is on.
+  4. ⬜ G4's owed check: time the inexact-alarm path on the Z Flip 6 (recipe in STATUS, G4 section).
 
 ## Phase 1: MVP on Android ✅
 - ✅ Habits: create, mark done daily, streaks (2026-05-27)
