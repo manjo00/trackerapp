@@ -12,6 +12,7 @@ Rebuilt on 2026-10-27 from the git log, the public releases, `docs/superpowers/S
 - **Code:** v1.18.0+27, last changed 2026-09-30. **Last public release:** v1.15.1 (2026-08-20).
   v1.16.0, v1.17.0 and v1.18.0 are built and committed but not released.
 - **This PC:** the build tools are back since 2026-10-31, in `D:\dev` (Flutter 3.44.9, Java 21, the Android SDK).
+  What each change to the PC did and how to undo it: `docs/_Undo_Table.md`.
 - **Next, in order:**
   1. ✅ Reinstall Flutter and the Android tools (2026-10-31, with Ahmed's OK; the laptop's Flutter 3.44 line).
   2. ⬜ Decide how to cross the signing-key change: the laptop's debug key is lost, so v1.18.0 can't install over the

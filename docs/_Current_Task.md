@@ -19,6 +19,30 @@ and debug and release builds work (the release build ran while Smart App Control
 4. **Heavy testing, then Google Play** (Ahmed, 2026-10-31; master plan, "Before a Play Store launch"). First shape with
    him what the testing covers (superpowers' brainstorming). Testing on the phone needs step 1 first.
 
+## Waiting on Ahmed (written 2026-10-31 20:40, before this chat's fresh start)
+- **"Start on the signing-key step now?"** (asked 2026-10-31 in the next-step box; buttons "Yes, start it" / "Not now").
+  "Yes, start it" means step 1. First check the guess in step 1 (Play App Signing), then shape the step with him
+  (brainstorming) and ask one go-ahead that names everything it does: export a backup, uninstall, install, restore,
+  make the real key.
+- **His opinion for two retros** (asked: "in a few words, how did this install round feel to you?"). Then add both to
+  `D:\projects\claude-setup\workflow\retros.md`:
+  1. The auto-load kit's first live test (2026-10-31): START HERE, the current task and the last 5 history lines all
+     loaded by themselves.
+  2. The build-tools install (2026-10-31): estimate "small: 20–30 min of my work, 20–40 min of downloads, then a
+     5–10 min first build"; real about 75 min (14:16–15:30), with an unplanned switch from Flutter 3.47.9 to 3.44.9
+     and a 17-min first build. Demo first, no helpers. Mistakes: the newest Flutter went in before reading the app's
+     pinned version; two Android SDK installs sent Google usage data before `--no-metrics`; the build estimate forgot
+     a fresh PC's downloads. Tokens: not counted yet (count them from this chat's transcript the Live Tracker's way).
+- **His own OK for two START HERE lines** (from this chat's round-table plan, which he approved through the Manager on
+  2026-10-31; a `CLAUDE.md` edit waits for his word in this chat): the pinned versions (Flutter 3.44 from `.metadata`;
+  AGP, Gradle, Kotlin and the NDK from the Android build files), and `docs/_Undo_Table.md` in the handover-files line.
+- **His yes to switch Flutter's and Dart's usage reporting off outside the Claude app too.** Checked from outside on
+  2026-10-31: the opt-out was saved under `%APPDATA%`, so it holds only inside the app (`docs/_Undo_Table.md`, row 3).
+  Nothing runs Flutter outside the app today. The fix: run `D:\dev\flutter\bin\flutter.bat --disable-analytics` and
+  `D:\dev\flutter\bin\dart.bat --disable-analytics` from a `.cmd` started through explorer.exe.
+- This chat's round-table plan (approved 2026-10-31) also says: read the project's pinned versions before any install,
+  switch a new tool's usage reporting off before its first run, and lead every reply with the answer.
+
 ## Done means
 - [ ] Written when a task starts.
 
