@@ -1,5 +1,5 @@
 # Current Task: none in progress
-**Date:** 2026-10-27 · **Branch:** master
+**Date:** 2026-10-31 · **Branch:** master
 
 ## State
 No task is in progress. The last app work was G4, Play-safe exact alarms (2026-09-30, commit ff9e928).
@@ -17,6 +17,9 @@ and the code map in `graphify-out/`.
 
 ## Do not touch
 - Written when a task starts.
+
+## Log (crash test: one line per step)
+- 2026-10-31 14:06 · done: session start (repo up to date and clean); a START HERE line on the code map's auto-refresh · half-done: nothing · next: Ahmed picks the next task (suggested: reinstall the build tools, with his OK)
 
 ## Noticed (not fixing now)
 - The 10 plan files in `docs/superpowers/plans/` never had their check boxes ticked, although the work shipped. The master plan is the record of what is done.

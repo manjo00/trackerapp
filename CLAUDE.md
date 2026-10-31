@@ -1,6 +1,6 @@
 # Uplan (Habit & Life Tracker App)
 
-## START HERE: state as of 2026-10-27 (after the Windows reinstall)
+## START HERE: state as of 2026-10-31 (after the Windows reinstall)
 Every AI working here reads this block first, then the current task (pulled in below) and the last 5 lines of
 `docs/_Task_History.md` (shown at start-up). Update them after every task.
 
@@ -14,6 +14,7 @@ Every AI working here reads this block first, then the current task (pulled in b
   - Device, screenshot and release steps: `.claude/skills/uplan-device-release/SKILL.md`.
 - **Branches:** `master` only (the cloud branch `claude/costa-screen-recorder-issue-vh6yhx` was merged as PR #1). Work and push from `D:\projects\trackerapp`.
 - **Handover files:** `docs/_Current_Task.md` · `docs/_Task_History.md` (append only) · `docs/_Master_Plan.md` · `docs/_Decisions_Log.md` · the code map `graphify-out/GRAPH_REPORT.md` · the detailed log and hard-won gotchas in `docs/superpowers/STATUS-2026-07-28.md` (kept up to date until 2026-09-30 despite its name) · `AGENTS.md` for other AI apps.
+- **Code map:** `graphify-out/GRAPH_REPORT.md` sums up how the code fits together: read it for the big picture before opening many files. On the PC it refreshes itself in the background after each commit that changes code and after each pull (graphify's git hooks, on since 2026-10-30), and the refreshed file goes in with the next commit. A cloud chat can leave it alone: the PC catches up when it pulls.
 
 ### The current task (loaded automatically from docs/_Current_Task.md)
 @docs/_Current_Task.md
