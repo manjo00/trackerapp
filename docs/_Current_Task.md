@@ -11,9 +11,13 @@ and debug and release builds work (the release build ran while Smart App Control
    install over the Uplan on the phone. Likely path: check that the app's backup (Settings > Export data) carries
    everything, note photos included; export it and keep the file off the phone; uninstall; install v1.18.0; restore.
    Then make a real signing key and back it up off C: (master plan, "Before a Play Store launch").
+   The real key is also one of the Play basics (Ahmed's Play decision, 2026-10-31). Made now, it could probably go to
+   Google Play later as the app's own key, so the phone wouldn't need a second reinstall (from memory, not checked).
 2. Release v1.18.0 (it carries v1.16.0 and v1.17.0 too) with the release ritual in
    `.claude/skills/uplan-device-release/SKILL.md`. A release build needs Smart App Control to stay in evaluation mode.
 3. G4's owed check: time the inexact-alarm path on the Z Flip 6 (recipe in `docs/superpowers/STATUS-2026-07-28.md`, G4 section).
+4. **Heavy testing, then Google Play** (Ahmed, 2026-10-31; master plan, "Before a Play Store launch"). First shape with
+   him what the testing covers (superpowers' brainstorming). Testing on the phone needs step 1 first.
 
 ## Done means
 - [ ] Written when a task starts.

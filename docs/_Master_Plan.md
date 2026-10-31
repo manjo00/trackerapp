@@ -19,6 +19,8 @@ Rebuilt on 2026-10-27 from the git log, the public releases, `docs/superpowers/S
      restore; and make a real signing key, backed up off C: (see "Before a Play Store launch").
   3. ⬜ Release v1.18.0 (it carries 1.16 and 1.17 too). Smart App Control blocks release builds whenever it is on.
   4. ⬜ G4's owed check: time the inexact-alarm path on the Z Flip 6 (recipe in STATUS, G4 section).
+  5. ⬜ Heavy testing, then Google Play (Ahmed, 2026-10-31; see "Before a Play Store launch"). What the testing covers
+     is still to be shaped with him. Testing on the phone needs step 2 first: no new build reaches it before then.
 
 ## Phase 1: MVP on Android ✅
 - ✅ Habits: create, mark done daily, streaks (2026-05-27)
@@ -55,10 +57,15 @@ Rebuilt on 2026-10-27 from the git log, the public releases, `docs/superpowers/S
 - ⬜ E word-level rich text (L) · F templates phase 2 · G3 coach and arrange-mode animation polish (S)
 
 ## Before a Play Store launch ⬜ (brand study, "Blocking work before any of this goes live")
+**The order (Ahmed, 2026-10-31):** Uplan stays the main focus but goes to Google Play only after heavy testing; the
+dock (New Desktop) goes on sale first, on Steam. His goal is side income. The plan and the checked Play facts:
+`business/ideas.md` in `manjo00/claude-setup` (`D:\projects\claude-setup` on the PC), "Ideas and next steps" item 4.
+- ⬜ Heavy testing first (what it covers is still to be shaped with Ahmed)
 - ⬜ Privacy policy and the Play data-safety form
 - ⬜ A real signing keystore (builds are debug-signed today)
+- ⬜ Play's closed test for a new personal account: at least 12 testers, opted in for 14 days in a row (friends can be the testers)
 - ✅ G4 alarms made Play-safe (2026-09-30) · ✅ G2 copy pass (2026-09-29)
-- ⬜ If the goal is revenue, the study's build order: themes and icons → insights → smart lists → rota photo to shifts (OCR) → calendar sync
+- ⬜ Then the first Pro features, so it can earn: themes and icons, then insights (the study's order goes on: smart lists → rota photo to shifts (OCR) → calendar sync)
 
 ## Phase 2 and later ⬜
 - ⬜ Cloud sync (Supabase) and accounts, multi-device
