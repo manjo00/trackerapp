@@ -23,9 +23,11 @@ Rebuilt on 2026-10-27 from the git log, the public releases, `docs/superpowers/S
      visuals, code), then fixes for speed and responsiveness. First known issue: adding a task from the widget lags.
      **Alongside it, gym (Ahmed, 2026-11-01; the Uplan chat):** his new split is a whole-body warm-up, 1 set per
      exercise, every other day; goal: strength and muscle equally, kept casual.
-     - ⬜ Smart order (his pick, the tired score): the exercises that waited longest for an early slot in his last 3
-       workouts go first; same-muscle exercises never back to back; one switch per workout. Demo first, short design
-       in chat, waiting for his yes.
+     - ⬜ Smart order (his pick, the tired score, plus his rules: mix the muscles; triceps after the presses, biceps
+       after the rows): the exercises that waited longest for an early slot in his last 3 workouts go first; one
+       switch per workout. Demo first; design `docs/superpowers/specs/2026-11-01-gym-smart-order-design.md`, waiting
+       for his yes.
+     - ⬜ A weekly cardio day, as a switch (Ahmed), after the smart order; Claude's sketch is in the same design file.
      - ⬜ A casual, science-based progress dashboard: strength trend per exercise, stall tips, weekly sets per muscle
        against the research ranges, his own "tired penalty". Full design path after the smart order.
   4. ⬜ Release v1.18.0 (it carries 1.16 and 1.17 too). Smart App Control blocks release builds whenever it is on. A
