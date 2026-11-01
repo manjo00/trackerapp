@@ -68,8 +68,11 @@ is a bit laggy."
 - Saving awaits the insert, then `HomeWidgetService.sync` (one query per habit, every task, every shift; about 13
   preference writes and 3 widget redraws when anything changed) before the sheet closes (`quick_add_task_screen.dart:98-111`).
 - And the phone runs a debug build, which does all of this much more slowly.
-- A profile build should keep the phone's `run-as` door open: Flutter's Gradle plugin makes the profile build type
-  from the debug one (checked: `FlutterPlugin.kt:209`, `initWith(debugBuildType)`); confirm on the built APK.
+- **A profile build keeps the phone's `run-as` door open** (checked 2026-11-01): Flutter's Gradle plugin makes the
+  profile build type from the debug one (`FlutterPlugin.kt:209`, `initWith(debugBuildType)`), and the worktree's
+  `app-profile.apk` (v1.18.0+27, 92.9 MB, arm64 + arm32 + x86_64, target SDK 36) shows `application-debuggable` in
+  `aapt2 dump badging`. So the phone could run a fast (AOT) profile build without losing the full-copy backup path.
+  First worktree build: pub get 10 s, build_runner 79 s, `flutter build apk --profile` 3 min 45 s.
 - Next: measure on a profile build (an emulator first): tap to sheet, send to closed, with and without the launch work.
 
 ## Size (Ahmed chose three helpers, 2026-11-01 about 10:05)
@@ -167,16 +170,14 @@ plus this chat about 0.9–1.4M; three helpers about 1.1–1.7M; this chat alone
 (The signing-key move's own checklist is all done: `docs/superpowers/plans/2026-11-01-signing-key.md` and the history.)
 
 ## Do not touch
-- **Until the Uplan chat says it's done (it expects about 13:30 on 2026-11-01):** its gym smart-order files,
-  `lib/features/workout/domain/smart_order.dart` (new), `test/features/workout/smart_order_test.dart`,
-  `lib/features/workout/data/dao/workout_dao.dart`, `lib/features/workout/data/repositories/workout_repository.dart`,
-  `lib/features/workout/presentation/providers/workout_providers.dart`, and the screens
-  `program_session_editor_screen.dart` and `active_workout_screen.dart` (design
-  `docs/superpowers/specs/2026-11-01-gym-smart-order-design.md`). A failing `smart_order_test.dart` there is its
-  test-first step. So its half-done edits can't break the Tester's builds, the Tester builds and changes code in a
-  separate worktree, `D:\projects\trackerapp-tester` on branch `tester/speed` (made 2026-11-01 from `eb587fa`), and
-  merges it into `master` only after that chat is done. That worktree has no `key.properties`, so its builds carry
-  the debug key: emulators only, never the phone. The handover files stay in `D:\projects\trackerapp`.
+- **The gym smart-order files are free again** (the Uplan chat, 2026-11-01: committed and pushed as `d3b3165`, analyze
+  clean, 329 tests pass; if Ahmed's phone try finds a bug, it says so before touching them again): the workout DAO,
+  repository and providers, `program_session_editor_screen.dart`, `active_workout_screen.dart` and the new
+  `smart_order.dart` (design and status: `docs/superpowers/specs/2026-11-01-gym-smart-order-design.md`). The Tester
+  still builds and changes code in its separate worktree, `D:\projects\trackerapp-tester` on branch `tester/speed`
+  (made 2026-11-01 from `eb587fa`, fast-forwarded to `d3b3165`), and merges into `master` when a fix batch is done.
+  That worktree has no `key.properties`, so its builds carry the debug key: emulators only, never the phone. The
+  handover files stay in `D:\projects\trackerapp`.
 - The phone's Uplan: never uninstall it to get past an install error (that deletes its data). A build carrying the
   new key updates it in place with `adb install -r`.
 - No key file or password in git, chat or logs. Smart App Control and other security settings stay as they are.
