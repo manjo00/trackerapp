@@ -1,29 +1,48 @@
-# Current Task: none in progress
-**Date:** 2026-10-31 · **Branch:** master
+# Current Task: the signing-key step (move to a real signing key without losing data)
+**Started:** 2026-11-01 (Ahmed: "Yes, start it") · **Branch:** master · **Path:** the careful one (brainstorm, a
+one-page design he approves, a short plan), because an uninstall deletes the app's data
 
-## State
-No task is in progress. The build tools are back on this PC since 2026-10-31 (details in START HERE in `CLAUDE.md`):
-Flutter 3.44.9, Java 21 and the Android SDK, all in `D:\dev`. On them the code checker is clean, all 303 tests pass,
-and debug and release builds work (the release build ran while Smart App Control was in evaluation mode).
+## Goal
+Get v1.18.0 onto Ahmed's Z Flip 6 without losing any of his data, signed with a real release key that is backed up
+off C: and can later become the app's signing key on Google Play.
 
-## Suggested next step (needs Ahmed)
-1. **Decide how to cross the signing-key change** before releasing. The laptop's debug key is lost, so v1.18.0 can't
-   install over the Uplan on the phone. Likely path: check that the app's backup (Settings > Export data) carries
-   everything, note photos included; export it and keep the file off the phone; uninstall; install v1.18.0; restore.
-   Then make a real signing key and back it up off C: (master plan, "Before a Play Store launch").
-   The real key is also one of the Play basics (Ahmed's Play decision, 2026-10-31). Made now, it could probably go to
-   Google Play later as the app's own key, so the phone wouldn't need a second reinstall (from memory, not checked).
-2. Release v1.18.0 (it carries v1.16.0 and v1.17.0 too) with the release ritual in
+## Found so far (2026-11-01; checked unless marked)
+- **Google Play accepts our own key** (checked: support.google.com/googleplay/android-developer/answer/9842756):
+  "Must be an RSA key of 2048 bits or more", uploaded with Google's PEPK tool. So a key made now can serve Play later,
+  and the phone needs only this one reinstall. A lost upload key is recoverable later (Play's upload key reset).
+- **The app ID `com.lifetracker.life_tracker` isn't used by any public app on Play** (checked: its Play page answers
+  404 "Not Found"). An unpublished or removed app could still hold it; Play only says so at the first upload.
+- **The backup has no photo files** (checked: `lib/core/backup/backup_service.dart`,
+  `lib/core/images/image_storage_service.dart`). Photos live in `<app documents>/note_images/`; the backup JSON keeps
+  only their file names, so restored photo blocks show "Image unavailable". The app has no share or save action for
+  photos (checked: no share code under `lib/features/notes`). The phone's Uplan is a release build (per the release
+  ritual; not checked on the phone), so `adb run-as` can't copy the files out either. Photos picked from the Gallery
+  may still have their originals there; photos taken with the in-app camera likely don't (from memory).
+- **v1.18.0 can't restore a v1.15.1 backup yet** (checked in the code, not yet by a test): v1.15.1 is schema 22,
+  v1.18.0 is 25. Schema 24 added `notes.isFavorite` and 25 added `notebooks.isFavorite`, both required booleans, and
+  the generated `fromJson` throws when a key is missing, so the whole import rolls back. Needed whichever way he
+  picks: fill the defaults for keys an older backup lacks, with a regression test that fails on today's code.
+- **Settings choices aren't in the backup** (checked: 10 files in `lib/` use SharedPreferences; the backup reads only
+  the database). List them before the move so he can set them again.
+- Assumed, not checked: only Ahmed uses Uplan; the phone runs v1.15.1 (check with adb before the move).
+
+## Waiting on Ahmed
+- **Which way to move his data** (asked 2026-11-01 in the next-step box):
+  1. Side by side (recommended): v1.18.0 gets a new app ID and installs beside the old app, so nothing is deleted;
+     the old app stays as a photo album until he has moved what he wants, and he mutes its notifications so
+     reminders don't come twice. The new ID is permanent and becomes the Play ID.
+  2. Uninstall and restore: one app, same ID; photos he doesn't screenshot first or find in his Gallery are lost.
+- Then: a one-page design (`docs/superpowers/specs/2026-11-01-signing-key-design.md`) for his OK, a short plan, and
+  one go-ahead that names every step on the phone.
+
+## Later, after this step
+1. Release v1.18.0 (it carries v1.16.0 and v1.17.0 too) with the release ritual in
    `.claude/skills/uplan-device-release/SKILL.md`. A release build needs Smart App Control to stay in evaluation mode.
-3. G4's owed check: time the inexact-alarm path on the Z Flip 6 (recipe in `docs/superpowers/STATUS-2026-07-28.md`, G4 section).
-4. **Heavy testing, then Google Play** (Ahmed, 2026-10-31; master plan, "Before a Play Store launch"). First shape with
-   him what the testing covers (superpowers' brainstorming). Testing on the phone needs step 1 first.
+2. G4's owed check: time the inexact-alarm path on the Z Flip 6 (recipe in `docs/superpowers/STATUS-2026-07-28.md`, G4 section).
+3. **Heavy testing, then Google Play** (Ahmed, 2026-10-31; master plan, "Before a Play Store launch"). First shape with
+   him what the testing covers (superpowers' brainstorming).
 
-## Waiting on Ahmed (written 2026-10-31 20:40, before this chat's fresh start)
-- **"Start on the signing-key step now?"** (asked 2026-10-31 in the next-step box; buttons "Yes, start it" / "Not now").
-  "Yes, start it" means step 1. First check the guess in step 1 (Play App Signing), then shape the step with him
-  (brainstorming) and ask one go-ahead that names everything it does: export a backup, uninstall, install, restore,
-  make the real key.
+## Also waiting on Ahmed (written 2026-10-31 20:40, before this chat's fresh start)
 - **His opinion for two retros** (asked: "in a few words, how did this install round feel to you?"). Then add both to
   `D:\projects\claude-setup\workflow\retros.md`:
   1. The auto-load kit's first live test (2026-10-31): START HERE, the current task and the last 5 history lines all
@@ -44,12 +63,21 @@ and debug and release builds work (the release build ran while Smart App Control
   switch a new tool's usage reporting off before its first run, and lead every reply with the answer.
 
 ## Done means
-- [ ] Written when a task starts.
+- [ ] Ahmed picks the way to move his data (side by side, or uninstall and restore).
+- [ ] A one-page design he approves (`docs/superpowers/specs/2026-11-01-signing-key-design.md`), then a short plan.
+- [ ] v1.18.0 restores a v1.15.1 backup: a regression test that fails on today's code and passes after the fix.
+- [ ] A real release key (RSA 4096) made, kept outside the repo and backed up off C:; its passwords only in the
+      git-ignored `android/key.properties` and Ahmed's own safe place; release builds signed with it.
+- [ ] v1.18.0 on the phone with all his data, checked by him; the old app handled the way he picked.
+- [ ] The release ritual signs with the new key and checks the signature before publishing.
 
 ## Do not touch
-- Written when a task starts.
+- The phone: nothing installed, uninstalled or exported until Ahmed's go-ahead names every step.
+- No key file or password in git, chat or logs. Smart App Control and other security settings stay as they are.
 
 ## Noticed (not fixing now)
+- **The backup could carry photos and Settings** (a zip with the JSON plus `note_images/`), so a lost phone or a
+  future reinstall keeps them. Found 2026-11-01; not this task. For the master plan's parked list if Ahmed wants it.
 - **AppData writes from a chat stay inside the Claude app's private copy**, like the registry. Checked from outside on
   2026-10-31: `%LOCALAPPDATA%\pip`, `%LOCALAPPDATA%\npm-cache` and `%APPDATA%\GitHub CLI` exist only inside the app.
   That's why the build tools and the Dart package cache live in `D:\dev`. Passed to the AI management chat.
