@@ -10,9 +10,10 @@ is a bit laggy."
 
 ## Steps (in order)
 1. ✅ Start: START HERE, this file, the history and the code map read (2026-11-01 09:50).
-2. ⬜ **← here.** Size the whole job and get his yes before any helper starts (asked 2026-11-01 about 10:00; see
-   "Proposed size").
-3. ⬜ Emulators: his own click to turn on Windows Hypervisor Platform, a restart, then the emulator and two Android
+2. ✅ Size the whole job and get his yes before any helper starts: "Three helpers" (Ahmed, 2026-11-01 about 10:05;
+   see "Size").
+3. ⬜ **← here, waiting on his Windows switch and restart (he types "done" in the Tester chat).** Emulators: his own
+   click to turn on Windows Hypervisor Platform, a restart, then the emulator and two Android
    versions into `D:\dev\android-sdk`, with the AVDs in `D:\dev\android-avd` (not on C:). Spread: a small phone, a
    Flip-like 1080 × 2640 phone, a large phone; Android 16 (his phone's) and Android 13.
 4. ⬜ The round table: helpers plus this chat review the product and flows, the visuals and the code (needless
@@ -44,8 +45,37 @@ is a bit laggy."
 - Not checked yet: whether a profile build keeps the phone's `run-as` door open (as I remember it, Flutter's profile
   build type copies the debug one, so probably yes; check the APK's `debuggable` flag before saying so).
 
-## Proposed size (asked 2026-11-01 about 10:00, waiting on Ahmed)
-Big, in rounds: my work about 2–3 h before the fixes (emulators 20–30 min, screenshots on three sizes 20–30 min, the
+## The widget's add-task: what the code shows (read 2026-11-01; nothing measured yet)
+- The "+" opens `MainActivity` with `uplan://add_task` (`UplanWidgetProvider.kt:49`). A new engine starts on
+  `/quick-add` (`MainActivity.getInitialRoute`); a running one gets `openQuickAdd` (`onNewIntent`, then
+  `app.dart` `_onWidgetMethod`).
+- Saving or dismissing calls `SystemNavigator.pop()` (`quick_add_task_screen.dart:63`), which finishes the activity,
+  and an activity that made its own engine destroys it (checked: Flutter's `FlutterActivity.shouldDestroyEngineWithHost`,
+  `D:\dev\flutter\engine\src\flutter\shell\platform\android\...\FlutterActivity.java:1081`). So every "+" starts the
+  whole Flutter app again, `main()` and the launch work included.
+- The whole app runs in a see-through window: `windowIsTranslucent` in both themes (`res/values*/styles.xml`) and
+  `getBackgroundMode()` transparent (`MainActivity.kt:22`), which puts every screen on Flutter's texture rendering
+  instead of its faster surface rendering (checked: `FlutterActivity.getRenderMode`, `FlutterActivity.java:1248`).
+  Android shows no splash for a see-through window (as I remember Android's starting-window rule; to check on the
+  emulator), so nothing appears between the tap and Flutter's first frame.
+- Before the first frame `main.dart` awaits the alarm plugin's start (which spins up a second, background Flutter engine:
+  checked, `android_alarm_manager_plus-4.0.8` `AndroidAlarmManagerPlugin.java:98`), the widget callback, SharedPreferences
+  and `NotificationService.init` (three channels, a permission request, the exact-alarm check).
+- Right after the first frame `app.dart` `_reschedule()` re-books every reminder (`NotificationService.rescheduleAll`:
+  for each open task with a reminder, 9 platform calls just to cancel its 3 slots, then 3 more per future slot),
+  purges Recently deleted, syncs the widgets and the live dashboard and checks for an update, while the sheet opens
+  and the keyboard comes up.
+- Saving awaits the insert, then `HomeWidgetService.sync` (one query per habit, every task, every shift; about 13
+  preference writes and 3 widget redraws when anything changed) before the sheet closes (`quick_add_task_screen.dart:98-111`).
+- And the phone runs a debug build, which does all of this much more slowly.
+- A profile build should keep the phone's `run-as` door open: Flutter's Gradle plugin makes the profile build type
+  from the debug one (checked: `FlutterPlugin.kt:209`, `initWith(debugBuildType)`); confirm on the built APK.
+- Next: measure on a profile build (an emulator first): tap to sheet, send to closed, with and without the launch work.
+
+## Size (Ahmed chose three helpers, 2026-11-01 about 10:05)
+The helpers' briefs: `round-table\briefs.md` in the shared notes folder
+(`C:\Users\kille\AppData\Local\Claude-Data\claude_pzs8sxrjxfjjc\side-session-notes\local_48e18ebc-7554-47c5-9e1a-ac62e7be4fcb`).
+Seats: product and flows, looks, code; the chair (this chat) takes start-up speed and the widget. Big, in rounds: my work about 2–3 h before the fixes (emulators 20–30 min, screenshots on three sizes 20–30 min, the
 widget lag 45–90 min, the ranked page 30–45 min), plus 30–60 min of waiting (downloads, builds, tests); the fixes get
 their own estimate once he picks. Tokens (guesses from earlier helpers' costs): two helpers (product and looks; code)
 plus this chat about 0.9–1.4M; three helpers about 1.1–1.7M; this chat alone about 0.7–1.0M. His yes also covers the
