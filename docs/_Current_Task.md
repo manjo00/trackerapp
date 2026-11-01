@@ -1,7 +1,64 @@
-# Current Task: handed to the Tester chat (2026-11-01)
-**Date:** 2026-11-01 · **Branch:** master
+# Current Task: Tester, a speed and quality pass (2026-11-01)
+**Date:** 2026-11-01 · **Branch:** master · **Chat:** Tester, a temporary chat the Uplan chat started at Ahmed's
+request. It owns the repo's work until it hands back.
 
-## State
+## Goal (Ahmed, 2026-11-01, his words)
+"make the app cleaner and fast and responsive can you download it in multiple sims and ask helpers including yourself
+to not just the product and visuals but the code also make a review in round table manner and find problems and fixes
+and ideas need to be implemented like if something is coded inefficiently. i found that adding a task from the widget
+is a bit laggy."
+
+## Steps (in order)
+1. ✅ Start: START HERE, this file, the history and the code map read (2026-11-01 09:50).
+2. ⬜ **← here.** Size the whole job and get his yes before any helper starts (asked 2026-11-01 about 10:00; see
+   "Proposed size").
+3. ⬜ Emulators: his own click to turn on Windows Hypervisor Platform, a restart, then the emulator and two Android
+   versions into `D:\dev\android-sdk`, with the AVDs in `D:\dev\android-avd` (not on C:). Spread: a small phone, a
+   Flip-like 1080 × 2640 phone, a large phone; Android 16 (his phone's) and Android 13.
+4. ⬜ The round table: helpers plus this chat review the product and flows, the visuals and the code (needless
+   rebuilds, database queries, startup, the home-screen widgets). Each finding: the problem as behaviour, where in
+   the code, the fix, its cost, its gain. One ranked list, on a page for his tablet and in `docs/`.
+5. ⬜ The widget's laggy add-task: reproduce, measure on a profile or release build (not debug), find the cause
+   (superpowers' systematic-debugging), fix it with a regression test that fails on the old code.
+6. ⬜ The fixes he picks, demo first, in batches; analyze clean and tests green; commit on `master`; push.
+7. ⬜ Hand back: state into these files, then offer to be archived.
+
+## Checked so far (2026-11-01, read only; nothing on the PC or the phone changed)
+- **The PC can run emulators after one Windows switch.** AMD virtualization is on in the BIOS
+  (`Win32_Processor.VirtualizationFirmwareEnabled` True) and Windows' own hypervisor already runs for Memory Integrity
+  (`Win32_DeviceGuard`: VBS and HVCI running). Windows Hypervisor Platform, Virtual Machine Platform and Hyper-V are
+  all off (`Win32_OptionalFeature` InstallState 2). The emulator needs Windows Hypervisor Platform on: Ahmed's own
+  click (Turn Windows features on or off), then a restart. Google's AMD driver (AEHD) is no way around it: as I
+  remember Google's docs, it can't run while Windows' hypervisor does (not checked).
+- 16 GB RAM (one emulator at a time is the comfortable load), 6 cores; free space C: 348 GB, D: 230 GB.
+- `D:\dev\android-sdk` has no emulator, no system images and no AVDs (platforms 34–36, build-tools 36.0.0,
+  cmdline-tools whose `sdkmanager` now hands over to `android.exe`: pass `--no-metrics`).
+- Download sizes (Google's repository lists, read 2026-11-01): emulator 37.2.13 (stable) 455 MB; Android 16
+  `system-images;android-36;google_apis;x86_64` 1,895 MB; Android 13 `android-33` 1,708 MB (Android 12 `android-31`
+  1,471 MB; Android 17 `android-37.0` 2,144 MB). The emulator plus Android 16 and 13: about 4.1 GB.
+- The code: 215 hand-written Dart files, about 36,700 lines in `lib/` (workout 8.4k, notes 5.0k, tasks 4.0k, trackers
+  2.6k, home 2.1k), 46 test files. The home-screen widgets: Kotlin in
+  `android/app/src/main/kotlin/com/lifetracker/life_tracker/` (`Uplan*WidgetProvider.kt`, `*RemoteViewsFactory.kt`,
+  `MainActivity.kt`) plus `lib/core/widget/home_widget_service.dart` and
+  `lib/features/tasks/presentation/screens/quick_add_task_screen.dart`.
+- Not checked yet: whether a profile build keeps the phone's `run-as` door open (as I remember it, Flutter's profile
+  build type copies the debug one, so probably yes; check the APK's `debuggable` flag before saying so).
+
+## Proposed size (asked 2026-11-01 about 10:00, waiting on Ahmed)
+Big, in rounds: my work about 2–3 h before the fixes (emulators 20–30 min, screenshots on three sizes 20–30 min, the
+widget lag 45–90 min, the ranked page 30–45 min), plus 30–60 min of waiting (downloads, builds, tests); the fixes get
+their own estimate once he picks. Tokens (guesses from earlier helpers' costs): two helpers (product and looks; code)
+plus this chat about 0.9–1.4M; three helpers about 1.1–1.7M; this chat alone about 0.7–1.0M. His yes also covers the
+4.1 GB download above.
+
+## Must know (from the Uplan chat's brief)
+- The phone's Uplan is a debug build (slow): judge speed on a profile or release build (an emulator, or his phone
+  with his OK). A release build on the phone closes `adb run-as`, today the only full copy of its data: his call.
+- Never uninstall the phone's app. Check an APK's fingerprint before `adb install -r` (device skill), and copy his
+  data off first the way the move did (`docs/superpowers/plans/2026-11-01-signing-key.md`, Task 4).
+- Stay on Flutter 3.44. Android CLI commands need `--no-metrics`. Never change Smart App Control.
+
+## Carried over from the signing-key move (2026-11-01)
 - **The signing-key move is done** (2026-11-01; plan `docs/superpowers/plans/2026-11-01-signing-key.md`, design
   `docs/superpowers/specs/2026-11-01-signing-key-design.md`). The phone's Uplan (v1.18.0+27, a debuggable build) is
   now signed with Uplan's own key (START HERE has its place and fingerprint), under the same app ID, with all its
@@ -11,12 +68,6 @@
   Ahmed is happy; what happens to it then is his call.
 - Asked of Ahmed after the move, not confirmed yet: Alarms & reminders on, battery Unrestricted, the widgets added
   again, the feedback key typed in again if he uses it, and the key's password copied into his own safe place.
-
-## Next: the Tester chat (Ahmed, 2026-11-01)
-Ahmed asked for a new chat called "Tester" to make the app cleaner, faster and more responsive: try it on several
-emulators, run a round-table review with helpers (product, visuals and code, inefficient code included), then turn
-the findings into fixes. First known issue: adding a task from the home-screen widget feels laggy. That chat owns the
-repo's next work and writes its own task here.
 
 ## Later
 1. Release v1.18.0 (it carries v1.16.0 and v1.17.0 too) with the release ritual in
@@ -78,19 +129,12 @@ repo's next work and writes its own task here.
 - This chat's round-table plan (approved 2026-10-31) also says: read the project's pinned versions before any install,
   switch a new tool's usage reporting off before its first run, and lead every reply with the answer.
 
-## Done means
-- [x] Ahmed picks the way to move his data: one app with the same ID, by a full copy (2026-11-01).
-- [x] A one-page design he approves (`docs/superpowers/specs/2026-11-01-signing-key-design.md`, "Looks right"), then
-      a short plan (`docs/superpowers/plans/2026-11-01-signing-key.md`, written 2026-11-01).
-- [x] A real signing key (RSA 4096) made, kept outside the repo and backed up off C: (OneDrive copy, same SHA-256);
-      its password only in the git-ignored `android/key.properties` and Ahmed's own safe place (his copy not
-      confirmed yet); debug, profile and release builds signed with it (checked with `signingReport` and `apksigner`).
-- [x] The full copy of the phone's private folder is on D: and checked (330 files as on the phone, integrity check
-      `ok`, all 309 photos the notes point to are there, row counts written to `counts.txt`) before anything was removed.
-- [x] The dress rehearsal passed: the test copy held the same database byte for byte; Ahmed: "Looks right"; removed.
-- [x] The new-key v1.18.0 is on the phone under the same ID with all his data (same database SHA-256, 309 photos);
-      its alarm entries came back (40, 38 before); Ahmed's first look: "initial; look is ok".
-- [x] The release ritual checks the fingerprint before any install or release (device skill).
+## Done means (Tester)
+- [ ] A ranked round-table report Ahmed has read (a page for his tablet, a copy in `docs/`).
+- [ ] The widget's add-task lag fixed, or explained with numbers from a profile or release build.
+- [ ] The fixes he picked built, analyze clean, all tests green, committed on `master` and pushed.
+- [ ] The handover files updated; Tester hands back and offers to be archived.
+(The signing-key move's own checklist is all done: `docs/superpowers/plans/2026-11-01-signing-key.md` and the history.)
 
 ## Do not touch
 - The phone's Uplan: never uninstall it to get past an install error (that deletes its data). A build carrying the

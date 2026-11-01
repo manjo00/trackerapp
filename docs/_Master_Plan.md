@@ -19,7 +19,7 @@ Rebuilt on 2026-10-27 from the git log, the public releases, `docs/superpowers/S
   2. ✅ Cross the signing-key change (2026-11-01): Uplan's own RSA 4096 key, backed up in OneDrive; the phone's whole
      private folder copied, checked, rehearsed in a test copy, then moved into a new-key install under the same ID
      (nothing lost: 309 photos, the database byte for byte). Plan `docs/superpowers/plans/2026-11-01-signing-key.md`.
-  3. ⬜ The Tester chat (Ahmed, 2026-11-01): the app on several emulators, a round-table review with helpers (product,
+  3. ⬜ **← now.** The Tester chat (Ahmed, 2026-11-01; started 09:47, its task in `docs/_Current_Task.md`): the app on several emulators, a round-table review with helpers (product,
      visuals, code), then fixes for speed and responsiveness. First known issue: adding a task from the widget lags.
   4. ⬜ Release v1.18.0 (it carries 1.16 and 1.17 too). Smart App Control blocks release builds whenever it is on. A
      release build on the phone isn't debuggable, so decide with Ahmed how backups work after that.
