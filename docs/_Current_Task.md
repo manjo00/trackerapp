@@ -12,11 +12,19 @@ is a bit laggy."
 1. ✅ Start: START HERE, this file, the history and the code map read (2026-11-01 09:50).
 2. ✅ Size the whole job and get his yes before any helper starts: "Three helpers" (Ahmed, 2026-11-01 about 10:05;
    see "Size").
-3. ⬜ **← here, waiting on his Windows switch and restart (he types "done" in the Tester chat).** Emulators: his own
-   click to turn on Windows Hypervisor Platform, a restart, then the emulator and two Android
-   versions into `D:\dev\android-sdk`, with the AVDs in `D:\dev\android-avd` (not on C:). Spread: a small phone, a
-   Flip-like 1080 × 2640 phone, a large phone; Android 16 (his phone's) and Android 13.
-4. ⬜ The round table: helpers plus this chat review the product and flows, the visuals and the code (needless
+3. ✅ Emulators (2026-11-01 11:13–11:55; undo rows in `docs/_Undo_Table.md`): Ahmed turned on Windows Hypervisor
+   Platform and restarted; the emulator 37.2.13 and Android 16 and 13 downloaded in 9 min; three AVDs in
+   `D:\dev\android-avd`: `uplan_flip_a16` (1080 × 2640, 420 dpi), `uplan_small_a13` (720 × 1280, 320 dpi, run with font
+   scale 1.3), `uplan_fold_a16` (1856 × 2160, 420 dpi). Start one at a time, headless:
+   `ANDROID_AVD_HOME=D:\dev\android-avd emulator -avd <name> -no-window -no-audio -no-boot-anim -gpu host -no-metrics
+   -crash-report-mode never` (boot 90–105 s). Demo data (made up): `tool/seed_demo_test.dart` in the worktree writes
+   the database (`flutter test tool/seed_demo_test.dart`); 10 photos made with ffmpeg; the Tester's scratchpad scripts
+   `prepare.sh` (install, permissions, data, settings with every first-run tip seen) and `capture.sh` (each screen by
+   route on a cold start: `am start -n com.lifetracker.life_tracker/.MainActivity --es route /x`). 65 screenshots plus
+   four overview sheets in the notes folder's `round-table\screens\` (`INDEX.md`).
+4. ⬜ **← here (2026-11-01 about 11:55).** The code seat is done (`round-table\code.md`: 14 findings; it used about 393k
+   tokens, over its 150–200k budget); the product and looks seats are running with a firmer budget (about 120k each).
+   The round table: helpers plus this chat review the product and flows, the visuals and the code (needless
    rebuilds, database queries, startup, the home-screen widgets). Each finding: the problem as behaviour, where in
    the code, the fix, its cost, its gain. One ranked list, on a page for his tablet and in `docs/`.
 5. ⬜ The widget's laggy add-task: reproduce, measure on a profile or release build (not debug), find the cause
@@ -73,6 +81,14 @@ is a bit laggy."
   `app-profile.apk` (v1.18.0+27, 92.9 MB, arm64 + arm32 + x86_64, target SDK 36) shows `application-debuggable` in
   `aapt2 dump badging`. So the phone could run a fast (AOT) profile build without losing the full-copy backup path.
   First worktree build: pub get 10 s, build_runner 79 s, `flutter build apk --profile` 3 min 45 s.
+- **Seen on the emulators (2026-11-01, profile build, demo data):** when the keyboard opens, the quick-add sheet
+  stretches to the top of the screen with a blank band above the keyboard: `quick_add_task_screen.dart:148` adds
+  `MediaQuery.of(context).viewInsets.bottom` while `resizeToAvoidBottomInset: true` already lifts the body, so the
+  keyboard's height counts twice (seen on all three emulators). The first launch after install took 4.5 s to
+  "Displayed"; later cold starts about 2.1 s, but Flutter doesn't hold back Android's first draw in texture mode
+  (checked: `FlutterActivity.java:807`), so that number stops before Flutter's first frame. On the foldable emulator
+  5 of 14 cold starts had drawn nothing after 5 s (all had by 9 s). The alarm plugin's second engine starts about 1–5 s
+  after the window appears (logcat: a second "Using the Impeller rendering backend" line).
 - Next: measure on a profile build (an emulator first): tap to sheet, send to closed, with and without the launch work.
 
 ## Size (Ahmed chose three helpers, 2026-11-01 about 10:05)
