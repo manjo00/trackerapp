@@ -1,5 +1,6 @@
 # The signing-key step: design
-**Date:** 2026-11-01 · **Status:** draft, waiting for Ahmed's OK · **Task:** `docs/_Current_Task.md`
+**Date:** 2026-11-01 · **Status:** being revised. The phone's Uplan turned out to be a debuggable v1.18.0, so its
+whole private folder (photos included) can be copied; the way to move is open again (`docs/_Current_Task.md`).
 
 ## Why
 Android only lets an update replace an app when both carry the same signature, made with a signing key. Uplan's key

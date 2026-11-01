@@ -14,26 +14,36 @@ off C: and can later become the app's signing key on Google Play.
   404 "Not Found"). An unpublished or removed app could still hold it; Play only says so at the first upload.
 - **The backup has no photo files** (checked: `lib/core/backup/backup_service.dart`,
   `lib/core/images/image_storage_service.dart`). Photos live in `<app documents>/note_images/`; the backup JSON keeps
-  only their file names, so restored photo blocks show "Image unavailable". The app has no share or save action for
-  photos (checked: no share code under `lib/features/notes`). The phone's Uplan is a release build (per the release
-  ritual; not checked on the phone), so `adb run-as` can't copy the files out either. Photos picked from the Gallery
-  may still have their originals there; photos taken with the in-app camera likely don't (from memory).
-- **v1.18.0 can't restore a v1.15.1 backup yet** (checked in the code, not yet by a test): v1.15.1 is schema 22,
-  v1.18.0 is 25. Schema 24 added `notes.isFavorite` and 25 added `notebooks.isFavorite`, both required booleans, and
-  the generated `fromJson` throws when a key is missing, so the whole import rolls back. Needed whichever way he
-  picks: fill the defaults for keys an older backup lacks, with a regression test that fails on today's code.
-- **Settings choices aren't in the backup** (checked: 10 files in `lib/` use SharedPreferences; the backup reads only
-  the database). List them before the move so he can set them again.
-- Assumed, not checked: only Ahmed uses Uplan; the phone runs v1.15.1 (check with adb before the move).
+  only their file names, and the app has no share or save action for photos. Settings (SharedPreferences) aren't in
+  it either.
+- **But the phone's Uplan is a test build, so the cable tool can copy everything** (checked on the phone over adb,
+  2026-11-01, after Ahmed asked why the photos can't move): `dumpsys` shows v1.18.0 (versionCode 27), installed
+  2026-06-29, last updated 2026-09-29 23:49, with the `DEBUGGABLE` flag, and `adb shell run-as
+  com.lifetracker.life_tracker` opens its private folder. Inside: `app_flutter/life_tracker.db`,
+  `app_flutter/note_images/` (309 photos, 457 MB; `app_flutter` is 543 MB in all), `shared_prefs/` (settings, widget
+  data, scheduled notifications), `databases/`, `files/`. The external folder
+  `/sdcard/Android/data/com.lifetracker.life_tracker/files` is empty.
+- **One thing can't be copied:** `flutter_secure_storage` keeps its values under a key in Android's key store, which
+  dies with the install. Only `lib/core/github/github_feedback_service.dart` uses it (the in-app feedback's GitHub
+  key), so that sign-in gets entered again. Its value is a secret: don't read or copy it.
+- **The phone already runs v1.18.0, not v1.15.1** (the old assumption was wrong), so its data is already at schema 25
+  and the old-backup restore bug (under Noticed) doesn't block this move.
+- Assumed, not checked: only Ahmed uses Uplan.
 
 ## Decided
-- **Side by side** (Ahmed, 2026-11-01, over "uninstall and restore"): v1.18.0 gets a new app ID and installs beside
-  the old app, so nothing is deleted; the old app stays as a photo album until he has moved what he wants.
+- **Side by side** (Ahmed, 2026-11-01, over "uninstall and restore"), picked while the photos looked impossible to
+  copy. Reopened the same morning with new evidence: the full copy works (above).
 
 ## Waiting on Ahmed
-- **His OK on the design:** `docs/superpowers/specs/2026-11-01-signing-key-design.md` (asked 2026-11-01). Then a
-  short plan (superpowers' writing-plans, carried out in this chat with executing-plans) and one go-ahead that names
-  every step on the phone.
+- **Which way, now that everything can be copied** (asked 2026-11-01):
+  1. One app, same ID (recommended): copy the whole private folder to the PC and check it; uninstall; install the
+     new-key build under the same ID; put everything back. Nothing lost, no new ID, no double reminders.
+  2. Side by side: the same full copy into a second app with the new ID `io.github.manjo00.uplan`; the old app stays
+     until he removes it.
+  Either way the new app's first install must be a debuggable build, so `run-as` can write into it; later updates
+  can be normal release builds with the same key.
+- Then: update the design (`docs/superpowers/specs/2026-11-01-signing-key-design.md`) for his OK, a short plan, and
+  one go-ahead that names every step on the phone.
 
 ## Later, after this step
 1. Release v1.18.0 (it carries v1.16.0 and v1.17.0 too) with the release ritual in
@@ -63,9 +73,10 @@ off C: and can later become the app's signing key on Google Play.
   switch a new tool's usage reporting off before its first run, and lead every reply with the answer.
 
 ## Done means
-- [x] Ahmed picks the way to move his data: side by side (2026-11-01).
+- [ ] Ahmed picks the way to move his data (side by side was picked, then reopened by the full-copy finding).
 - [ ] A one-page design he approves (`docs/superpowers/specs/2026-11-01-signing-key-design.md`), then a short plan.
-- [ ] v1.18.0 restores a v1.15.1 backup: a regression test that fails on today's code and passes after the fix.
+- [ ] The full copy of the phone's private folder is on the PC and checked (database opens, 309 photos) before
+      anything is removed from the phone.
 - [ ] A real release key (RSA 4096) made, kept outside the repo and backed up off C:; its passwords only in the
       git-ignored `android/key.properties` and Ahmed's own safe place; release builds signed with it.
 - [ ] v1.18.0 on the phone with all his data, checked by him; the old app handled the way he picked.
@@ -76,6 +87,10 @@ off C: and can later become the app's signing key on Google Play.
 - No key file or password in git, chat or logs. Smart App Control and other security settings stay as they are.
 
 ## Noticed (not fixing now)
+- **v1.18.0 can't restore a backup made by an older version** (checked in the code, not by a test): schema 24 added
+  `notes.isFavorite` and 25 added `notebooks.isFavorite`, both required booleans, and the generated `fromJson` throws
+  on a missing key, so the whole import rolls back. Not needed for the signing-key move (the phone is on v1.18.0);
+  worth a fix with a regression test before anyone restores an old backup. Found 2026-11-01.
 - **The backup could carry photos and Settings** (a zip with the JSON plus `note_images/`), so a lost phone or a
   future reinstall keeps them. Found 2026-11-01; not this task. For the master plan's parked list if Ahmed wants it.
 - **AppData writes from a chat stay inside the Claude app's private copy**, like the registry. Checked from outside on
