@@ -33,9 +33,17 @@ Rebuilt on 2026-10-27 from the git log, the public releases, `docs/superpowers/S
        switch per workout. Demo first; design `docs/superpowers/specs/2026-11-01-gym-smart-order-design.md` (he
        approved it). **Built, tested and on the phone 2026-11-01; the order itself waits for his next workout** (the
        design file's Status says what's next).
+     - ⬜ **Clean-up next (Ahmed, 2026-11-01):** the smart order only in developer mode; the Targets system and
+       Programs removed; quick starts show his recent saved workouts; My Workouts and their editor stay. No database
+       change. Design `docs/superpowers/specs/2026-11-01-gym-cleanup-design.md`, waiting for his yes.
      - ⬜ A weekly cardio day, as a switch (Ahmed), after the smart order; Claude's sketch is in the same design file.
      - ⬜ A casual, science-based progress dashboard: strength trend per exercise, stall tips, weekly sets per muscle
-       against the research ranges, his own "tired penalty". Full design path after the smart order.
+       against the research ranges, his own "tired penalty". Full design path after the smart order. It replaces the
+       Targets system.
+     - ⬜ Later: a scheduling tool that puts saved workouts on the schedule; it replaces programs (Ahmed, 2026-11-01).
+     - ⬜ Idea: a Snapchat sticker with a workout's total kg lifted and total sets (Ahmed asked, 2026-11-01): Snap's
+       Creative Kit opens Snapchat's camera with an app's sticker on top; whether Snap must approve it for personal
+       use isn't checked yet. The other way: a photo made in Uplan with the summary on it, shared to any app.
   4. ⬜ Release v1.18.0 (it carries 1.16 and 1.17 too). Smart App Control blocks release builds whenever it is on. A
      release build on the phone isn't debuggable, so decide with Ahmed how backups work after that.
   5. ⬜ G4's owed check: time the inexact-alarm path on the Z Flip 6 (recipe in STATUS, G4 section).
