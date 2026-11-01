@@ -22,7 +22,9 @@ Rebuilt on 2026-10-27 from the git log, the public releases, `docs/superpowers/S
   3. ⬜ **← now.** The Tester chat (Ahmed, 2026-11-01; started 09:47, its task in `docs/_Current_Task.md`): the app on several emulators, a round-table review with helpers (product,
      visuals, code), then fixes for speed and responsiveness. First known issue: adding a task from the widget lags.
      ✅ Emulators and the round table (2026-11-01): `docs/superpowers/round-table-2026-11-01.md` (top find: a new note
-     typed and left without Enter vanishes; the widget "+" shows nothing for 1.2–5.4 s). ⬜ The fix batches Ahmed picks.
+     typed and left without Enter vanishes; the widget "+" shows nothing for 1.2–5.4 s). Ahmed picked "A, then B".
+     ✅ Batch A (2026-11-01, `fcaab82`): notes keep typed lines, cursor in new lines, "Last backup" in Settings.
+     ⬜ Batch B: the widget "+". ⬜ Then the phone try.
      **Alongside it, gym (Ahmed, 2026-11-01; the Uplan chat):** his new split is a whole-body warm-up, 1 set per
      exercise, every other day; goal: strength and muscle equally, kept casual.
      - ⬜ Smart order (his pick, the tired score, plus his rules: mix the muscles; triceps after the presses, biceps

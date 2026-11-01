@@ -17,10 +17,12 @@
   about 193k, looks about 236k.
 
 ## The three things to know
-1. **W1 + C4: a new note vanishes if you leave it without pressing Enter** (checked 3 of 3 on the emulator: new note,
-   one typed line, then Back twice or the on-screen arrow; the note is gone from the database). Cause (code seat): text
-   saves only on blur or Enter, and `_onLeave` (`note_editor_screen.dart`) deletes lines that read as empty before the
-   blur save lands. Editing an existing line and backing out normally kept the edit.
+1. **W1 + C4: a new note vanishes if you leave it without pressing Enter** (seen on the emulator: new note, one typed
+   line, then Back twice; the note was gone from the database. Only that first try had a screenshot proving the line
+   was typed; tries 2 and 3 may have been the missing-cursor bug instead, so the first "3 of 3" was corrected. A widget
+   test with Android's Back reproduces it every time on the old code). Cause (code seat): text saves only on blur or
+   Enter, and `_onLeave` (`note_editor_screen.dart`) deletes lines that read as empty before the blur save lands.
+   Editing an existing line and backing out normally kept the edit. **Fixed in batch A (`fcaab82`).**
 2. **W2–W4: the widget "+" shows nothing for 1.2–5.4 s.** Every "+" restarts the app (`SystemNavigator.pop` destroys
    the engine); the see-through window gets no splash; `AndroidAlarmManager.initialize()` (which spins up a second
    engine) blocks 0.7–1.6 s before `runApp`; after the sheet appears, `_reschedule()` re-books every reminder for

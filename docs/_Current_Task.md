@@ -35,9 +35,18 @@ is a bit laggy."
    stopwatch (`lib/core/diagnostics/startup_trace.dart`, marks in `main.dart`, `app.dart`, `quick_add_task_screen.dart`)
    and the emulator scripts (`tool/emulator/`, `tool/seed_demo_test.dart`) sit uncommitted in the Tester worktree.
    The fix is batch B.
-6. ⬜ **← here: waiting on Ahmed's pick of the first fix batch** (A nothing gets lost, B the widget "+", C smooth
-   everywhere, D easier to read, E faster daily flow; all four seats and the chair recommend A, then B). Then demo
-   first, in batches; analyze clean and tests green; commit on `master`; push.
+6. ⬜ **← here: the fix batches Ahmed picked, "A, then B" (2026-11-01 about 12:55).**
+   - ✅ Batch A (13:15, `fcaab82`, on `master`): a typed line survives Back (`NoteLineSaves` in
+     `lib/features/notes/presentation/note_line_saves.dart` saves every line before `_onLeave` prunes empty ones, and
+     when the app goes inactive); a new line takes the cursor even when it is marked after it was built (it often
+     didn't on the emulator); Settings › Data shows "Last backup: …" and says note photos and Settings aren't in the
+     backup (`lib/core/backup/last_backup.dart`; recorded when the share sheet reports a chosen app). 11 new tests, each
+     failed first on the old code; 340 pass; analyze clean; tried on the Flip emulator. Not on the phone yet.
+   - ⬜ Batch B, the widget "+": the alarm plugin after the first frame (`rescheduleAll` waits for it), no launch work on
+     quick-add opens, the sheet's keyboard inset counted once, Trackers' double title. Measure before and after with
+     the stopwatch (`--dart-define=UPLAN_TRACE=true`, still uncommitted in the worktree).
+   - Then ask Ahmed about his phone: install A + B as a debug build (as now) or the fast profile build; copy his data
+     off first either way.
 7. ⬜ Hand back: state into these files, then offer to be archived.
 
 ## Checked so far (2026-11-01, read only; nothing on the PC or the phone changed)
