@@ -21,6 +21,13 @@ Rebuilt on 2026-10-27 from the git log, the public releases, `docs/superpowers/S
      (nothing lost: 309 photos, the database byte for byte). Plan `docs/superpowers/plans/2026-11-01-signing-key.md`.
   3. ⬜ **← now.** The Tester chat (Ahmed, 2026-11-01; started 09:47, its task in `docs/_Current_Task.md`): the app on several emulators, a round-table review with helpers (product,
      visuals, code), then fixes for speed and responsiveness. First known issue: adding a task from the widget lags.
+     **Alongside it, gym (Ahmed, 2026-11-01; the Uplan chat):** his new split is a whole-body warm-up, 1 set per
+     exercise, every other day; goal: strength and muscle equally, kept casual.
+     - ⬜ Smart order (his pick, the tired score): the exercises that waited longest for an early slot in his last 3
+       workouts go first; same-muscle exercises never back to back; one switch per workout. Demo first, short design
+       in chat, waiting for his yes.
+     - ⬜ A casual, science-based progress dashboard: strength trend per exercise, stall tips, weekly sets per muscle
+       against the research ranges, his own "tired penalty". Full design path after the smart order.
   4. ⬜ Release v1.18.0 (it carries 1.16 and 1.17 too). Smart App Control blocks release builds whenever it is on. A
      release build on the phone isn't debuggable, so decide with Ahmed how backups work after that.
   5. ⬜ G4's owed check: time the inexact-alarm path on the Z Flip 6 (recipe in STATUS, G4 section).
