@@ -174,6 +174,43 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase>
     return allSets.where((s) => s.sessionId == latestSessionId).toList();
   }
 
+  /// The order exercises were really done in, for the last [limit] workouts
+  /// run from [programSessionId], newest first — what the smart order learns
+  /// from.
+  ///
+  /// An exercise's place is its first filled set: set rows are made when an
+  /// exercise is opened, and rows never filled in (weight and reps empty) don't
+  /// count, so a workout with nothing filled in is skipped.
+  Future<List<List<String>>> recentExerciseOrders(int programSessionId,
+      {int limit = 3}) async {
+    final rows = await (select(workoutSets).join([
+      innerJoin(workoutSessions,
+          workoutSessions.id.equalsExp(workoutSets.sessionId)),
+    ])
+          ..where(workoutSessions.programSessionId.equals(programSessionId) &
+              (workoutSets.weightKg.isNotNull() | workoutSets.reps.isNotNull()))
+          ..orderBy([
+            OrderingTerm.desc(workoutSessions.createdAt),
+            OrderingTerm.desc(workoutSessions.id),
+            OrderingTerm.asc(workoutSets.id),
+          ]))
+        .get();
+
+    // Rows come grouped by workout, newest first, each in set order.
+    final Map<int, List<String>> orders = {};
+    for (final row in rows) {
+      final WorkoutSet set = row.readTable(workoutSets);
+      final List<String>? names = orders[set.sessionId];
+      if (names == null) {
+        if (orders.length == limit) break;
+        orders[set.sessionId] = [set.exerciseName];
+      } else if (!names.contains(set.exerciseName)) {
+        names.add(set.exerciseName);
+      }
+    }
+    return orders.values.toList();
+  }
+
   // ── Exercise library ──────────────────────────────────────────────────────
 
   /// All exercises, built-in first then custom, alphabetical within each.

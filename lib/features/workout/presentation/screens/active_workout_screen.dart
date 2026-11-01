@@ -7,6 +7,7 @@ import '../../data/models/exercise_model.dart';
 import '../../data/models/muscle_groups.dart';
 import '../../data/models/program_exercise_model.dart';
 import '../../data/models/workout_set_model.dart';
+import '../../domain/smart_order.dart';
 import '../providers/workout_providers.dart';
 import '../widgets/exercise_accordion_card.dart';
 import '../widgets/rest_timer_bar.dart';
@@ -83,9 +84,11 @@ class _ActiveWorkoutScreenState
   }
 
   /// Builds the display list: exercises in program order, or grouped under
-  /// muscle headers when [_byMuscle] is on.
-  List<_DisplayItem> _buildItems(List<String> exercises) {
-    if (!_byMuscle) {
+  /// muscle headers when [grouped]. Never grouped while the smart order is on:
+  /// the Push/Pull/Legs sections would undo its mixing.
+  List<_DisplayItem> _buildItems(List<String> exercises,
+      {required bool grouped}) {
+    if (!grouped) {
       return exercises.map(_DisplayItem.exercise).toList();
     }
     // Bucket exercises under their Push/Pull/Legs/… group (by primary muscle).
@@ -356,6 +359,7 @@ class _ActiveWorkoutScreenState
 
         final exercises = active.exerciseNames;
         final setsByExercise = active.setsByExercise;
+        final SmartOrderResult? smart = active.smartOrder;
 
         return CoachMarks(
       screen: kCoachActiveWorkout,
@@ -382,7 +386,8 @@ class _ActiveWorkoutScreenState
                 itemBuilder: (_) => [
                   CheckedPopupMenuItem(
                     value: 'muscle',
-                    checked: _byMuscle,
+                    checked: _byMuscle && smart == null,
+                    enabled: smart == null,
                     child: const Text('Group by Push/Pull/Legs'),
                   ),
                   const PopupMenuItem(
@@ -400,12 +405,14 @@ class _ActiveWorkoutScreenState
             children: [
               _DayTimerHeader(elapsed: _elapsed),
               const RestTimerBar(),
+              if (smart != null) _SmartOrderNote(result: smart),
               Expanded(
                 child: exercises.isEmpty
                     ? _NoExercisesPlaceholder(onAdd: _addExercise)
                     : Builder(
                         builder: (ctx) {
-                          final items = _buildItems(exercises);
+                          final items = _buildItems(exercises,
+                              grouped: _byMuscle && smart == null);
                           return ListView.builder(
                             padding: const EdgeInsets.only(bottom: 120),
                             itemCount: items.length,
@@ -495,6 +502,48 @@ class _DayTimerHeader extends StatelessWidget {
               fontFeatures: const [FontFeature.tabularFigures()],
               color: cs.primary,
               height: 1.1,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The smart order's lines above the list: which exercises moved up for a
+/// fresh start, and a reminder that the first one (it changes each time)
+/// needs a light set first — the whole-body warm-up doesn't prepare it.
+class _SmartOrderNote extends StatelessWidget {
+  const _SmartOrderNote({required this.result});
+  final SmartOrderResult result;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final TextStyle style =
+        TextStyle(fontSize: 13, color: cs.onSurface.withAlpha(170));
+    final List<String> moved = result.movedUp;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.shuffle_rounded, size: 18, color: cs.primary),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (moved.isNotEmpty)
+                  Text(
+                    '${moved.join(' and ')} first: '
+                    '${moved.length == 1 ? 'its' : 'their'} turn for a fresh start.',
+                    style: style,
+                  ),
+                if (result.order.isNotEmpty)
+                  Text('First up: ${result.order.first}. One light set first.',
+                      style: style),
+              ],
             ),
           ),
         ],

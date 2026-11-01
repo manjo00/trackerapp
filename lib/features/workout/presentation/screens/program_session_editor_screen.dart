@@ -220,6 +220,16 @@ class _SessionEditorViewState
             )
           : Column(
               children: [
+                SwitchListTile(
+                  secondary: const Icon(Icons.shuffle_rounded),
+                  title: const Text('Smart order'),
+                  subtitle: const Text(
+                      'Reorders the exercises at each start from your last 3 workouts'),
+                  value: ref.watch(smartOrderEnabledProvider(session.id)),
+                  onChanged: (bool on) => ref
+                      .read(smartOrderEnabledProvider(session.id).notifier)
+                      .set(on),
+                ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
                   child: Row(

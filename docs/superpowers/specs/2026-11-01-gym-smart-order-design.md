@@ -1,7 +1,22 @@
 # Gym smart order (and the weekly cardio sketch): design
 
-**Date:** 2026-11-01 · **Status:** waiting for Ahmed's yes · **Path:** demo first (no database change, so nothing
-can be lost); the progress dashboard gets its own full design later.
+**Date:** 2026-11-01 · **Status:** approved by Ahmed ("Looks right"), built and tested, not yet tried on the phone ·
+**Path:** demo first (no database change, so nothing can be lost); the progress dashboard gets its own full design
+later.
+
+## Status (2026-11-01, 11:00; the Uplan chat)
+- **Built and tested, not yet tried on the phone.** The rules (`lib/features/workout/domain/smart_order.dart`), the
+  history read (`WorkoutDao.recentExerciseOrders`), Start (`ActiveWorkout.start`), the switch (`SmartOrderEnabled`,
+  shown in the workout's editor) and the two lines on the workout screen. While the smart order is on, the workout
+  screen's "Group by Push/Pull/Legs" (on by default) is off and greyed out, because its fixed sections would undo the
+  mixing. 26 new tests (`smart_order_test`, `recent_exercise_orders_test`, `smart_order_start_test`), each watched
+  failing first; the code checker is clean and all 329 tests pass. The two screens have no widget test: they get the
+  real try.
+- **Next:** with Ahmed's OK, install the debug build on the phone (`adb install -r` after the certificate check in
+  the device skill; never a release build, so the phone stays debuggable) and look at the switch in the editor.
+  Starting a workout on his phone adds an entry to his history, so the order itself is tried by Ahmed at his next
+  workout, or on the Tester's emulator once it runs. Then the weekly cardio switch, then the progress dashboard (full
+  design path).
 
 ## What Ahmed wants (his words, condensed)
 - His new split: a whole-body warm-up, then 1 working set per exercise, every other day. Goal: strength and muscle

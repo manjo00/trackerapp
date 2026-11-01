@@ -166,6 +166,11 @@ class WorkoutRepository {
     return rows.map(_setFromRow).toList();
   }
 
+  /// The order exercises were really done in, for the last three workouts of
+  /// [programSessionId], newest first (for the smart order).
+  Future<List<List<String>>> recentExerciseOrders(int programSessionId) =>
+      _dao.recentExerciseOrders(programSessionId);
+
   /// Dated history of past sets for [exerciseName] (newest first).
   Future<List<ExerciseHistoryEntry>> getExerciseHistory(
       String exerciseName, int currentSessionId) async {

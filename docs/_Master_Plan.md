@@ -25,8 +25,9 @@ Rebuilt on 2026-10-27 from the git log, the public releases, `docs/superpowers/S
      exercise, every other day; goal: strength and muscle equally, kept casual.
      - ⬜ Smart order (his pick, the tired score, plus his rules: mix the muscles; triceps after the presses, biceps
        after the rows): the exercises that waited longest for an early slot in his last 3 workouts go first; one
-       switch per workout. Demo first; design `docs/superpowers/specs/2026-11-01-gym-smart-order-design.md`, waiting
-       for his yes.
+       switch per workout. Demo first; design `docs/superpowers/specs/2026-11-01-gym-smart-order-design.md` (he
+       approved it). **Built and tested 2026-11-01; not yet tried on the phone** (the design file's Status says what's
+       next).
      - ⬜ A weekly cardio day, as a switch (Ahmed), after the smart order; Claude's sketch is in the same design file.
      - ⬜ A casual, science-based progress dashboard: strength trend per exercise, stall tips, weekly sets per muscle
        against the research ranges, his own "tired penalty". Full design path after the smart order.

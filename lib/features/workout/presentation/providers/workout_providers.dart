@@ -20,6 +20,7 @@ import '../../data/models/program_exercise_model.dart';
 import '../../data/models/workout_session_model.dart';
 import '../../data/models/workout_set_model.dart';
 import '../../data/repositories/workout_repository.dart';
+import '../../domain/smart_order.dart';
 
 part 'workout_providers.g.dart';
 
@@ -182,6 +183,45 @@ class WorkoutTargetsMode extends _$WorkoutTargetsMode {
   }
 }
 
+/// Whether the smart order is on for one planned workout (a program session):
+/// each start reorders its exercises from its last three workouts
+/// (`domain/smart_order.dart`). Off by default. Persisted in
+/// shared_preferences as a list of program-session ids; the app's backup
+/// leaves settings out, so after a reinstall it is off again.
+@riverpod
+class SmartOrderEnabled extends _$SmartOrderEnabled {
+  static const String _key = 'smart_order_session_ids';
+
+  @override
+  bool build(int programSessionId) {
+    _load();
+    return false;
+  }
+
+  Future<void> _load() async {
+    final bool on = await isOn(programSessionId);
+    if (on != state) state = on;
+  }
+
+  Future<void> set(bool on) async {
+    state = on;
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final Set<String> ids = {...?prefs.getStringList(_key)};
+    if (on) {
+      ids.add('$programSessionId');
+    } else {
+      ids.remove('$programSessionId');
+    }
+    await prefs.setStringList(_key, ids.toList());
+  }
+
+  /// Reads the switch straight from storage, for when a workout starts.
+  static Future<bool> isOn(int programSessionId) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getStringList(_key)?.contains('$programSessionId') ?? false;
+  }
+}
+
 // ── Active workout state ──────────────────────────────────────────────────
 
 /// Holds the current in-progress workout.
@@ -195,10 +235,16 @@ class ActiveWorkoutState {
     this.programExercises = const [],
     this.sets = const [],
     this.completedSetIds = const {},
+    this.smartOrder,
   });
 
   final int sessionId;
   final DateTime startedAt;
+
+  /// What the smart order decided, when it reordered [programExercises] —
+  /// the screen's "fresh start" and "first up" lines read it. Null when the
+  /// workout's switch is off.
+  final SmartOrderResult? smartOrder;
 
   /// Non-null when this session is driven by a program session type.
   final int? programSessionId;
@@ -229,6 +275,7 @@ class ActiveWorkoutState {
         programExercises: programExercises ?? this.programExercises,
         sets: sets ?? this.sets,
         completedSetIds: completedSetIds ?? this.completedSetIds,
+        smartOrder: smartOrder,
       );
 
   /// True when the session has a planned exercise list — either a real program
@@ -311,6 +358,20 @@ class ActiveWorkout extends _$ActiveWorkout {
   }) async {
     state = const AsyncLoading();
     final repo = ref.read(workoutRepositoryProvider);
+    List<ProgramExerciseModel> exercises = programExercises;
+    SmartOrderResult? smart;
+    if (programSessionId != null &&
+        programExercises.length > 1 &&
+        await SmartOrderEnabled.isOn(programSessionId)) {
+      try {
+        smart = await _smartOrder(repo, programSessionId, programExercises);
+        exercises = _inOrder(programExercises, smart.order);
+      } catch (e, st) {
+        // Never block a workout: fall back to the plan's order.
+        debugPrint('Smart order failed, using the plan order: $e\n$st');
+        smart = null;
+      }
+    }
     final int sessionId = await repo.createSession(
       programSessionId: programSessionId,
     );
@@ -319,9 +380,36 @@ class ActiveWorkout extends _$ActiveWorkout {
       startedAt: DateTime.now(),
       programSessionId: programSessionId,
       programSessionName: programSessionName,
-      programExercises: programExercises,
+      programExercises: exercises,
+      smartOrder: smart,
     ));
   }
+
+  /// Works out today's order from the last three workouts of this plan and
+  /// each exercise's main muscle in the library.
+  Future<SmartOrderResult> _smartOrder(WorkoutRepository repo,
+      int programSessionId, List<ProgramExerciseModel> planned) async {
+    final List<List<String>> recent =
+        await repo.recentExerciseOrders(programSessionId);
+    final Map<String, String> muscles = {
+      for (final ExerciseModel e in await repo.getAllExercises())
+        e.name: e.primaryMuscle,
+    };
+    return smartOrder(
+      planned: [for (final ProgramExerciseModel e in planned) e.exerciseName],
+      muscles: muscles,
+      recent: recent,
+    );
+  }
+
+  /// [planned] rearranged to follow [order]; an exercise planned twice keeps
+  /// both slots together.
+  static List<ProgramExerciseModel> _inOrder(
+          List<ProgramExerciseModel> planned, List<String> order) =>
+      [
+        for (final String name in order)
+          ...planned.where((ProgramExerciseModel e) => e.exerciseName == name),
+      ];
 
   /// Adds a set for [exerciseName], auto-detects PR, and updates state.
   Future<WorkoutSetModel?> addSet({
