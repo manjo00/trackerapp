@@ -42,11 +42,20 @@ is a bit laggy."
      didn't on the emulator); Settings › Data shows "Last backup: …" and says note photos and Settings aren't in the
      backup (`lib/core/backup/last_backup.dart`; recorded when the share sheet reports a chosen app). 11 new tests, each
      failed first on the old code; 340 pass; analyze clean; tried on the Flip emulator. Not on the phone yet.
-   - ⬜ Batch B, the widget "+": the alarm plugin after the first frame (`rescheduleAll` waits for it), no launch work on
-     quick-add opens, the sheet's keyboard inset counted once, Trackers' double title. Measure before and after with
-     the stopwatch (`--dart-define=UPLAN_TRACE=true`, still uncommitted in the worktree).
-   - Then ask Ahmed about his phone: install A + B as a debug build (as now) or the fast profile build; copy his data
-     off first either way.
+   - ✅ Batch B (13:35, `44f8d2d`, on `master`): the quick-add sheet sits on the keyboard (inset counted once); an app
+     start on `/quick-add` skips the launch work (`lib/core/startup/launch_work.dart`); Trackers has one title bar;
+     `StartupTrace` (`lib/core/diagnostics/startup_trace.dart`, compiled out unless `--dart-define=UPLAN_TRACE=true`).
+     4 new tests (each failed first); 344 pass; analyze clean; tried on the emulator. **Measured: the time until the
+     sheet is drawn did not improve** (profile 2.9 s closed / 1.35 s in memory; debug 5.9 / 3.8 s; within session
+     drift). The morning's "alarm plugin costs 0.7–1.6 s" was wrong: moving it after the first frame gained nothing
+     (the next platform call waits for Android's busy main thread instead) and made a visible ~0.65 s freeze after the
+     first frame, so it was reverted. What still makes the "+" slow: Android starting the app and its engine (every
+     "+" starts it again) and the debug build. Next real levers: the fast build on the phone, keeping the app warm
+     after a quick add (W6), a Perfetto trace of the busy main thread.
+   - ⬜ **← next: ask Ahmed about his phone**: install A + B (master `44f8d2d`) as the fast profile build or the same
+     debug kind as now; copy his data off first either way (signing-key plan, Task 4); check the fingerprint; then a
+     10-minute timing check on the phone with the stopwatch build if he agrees. The Uplan chat also installs on the
+     phone (gym smart order): tell it before installing.
 7. ⬜ Hand back: state into these files, then offer to be archived.
 
 ## Checked so far (2026-11-01, read only; nothing on the PC or the phone changed)
