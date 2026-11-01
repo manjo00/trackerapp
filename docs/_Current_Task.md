@@ -26,14 +26,14 @@ off C: and can later become the app's signing key on Google Play.
   the database). List them before the move so he can set them again.
 - Assumed, not checked: only Ahmed uses Uplan; the phone runs v1.15.1 (check with adb before the move).
 
+## Decided
+- **Side by side** (Ahmed, 2026-11-01, over "uninstall and restore"): v1.18.0 gets a new app ID and installs beside
+  the old app, so nothing is deleted; the old app stays as a photo album until he has moved what he wants.
+
 ## Waiting on Ahmed
-- **Which way to move his data** (asked 2026-11-01 in the next-step box):
-  1. Side by side (recommended): v1.18.0 gets a new app ID and installs beside the old app, so nothing is deleted;
-     the old app stays as a photo album until he has moved what he wants, and he mutes its notifications so
-     reminders don't come twice. The new ID is permanent and becomes the Play ID.
-  2. Uninstall and restore: one app, same ID; photos he doesn't screenshot first or find in his Gallery are lost.
-- Then: a one-page design (`docs/superpowers/specs/2026-11-01-signing-key-design.md`) for his OK, a short plan, and
-  one go-ahead that names every step on the phone.
+- **His OK on the design:** `docs/superpowers/specs/2026-11-01-signing-key-design.md` (asked 2026-11-01). Then a
+  short plan (superpowers' writing-plans, carried out in this chat with executing-plans) and one go-ahead that names
+  every step on the phone.
 
 ## Later, after this step
 1. Release v1.18.0 (it carries v1.16.0 and v1.17.0 too) with the release ritual in
@@ -63,7 +63,7 @@ off C: and can later become the app's signing key on Google Play.
   switch a new tool's usage reporting off before its first run, and lead every reply with the answer.
 
 ## Done means
-- [ ] Ahmed picks the way to move his data (side by side, or uninstall and restore).
+- [x] Ahmed picks the way to move his data: side by side (2026-11-01).
 - [ ] A one-page design he approves (`docs/superpowers/specs/2026-11-01-signing-key-design.md`), then a short plan.
 - [ ] v1.18.0 restores a v1.15.1 backup: a regression test that fails on today's code and passes after the fix.
 - [ ] A real release key (RSA 4096) made, kept outside the repo and backed up off C:; its passwords only in the
