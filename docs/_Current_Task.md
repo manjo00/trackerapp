@@ -31,19 +31,14 @@ off C: and can later become the app's signing key on Google Play.
 - Assumed, not checked: only Ahmed uses Uplan.
 
 ## Decided
-- **Side by side** (Ahmed, 2026-11-01, over "uninstall and restore"), picked while the photos looked impossible to
-  copy. Reopened the same morning with new evidence: the full copy works (above).
+- **One app with the same ID, moved by a full copy of its private folder** (Ahmed, 2026-11-01: "Yes, one app").
+  It replaced his earlier "side by side" pick, made while the photos looked impossible to copy. The uninstall comes
+  only after the copy is checked on D: and a dress rehearsal in a throwaway test copy has passed.
 
 ## Waiting on Ahmed
-- **Which way, now that everything can be copied** (asked 2026-11-01):
-  1. One app, same ID (recommended): copy the whole private folder to the PC and check it; uninstall; install the
-     new-key build under the same ID; put everything back. Nothing lost, no new ID, no double reminders.
-  2. Side by side: the same full copy into a second app with the new ID `io.github.manjo00.uplan`; the old app stays
-     until he removes it.
-  Either way the new app's first install must be a debuggable build, so `run-as` can write into it; later updates
-  can be normal release builds with the same key.
-- Then: update the design (`docs/superpowers/specs/2026-11-01-signing-key-design.md`) for his OK, a short plan, and
-  one go-ahead that names every step on the phone.
+- **His OK on the rewritten design:** `docs/superpowers/specs/2026-11-01-signing-key-design.md` (asked 2026-11-01).
+  Then a short plan (superpowers' writing-plans, carried out in this chat with executing-plans) and one go-ahead
+  that names every step on the phone.
 
 ## Later, after this step
 1. Release v1.18.0 (it carries v1.16.0 and v1.17.0 too) with the release ritual in
@@ -73,14 +68,15 @@ off C: and can later become the app's signing key on Google Play.
   switch a new tool's usage reporting off before its first run, and lead every reply with the answer.
 
 ## Done means
-- [ ] Ahmed picks the way to move his data (side by side was picked, then reopened by the full-copy finding).
+- [x] Ahmed picks the way to move his data: one app with the same ID, by a full copy (2026-11-01).
 - [ ] A one-page design he approves (`docs/superpowers/specs/2026-11-01-signing-key-design.md`), then a short plan.
-- [ ] The full copy of the phone's private folder is on the PC and checked (database opens, 309 photos) before
-      anything is removed from the phone.
-- [ ] A real release key (RSA 4096) made, kept outside the repo and backed up off C:; its passwords only in the
-      git-ignored `android/key.properties` and Ahmed's own safe place; release builds signed with it.
-- [ ] v1.18.0 on the phone with all his data, checked by him; the old app handled the way he picked.
-- [ ] The release ritual signs with the new key and checks the signature before publishing.
+- [ ] A real signing key (RSA 4096) made, kept outside the repo and backed up off C:; its password only in the
+      git-ignored `android/key.properties` and Ahmed's own safe place; debug and release builds signed with it.
+- [ ] The full copy of the phone's private folder is on D: and checked (integrity check passes, all 309 photos the
+      notes point to are there, row counts written down) before anything is removed from the phone.
+- [ ] The dress rehearsal passed: a throwaway test copy with the copied data looked right to Ahmed, then was removed.
+- [ ] The new-key v1.18.0 is on the phone under the same ID with all his data, checked by him; reminders are back.
+- [ ] The release ritual signs with the new key and checks the fingerprint before any install or release.
 
 ## Do not touch
 - The phone: nothing installed, uninstalled or exported until Ahmed's go-ahead names every step.
