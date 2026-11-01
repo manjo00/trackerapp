@@ -167,6 +167,16 @@ plus this chat about 0.9–1.4M; three helpers about 1.1–1.7M; this chat alone
 (The signing-key move's own checklist is all done: `docs/superpowers/plans/2026-11-01-signing-key.md` and the history.)
 
 ## Do not touch
+- **Until the Uplan chat says it's done (it expects about 13:30 on 2026-11-01):** its gym smart-order files,
+  `lib/features/workout/domain/smart_order.dart` (new), `test/features/workout/smart_order_test.dart`,
+  `lib/features/workout/data/dao/workout_dao.dart`, `lib/features/workout/data/repositories/workout_repository.dart`,
+  `lib/features/workout/presentation/providers/workout_providers.dart`, and the screens
+  `program_session_editor_screen.dart` and `active_workout_screen.dart` (design
+  `docs/superpowers/specs/2026-11-01-gym-smart-order-design.md`). A failing `smart_order_test.dart` there is its
+  test-first step. So its half-done edits can't break the Tester's builds, the Tester builds and changes code in a
+  separate worktree, `D:\projects\trackerapp-tester` on branch `tester/speed` (made 2026-11-01 from `eb587fa`), and
+  merges it into `master` only after that chat is done. That worktree has no `key.properties`, so its builds carry
+  the debug key: emulators only, never the phone. The handover files stay in `D:\projects\trackerapp`.
 - The phone's Uplan: never uninstall it to get past an install error (that deletes its data). A build carrying the
   new key updates it in place with `adb install -r`.
 - No key file or password in git, chat or logs. Smart App Control and other security settings stay as they are.
