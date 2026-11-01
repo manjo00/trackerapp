@@ -1,7 +1,16 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+}
+
+// The release key's passwords live in the git-ignored android/key.properties (START HERE in CLAUDE.md).
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
 }
 
 android {
@@ -30,11 +39,25 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        create("release") {
+            if (keystorePropertiesFile.exists()) {
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+                storeFile = file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+            }
+        }
+    }
+
     buildTypes {
+        // With key.properties, every build type carries the release key, so any build can update the phone's
+        // Uplan. Without it (cloud chats, fresh clones), release falls back to the debug key below.
+        if (keystorePropertiesFile.exists()) {
+            configureEach { signingConfig = signingConfigs.getByName("release") }
+        }
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            if (!keystorePropertiesFile.exists()) signingConfig = signingConfigs.getByName("debug")
             // R8 obfuscation was mangling flutter_local_notifications' Gson
             // (de)serialisation, so scheduled notifications never posted at fire
             // time. This is a sideloaded personal app (size isn't a concern), so
