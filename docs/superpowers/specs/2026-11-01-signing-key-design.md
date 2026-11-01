@@ -1,5 +1,6 @@
 # The signing-key step: design
-**Date:** 2026-11-01 · **Status:** draft, waiting for Ahmed's OK · **Task:** `docs/_Current_Task.md`
+**Date:** 2026-11-01 · **Status:** approved by Ahmed on 2026-11-01 ("Looks right") · **Plan:**
+`docs/superpowers/plans/2026-11-01-signing-key.md` · **Task:** `docs/_Current_Task.md`
 
 ## Why
 Android only lets an update replace an app when both carry the same signature, made with a signing key. Uplan's key

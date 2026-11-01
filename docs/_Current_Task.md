@@ -36,9 +36,10 @@ off C: and can later become the app's signing key on Google Play.
   only after the copy is checked on D: and a dress rehearsal in a throwaway test copy has passed.
 
 ## Waiting on Ahmed
-- **His OK on the rewritten design:** `docs/superpowers/specs/2026-11-01-signing-key-design.md` (asked 2026-11-01).
-  Then a short plan (superpowers' writing-plans, carried out in this chat with executing-plans) and one go-ahead
-  that names every step on the phone.
+- **His go-ahead on the plan:** `docs/superpowers/plans/2026-11-01-signing-key.md` (asked 2026-11-01, naming every
+  step: the key on D: and its OneDrive copy, the build change, the copy to D:, the dress rehearsal, then the
+  uninstall and reinstall). It is carried out in this chat with superpowers' executing-plans, no helpers. The
+  design was approved first ("Looks right").
 
 ## Later, after this step
 1. Release v1.18.0 (it carries v1.16.0 and v1.17.0 too) with the release ritual in
@@ -69,7 +70,8 @@ off C: and can later become the app's signing key on Google Play.
 
 ## Done means
 - [x] Ahmed picks the way to move his data: one app with the same ID, by a full copy (2026-11-01).
-- [ ] A one-page design he approves (`docs/superpowers/specs/2026-11-01-signing-key-design.md`), then a short plan.
+- [x] A one-page design he approves (`docs/superpowers/specs/2026-11-01-signing-key-design.md`, "Looks right"), then
+      a short plan (`docs/superpowers/plans/2026-11-01-signing-key.md`, written 2026-11-01).
 - [ ] A real signing key (RSA 4096) made, kept outside the repo and backed up off C:; its password only in the
       git-ignored `android/key.properties` and Ahmed's own safe place; debug and release builds signed with it.
 - [ ] The full copy of the phone's private folder is on D: and checked (integrity check passes, all 309 photos the
