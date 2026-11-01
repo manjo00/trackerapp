@@ -33,11 +33,9 @@ class TrackersScreen extends ConsumerWidget {
 
     return CoachMarks(
       screen: kCoachTrackers,
+      // No app bar: this is a tab, and the shell's bar already says
+      // "Trackers" (a second bar here doubled the title).
       child: Scaffold(
-      appBar: AppBar(
-        title: const Text('Trackers'),
-        centerTitle: false,
-      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push('/trackers/add'),
         icon: const Icon(Icons.add),

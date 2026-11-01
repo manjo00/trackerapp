@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/database/database_provider.dart';
+import 'core/diagnostics/startup_trace.dart';
+import 'core/startup/launch_work.dart';
 import 'core/notifications/live_dashboard_service.dart';
 import 'core/notifications/notification_service.dart';
 import 'core/router/app_router.dart';
@@ -46,8 +48,13 @@ class _LifeTrackerAppState extends ConsumerState<LifeTrackerApp>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    // Run rescheduleAll after the first frame so providers are ready.
-    WidgetsBinding.instance.addPostFrameCallback((_) => _reschedule());
+    // Run the launch work after the first frame so providers are ready, and
+    // not at all when the widget's "+" opened the quick-add sheet.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (wantsLaunchWork(appRouter.routerDelegate.currentConfiguration.uri.path)) {
+        _reschedule();
+      }
+    });
     _widgetChannel.setMethodCallHandler(_onWidgetMethod);
     _liveChannel.setMethodCallHandler(_onLiveMethod);
   }
@@ -151,17 +158,22 @@ class _LifeTrackerAppState extends ConsumerState<LifeTrackerApp>
   }
 
   Future<void> _reschedule() async {
+    StartupTrace.mark('launch_work_start');
     await _rescheduleReminders();
+    StartupTrace.mark('reminders_rebooked');
 
     // Anything whose 30 days in Recently deleted are up goes now. A plain
     // query on launch — no background worker, and nothing to schedule.
     await ref.read(archiveServiceProvider).purgeExpired(DateTime.now());
+    StartupTrace.mark('purged');
 
     // Seed the home-screen widget with today's snapshot on launch, and
     // bring up the live dashboard notification if the user enabled it.
     final db = ref.read(appDatabaseProvider);
     await HomeWidgetService.sync(db);
+    StartupTrace.mark('widgets_synced');
     await LiveDashboardService.syncCards(db);
+    StartupTrace.mark('live_cards_synced');
 
     // First run after an update: what changed, once. Before the update check
     // so the two dialogs can never fight over the screen.
@@ -169,6 +181,7 @@ class _LifeTrackerAppState extends ConsumerState<LifeTrackerApp>
 
     // Quiet daily check for a newer APK on the releases repo.
     await _maybeOfferUpdate();
+    StartupTrace.mark('launch_work_done');
   }
 
   /// Auto update check (throttled to once/day inside the service). Shows a

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/database/database_provider.dart';
+import '../../../../core/diagnostics/startup_trace.dart';
 import '../../../../core/widget/home_widget_service.dart';
 import '../../../shifts/data/models/work_shift_model.dart';
 import '../../../shifts/presentation/providers/shifts_providers.dart';
@@ -37,6 +38,13 @@ class _QuickAddTaskScreenState extends ConsumerState<QuickAddTaskScreen> {
     '', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => StartupTrace.mark('quick_add_shown'));
+  }
 
   @override
   void dispose() {
@@ -94,6 +102,7 @@ class _QuickAddTaskScreenState extends ConsumerState<QuickAddTaskScreen> {
       _dismiss();
       return;
     }
+    StartupTrace.mark('quick_add_send');
     setState(() => _saving = true);
     await ref.read(addTaskProvider.notifier).add(
           title,
@@ -105,9 +114,11 @@ class _QuickAddTaskScreenState extends ConsumerState<QuickAddTaskScreen> {
           priority: _priority,
           listId: _listId,
         );
+    StartupTrace.mark('quick_add_saved');
     // Push the new task to the home-screen widgets *before* closing — once the
     // activity finishes, the lifecycle sync may not complete in time.
     await HomeWidgetService.sync(ref.read(appDatabaseProvider));
+    StartupTrace.mark('quick_add_closing');
     _dismiss();
   }
 
@@ -141,12 +152,10 @@ class _QuickAddTaskScreenState extends ConsumerState<QuickAddTaskScreen> {
                 borderRadius:
                     const BorderRadius.vertical(top: Radius.circular(20)),
               ),
-              padding: EdgeInsets.fromLTRB(
-                20,
-                10,
-                20,
-                MediaQuery.of(context).viewInsets.bottom + 16,
-              ),
+              // No keyboard padding here: the Scaffold already lifts its body
+              // above the keyboard (resizeToAvoidBottomInset), and adding the
+              // keyboard's height again stretched the sheet to the top.
+              padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,

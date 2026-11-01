@@ -8,6 +8,7 @@ import 'package:home_widget/home_widget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'app.dart';
 import 'core/diagnostics/crash_log.dart';
+import 'core/diagnostics/startup_trace.dart';
 import 'core/notifications/live_background_callback.dart';
 import 'core/notifications/notification_service.dart';
 import 'core/router/app_router.dart';
@@ -27,6 +28,7 @@ import 'core/settings/startup_tab.dart';
 /// share from Settings → Diagnostics (we can't adb into their devices).
 void main() {
   runZonedGuarded<Future<void>>(() async {
+    StartupTrace.mark('main');
     // Must be inside the same zone as runApp.
     WidgetsFlutterBinding.ensureInitialized();
 
@@ -45,18 +47,24 @@ void main() {
 
     // Background alarm scheduler — runs alarmNotificationCallback at the
     // exact scheduled time (even when the app is killed) to fire reminders
-    // reliably.
+    // reliably. Measured 2026-11-01: moving this after the first frame gained
+    // nothing (the next platform call waits for Android's busy main thread
+    // instead) and turned its ~0.65 s of main-thread work into a visible freeze
+    // after the first frame, so it stays here, before runApp.
     await AndroidAlarmManager.initialize();
+    StartupTrace.mark('alarm_init');
 
     // Live-notification action buttons (✓/snooze) run liveBackgroundCallback
     // in a headless engine — registered here so it works with the app closed.
     await HomeWidget.registerInteractivityCallback(liveBackgroundCallback);
+    StartupTrace.mark('widget_callback');
 
     // Run both async inits in parallel — neither depends on the other.
     final results = await Future.wait([
       SharedPreferences.getInstance(),
       NotificationService.instance.init(),
     ]);
+    StartupTrace.mark('prefs_and_notifications');
 
     final SharedPreferences prefs = results[0] as SharedPreferences;
 
@@ -69,6 +77,9 @@ void main() {
 
     CrashLog.note('app start');
 
+    StartupTrace.mark('run_app');
+    WidgetsBinding.instance.waitUntilFirstFrameRasterized
+        .then((_) => StartupTrace.mark('first_frame'));
     runApp(
       ProviderScope(
         overrides: [
