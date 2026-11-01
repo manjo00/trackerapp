@@ -22,14 +22,22 @@ is a bit laggy."
    `prepare.sh` (install, permissions, data, settings with every first-run tip seen) and `capture.sh` (each screen by
    route on a cold start: `am start -n com.lifetracker.life_tracker/.MainActivity --es route /x`). 65 screenshots plus
    four overview sheets in the notes folder's `round-table\screens\` (`INDEX.md`).
-4. ⬜ **← here (2026-11-01 about 11:55).** The code seat is done (`round-table\code.md`: 14 findings; it used about 393k
-   tokens, over its 150–200k budget); the product and looks seats are running with a firmer budget (about 120k each).
+4. ✅ The round table (2026-11-01 11:55–12:50): three seats plus the chair, then a second round on the merged list.
+   Summary and ranking: `docs/superpowers/round-table-2026-11-01.md` (the seats' full reports beside it in
+   `docs/superpowers/round-table-2026-11-01/`); Ahmed's page: https://claude.ai/artifact/KCStP5nQos8BCrZo65hUca.
+   Helper tokens over both rounds: code about 403k (over its brief's 150–200k), product about 193k, looks about 236k.
    The round table: helpers plus this chat review the product and flows, the visuals and the code (needless
    rebuilds, database queries, startup, the home-screen widgets). Each finding: the problem as behaviour, where in
    the code, the fix, its cost, its gain. One ranked list, on a page for his tablet and in `docs/`.
 5. ⬜ The widget's laggy add-task: reproduce, measure on a profile or release build (not debug), find the cause
-   (superpowers' systematic-debugging), fix it with a regression test that fails on the old code.
-6. ⬜ The fixes he picks, demo first, in batches; analyze clean and tests green; commit on `master`; push.
+   (superpowers' systematic-debugging), fix it with a regression test that fails on the old code. **Reproduced,
+   measured and explained (2026-11-01)**: timings and causes in `docs/superpowers/round-table-2026-11-01.md`; the
+   stopwatch (`lib/core/diagnostics/startup_trace.dart`, marks in `main.dart`, `app.dart`, `quick_add_task_screen.dart`)
+   and the emulator scripts (`tool/emulator/`, `tool/seed_demo_test.dart`) sit uncommitted in the Tester worktree.
+   The fix is batch B.
+6. ⬜ **← here: waiting on Ahmed's pick of the first fix batch** (A nothing gets lost, B the widget "+", C smooth
+   everywhere, D easier to read, E faster daily flow; all four seats and the chair recommend A, then B). Then demo
+   first, in batches; analyze clean and tests green; commit on `master`; push.
 7. ⬜ Hand back: state into these files, then offer to be archived.
 
 ## Checked so far (2026-11-01, read only; nothing on the PC or the phone changed)
@@ -180,7 +188,8 @@ plus this chat about 0.9–1.4M; three helpers about 1.1–1.7M; this chat alone
 
 ## Done means (Tester)
 - [ ] A ranked round-table report Ahmed has read (a page for his tablet, a copy in `docs/`).
-- [ ] The widget's add-task lag fixed, or explained with numbers from a profile or release build.
+- [ ] The widget's add-task lag fixed, or explained with numbers from a profile or release build. (Explained with
+      numbers on 2026-11-01; the fix waits on his pick of batch B.)
 - [ ] The fixes he picked built, analyze clean, all tests green, committed on `master` and pushed.
 - [ ] The handover files updated; Tester hands back and offers to be archived.
 (The signing-key move's own checklist is all done: `docs/superpowers/plans/2026-11-01-signing-key.md` and the history.)
