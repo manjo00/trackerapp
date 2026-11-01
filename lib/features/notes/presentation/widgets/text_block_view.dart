@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../domain/note_text_style.dart';
+import '../note_line_saves.dart';
 import '../providers/notes_providers.dart';
 
 /// A borderless, transparent text line that behaves like a document paragraph:
@@ -49,11 +50,13 @@ class TextBlockView extends ConsumerStatefulWidget {
 class _TextBlockViewState extends ConsumerState<TextBlockView> {
   late final TextEditingController _ctrl;
   late final FocusNode _focus;
+  late final NoteLineSaves _lineSaves;
 
   @override
   void initState() {
     super.initState();
     _ctrl = TextEditingController(text: widget.block.content ?? '');
+    _lineSaves = ref.read(noteLineSavesProvider)..add(_save);
     _focus = FocusNode(onKeyEvent: _onKey);
     _focus.addListener(() {
       if (mounted) setState(() {}); // toggle the focus-only hint
@@ -106,6 +109,13 @@ class _TextBlockViewState extends ConsumerState<TextBlockView> {
     if (!_focus.hasFocus && incoming != _ctrl.text) {
       _ctrl.text = incoming;
     }
+    // A new line can be built before the editor marks it for focus (the
+    // database's update can win that race), so honour a late mark too.
+    if (widget.autofocus && !old.autofocus && !_focus.hasFocus) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _focus.requestFocus();
+      });
+    }
   }
 
   Future<void> _save() async {
@@ -121,6 +131,7 @@ class _TextBlockViewState extends ConsumerState<TextBlockView> {
 
   @override
   void dispose() {
+    _lineSaves.remove(_save);
     _ctrl.dispose();
     _focus.dispose();
     super.dispose();

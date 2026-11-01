@@ -11,6 +11,7 @@ import '../../domain/note_outline.dart';
 import '../../domain/note_text_style.dart';
 import '../../domain/section_fold.dart';
 import '../../../archive/presentation/archive_providers.dart';
+import '../note_line_saves.dart';
 import '../providers/notes_providers.dart';
 import '../widgets/notebook_picker_sheet.dart';
 import '../widgets/checkbox_block_view.dart';
@@ -317,6 +318,11 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     _saveTitle();
     final dao = ref.read(notesDaoProvider);
     final repo = ref.read(notesRepositoryProvider);
+
+    // Write what is still being typed before reading the lines back: Back
+    // doesn't take focus from the line first, so its own save would land
+    // after this read and a just-typed line would be pruned as empty.
+    await ref.read(noteLineSavesProvider).flushAll();
 
     final List<NoteBlock> blocks = await dao.getBlocks(widget.noteId);
     for (final NoteBlock b in blocks) {

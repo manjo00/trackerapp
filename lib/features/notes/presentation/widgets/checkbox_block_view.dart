@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/database/app_database.dart';
+import '../note_line_saves.dart';
 import '../providers/notes_providers.dart';
 
 /// A checklist line: a light circular checkbox + inline text. The "List item"
@@ -41,11 +42,13 @@ class CheckboxBlockView extends ConsumerStatefulWidget {
 class _CheckboxBlockViewState extends ConsumerState<CheckboxBlockView> {
   late final TextEditingController _ctrl;
   late final FocusNode _focus;
+  late final NoteLineSaves _lineSaves;
 
   @override
   void initState() {
     super.initState();
     _ctrl = TextEditingController(text: widget.block.content ?? '');
+    _lineSaves = ref.read(noteLineSavesProvider)..add(_save);
     _focus = FocusNode(onKeyEvent: _onKey);
     _focus.addListener(() {
       if (mounted) setState(() {}); // toggle the focus-only hint
@@ -94,6 +97,13 @@ class _CheckboxBlockViewState extends ConsumerState<CheckboxBlockView> {
     if (!_focus.hasFocus && incoming != _ctrl.text) {
       _ctrl.text = incoming;
     }
+    // Same late focus mark as TextBlockView: a new line can be built before
+    // the editor marks it.
+    if (widget.autofocus && !old.autofocus && !_focus.hasFocus) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _focus.requestFocus();
+      });
+    }
   }
 
   Future<void> _save() async {
@@ -122,6 +132,7 @@ class _CheckboxBlockViewState extends ConsumerState<CheckboxBlockView> {
 
   @override
   void dispose() {
+    _lineSaves.remove(_save);
     _ctrl.dispose();
     _focus.dispose();
     super.dispose();

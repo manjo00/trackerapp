@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../../../../core/backup/backup_service.dart';
+import '../../../../../core/backup/last_backup.dart';
 import '../../../../../core/database/database_provider.dart';
 import '../../../../../core/github/github_feedback_providers.dart';
 import '../../../../../core/github/github_feedback_service.dart';
@@ -134,8 +135,13 @@ class SettingsScreen extends ConsumerWidget {
           ListTile(
             leading: Icon(Icons.upload_file_rounded, color: cs.primary),
             title: const Text('Export data'),
-            subtitle: const Text(
-                'Save a backup file (share to Drive, email, etc.)'),
+            // How old the last backup is, and what it leaves out: the phone
+            // usually holds the only copy of everything.
+            subtitle: Text(
+              '${lastBackupLabel(ref.watch(lastBackupProvider), DateTime.now())}. '
+              'Save a backup file (share to Drive, email, etc.). '
+              "Note photos and Settings aren't in it.",
+            ),
             onTap: () => _exportData(context, ref),
           ),
           ListTile(
@@ -443,10 +449,14 @@ class SettingsScreen extends ConsumerWidget {
       final File file =
           File('${dir.path}/life_tracker_backup_$stamp.json');
       await file.writeAsString(json);
-      await Share.shareXFiles(
+      final ShareResult result = await Share.shareXFiles(
         [XFile(file.path)],
         subject: 'Life Tracker backup',
       );
+      // Only a share that reached an app counts as a backup made.
+      if (result.status == ShareResultStatus.success) {
+        await ref.read(lastBackupProvider.notifier).record(DateTime.now());
+      }
     } catch (e) {
       messenger.showSnackBar(
         SnackBar(content: Text('Export failed: $e')),
