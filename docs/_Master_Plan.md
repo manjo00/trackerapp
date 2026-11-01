@@ -8,20 +8,24 @@ Rebuilt on 2026-10-27 from the git log, the public releases, `docs/superpowers/S
 `docs/superpowers/NOTES-ROADMAP.md`, the brand study and `feedback/app.md`. The plan files in
 `docs/superpowers/plans/` never had their own check boxes ticked, so this page is the record of what is done.
 
-## ← We are here (2026-10-31)
+## ← We are here (2026-11-01)
 - **Code:** v1.18.0+27, last changed 2026-09-30. **Last public release:** v1.15.1 (2026-08-20).
-  v1.16.0, v1.17.0 and v1.18.0 are built and committed but not released.
+  v1.16.0, v1.17.0 and v1.18.0 are built and committed but not released. **The phone** runs v1.18.0+27 (debuggable),
+  signed with Uplan's own key since 2026-11-01.
 - **This PC:** the build tools are back since 2026-10-31, in `D:\dev` (Flutter 3.44.9, Java 21, the Android SDK).
   What each change to the PC did and how to undo it: `docs/_Undo_Table.md`.
 - **Next, in order:**
   1. ✅ Reinstall Flutter and the Android tools (2026-10-31, with Ahmed's OK; the laptop's Flutter 3.44 line).
-  2. ⬜ Decide how to cross the signing-key change: the laptop's debug key is lost, so v1.18.0 can't install over the
-     phone's Uplan. Likely: check the in-app backup carries everything (photos too), export it, uninstall, install,
-     restore; and make a real signing key, backed up off C: (see "Before a Play Store launch").
-  3. ⬜ Release v1.18.0 (it carries 1.16 and 1.17 too). Smart App Control blocks release builds whenever it is on.
-  4. ⬜ G4's owed check: time the inexact-alarm path on the Z Flip 6 (recipe in STATUS, G4 section).
-  5. ⬜ Heavy testing, then Google Play (Ahmed, 2026-10-31; see "Before a Play Store launch"). What the testing covers
-     is still to be shaped with him. Testing on the phone needs step 2 first: no new build reaches it before then.
+  2. ✅ Cross the signing-key change (2026-11-01): Uplan's own RSA 4096 key, backed up in OneDrive; the phone's whole
+     private folder copied, checked, rehearsed in a test copy, then moved into a new-key install under the same ID
+     (nothing lost: 309 photos, the database byte for byte). Plan `docs/superpowers/plans/2026-11-01-signing-key.md`.
+  3. ⬜ The Tester chat (Ahmed, 2026-11-01): the app on several emulators, a round-table review with helpers (product,
+     visuals, code), then fixes for speed and responsiveness. First known issue: adding a task from the widget lags.
+  4. ⬜ Release v1.18.0 (it carries 1.16 and 1.17 too). Smart App Control blocks release builds whenever it is on. A
+     release build on the phone isn't debuggable, so decide with Ahmed how backups work after that.
+  5. ⬜ G4's owed check: time the inexact-alarm path on the Z Flip 6 (recipe in STATUS, G4 section).
+  6. ⬜ Heavy testing, then Google Play (Ahmed, 2026-10-31; see "Before a Play Store launch"). What the testing covers
+     is still to be shaped with him; new builds now reach the phone.
 
 ## Phase 1: MVP on Android ✅
 - ✅ Habits: create, mark done daily, streaks (2026-05-27)

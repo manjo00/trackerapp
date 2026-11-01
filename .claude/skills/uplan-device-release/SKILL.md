@@ -31,9 +31,13 @@ Shell is Windows PowerShell 5.1 unless noted — that shapes several gotchas bel
 
 Emulator (day-to-day dev): `flutter run -d emulator-5554`.
 
-Real device (release APK — release builds are debug-signed, fine for sideload). **Since 2026-10-31 the debug key
-is new** (the laptop's was lost), so the first install over the phone's current Uplan fails with
-`INSTALL_FAILED_UPDATE_INCOMPATIBLE`; see START HERE in `CLAUDE.md` before releasing.
+Real device. **Since 2026-11-01 every build on this PC is signed with Uplan's own key** (from the git-ignored
+`android/key.properties`; START HERE in `CLAUDE.md`), so `install -r` updates the phone in place. The phone runs a
+debuggable build. Before installing or releasing, check the APK's certificate:
+`& D:\dev\jdk-21\bin\java.exe -jar D:\dev\android-sdk\build-tools\36.0.0\lib\apksigner.jar verify --print-certs <apk>`
+must show SHA-256 `5b269323cc1b3dfb3b160ad5588bebfa862857b0b5a35a1f5be9ea20100c7ac5`. A build without
+`key.properties` carries the debug key and fails with `INSTALL_FAILED_UPDATE_INCOMPATIBLE`: never uninstall to get
+past it, because that deletes the app's data.
 
 ```powershell
 flutter build apk --release
@@ -106,7 +110,8 @@ the private source repo `manjo00/trackerapp`. The in-app UpdateService polls
 
 1. Bump `version:` in `pubspec.yaml` (both semver and build number, e.g. `1.2.0+4`) —
    the tag must match the semver or the update dialog never fires.
-2. `flutter build apk --release` → `build\app\outputs\flutter-apk\app-release.apk`.
+2. `flutter build apk --release` → `build\app\outputs\flutter-apk\app-release.apk`. Check its certificate's
+   SHA-256 (see "Deploying a build") before step 3.
 3. Create the release with gh (or browser):
 
 ```powershell

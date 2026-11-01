@@ -1,12 +1,32 @@
-# Current Task: the signing-key step (move to a real signing key without losing data)
-**Started:** 2026-11-01 (Ahmed: "Yes, start it") · **Branch:** master · **Path:** the careful one (brainstorm, a
-one-page design he approves, a short plan), because an uninstall deletes the app's data
+# Current Task: handed to the Tester chat (2026-11-01)
+**Date:** 2026-11-01 · **Branch:** master
 
-## Goal
-Get v1.18.0 onto Ahmed's Z Flip 6 without losing any of his data, signed with a real release key that is backed up
-off C: and can later become the app's signing key on Google Play.
+## State
+- **The signing-key move is done** (2026-11-01; plan `docs/superpowers/plans/2026-11-01-signing-key.md`, design
+  `docs/superpowers/specs/2026-11-01-signing-key-design.md`). The phone's Uplan (v1.18.0+27, a debuggable build) is
+  now signed with Uplan's own key (START HERE has its place and fingerprint), under the same app ID, with all its
+  data: the database byte for byte (SHA-256 `9a9ad0ad…`), all 309 photos, the Settings. Uplan's alarm entries came
+  back (40 after the move, 38 before). Ahmed's first look: "initial; look is ok".
+- The checked copy of the phone's folder stays in `D:\backups\uplan\2026-11-01\` (personal data, never in git) until
+  Ahmed is happy; what happens to it then is his call.
+- Asked of Ahmed after the move, not confirmed yet: Alarms & reminders on, battery Unrestricted, the widgets added
+  again, the feedback key typed in again if he uses it, and the key's password copied into his own safe place.
 
-## Found so far (2026-11-01; checked unless marked)
+## Next: the Tester chat (Ahmed, 2026-11-01)
+Ahmed asked for a new chat called "Tester" to make the app cleaner, faster and more responsive: try it on several
+emulators, run a round-table review with helpers (product, visuals and code, inefficient code included), then turn
+the findings into fixes. First known issue: adding a task from the home-screen widget feels laggy. That chat owns the
+repo's next work and writes its own task here.
+
+## Later
+1. Release v1.18.0 (it carries v1.16.0 and v1.17.0 too) with the release ritual in
+   `.claude/skills/uplan-device-release/SKILL.md`. A release build needs Smart App Control in evaluation mode. A
+   release build on the phone isn't debuggable, so `run-as` would stop working there, and the app's backup leaves out
+   photos and Settings: decide that with Ahmed first.
+2. G4's owed check: time the inexact-alarm path on the Z Flip 6 (recipe in `docs/superpowers/STATUS-2026-07-28.md`, G4 section).
+3. **Heavy testing, then Google Play** (Ahmed, 2026-10-31; master plan, "Before a Play Store launch").
+
+## What the signing-key move found (2026-11-01; checked unless marked)
 - **Google Play accepts our own key** (checked: support.google.com/googleplay/android-developer/answer/9842756):
   "Must be an RSA key of 2048 bits or more", uploaded with Google's PEPK tool. So a key made now can serve Play later,
   and the phone needs only this one reinstall. A lost upload key is recoverable later (Play's upload key reset).
@@ -35,20 +55,10 @@ off C: and can later become the app's signing key on Google Play.
   It replaced his earlier "side by side" pick, made while the photos looked impossible to copy. The uninstall comes
   only after the copy is checked on D: and a dress rehearsal in a throwaway test copy has passed.
 
-## Waiting on Ahmed
-- **His go-ahead on the plan:** `docs/superpowers/plans/2026-11-01-signing-key.md` (asked 2026-11-01, naming every
-  step: the key on D: and its OneDrive copy, the build change, the copy to D:, the dress rehearsal, then the
-  uninstall and reinstall). It is carried out in this chat with superpowers' executing-plans, no helpers. The
-  design was approved first ("Looks right").
-
-## Later, after this step
-1. Release v1.18.0 (it carries v1.16.0 and v1.17.0 too) with the release ritual in
-   `.claude/skills/uplan-device-release/SKILL.md`. A release build needs Smart App Control to stay in evaluation mode.
-2. G4's owed check: time the inexact-alarm path on the Z Flip 6 (recipe in `docs/superpowers/STATUS-2026-07-28.md`, G4 section).
-3. **Heavy testing, then Google Play** (Ahmed, 2026-10-31; master plan, "Before a Play Store launch"). First shape with
-   him what the testing covers (superpowers' brainstorming).
-
-## Also waiting on Ahmed (written 2026-10-31 20:40, before this chat's fresh start)
+## Also waiting on Ahmed
+- **His opinion of the signing-key move, for its retro** (the retro is in `D:\projects\claude-setup\workflow\retros.md`
+  with his words so far, "initial; look is ok"; add his opinion as a new line when he gives it).
+- Written 2026-10-31 20:40, before that chat's fresh start:
 - **His opinion for two retros** (asked: "in a few words, how did this install round feel to you?"). Then add both to
   `D:\projects\claude-setup\workflow\retros.md`:
   1. The auto-load kit's first live test (2026-10-31): START HERE, the current task and the last 5 history lines all
@@ -72,17 +82,21 @@ off C: and can later become the app's signing key on Google Play.
 - [x] Ahmed picks the way to move his data: one app with the same ID, by a full copy (2026-11-01).
 - [x] A one-page design he approves (`docs/superpowers/specs/2026-11-01-signing-key-design.md`, "Looks right"), then
       a short plan (`docs/superpowers/plans/2026-11-01-signing-key.md`, written 2026-11-01).
-- [ ] A real signing key (RSA 4096) made, kept outside the repo and backed up off C:; its password only in the
-      git-ignored `android/key.properties` and Ahmed's own safe place; debug and release builds signed with it.
-- [ ] The full copy of the phone's private folder is on D: and checked (integrity check passes, all 309 photos the
-      notes point to are there, row counts written down) before anything is removed from the phone.
-- [ ] The dress rehearsal passed: a throwaway test copy with the copied data looked right to Ahmed, then was removed.
-- [ ] The new-key v1.18.0 is on the phone under the same ID with all his data, checked by him; reminders are back.
-- [ ] The release ritual signs with the new key and checks the fingerprint before any install or release.
+- [x] A real signing key (RSA 4096) made, kept outside the repo and backed up off C: (OneDrive copy, same SHA-256);
+      its password only in the git-ignored `android/key.properties` and Ahmed's own safe place (his copy not
+      confirmed yet); debug, profile and release builds signed with it (checked with `signingReport` and `apksigner`).
+- [x] The full copy of the phone's private folder is on D: and checked (330 files as on the phone, integrity check
+      `ok`, all 309 photos the notes point to are there, row counts written to `counts.txt`) before anything was removed.
+- [x] The dress rehearsal passed: the test copy held the same database byte for byte; Ahmed: "Looks right"; removed.
+- [x] The new-key v1.18.0 is on the phone under the same ID with all his data (same database SHA-256, 309 photos);
+      its alarm entries came back (40, 38 before); Ahmed's first look: "initial; look is ok".
+- [x] The release ritual checks the fingerprint before any install or release (device skill).
 
 ## Do not touch
-- The phone: nothing installed, uninstalled or exported until Ahmed's go-ahead names every step.
+- The phone's Uplan: never uninstall it to get past an install error (that deletes its data). A build carrying the
+  new key updates it in place with `adb install -r`.
 - No key file or password in git, chat or logs. Smart App Control and other security settings stay as they are.
+- `D:\backups\uplan\2026-11-01\` until Ahmed decides.
 
 ## Noticed (not fixing now)
 - **v1.18.0 can't restore a backup made by an older version** (checked in the code, not by a test): schema 24 added
