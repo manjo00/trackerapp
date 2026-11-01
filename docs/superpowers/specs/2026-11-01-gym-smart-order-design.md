@@ -1,21 +1,27 @@
 # Gym smart order (and the weekly cardio sketch): design
 
-**Date:** 2026-11-01 · **Status:** approved by Ahmed ("Looks right"), built and tested, not yet tried on the phone ·
+**Date:** 2026-11-01 · **Status:** approved by Ahmed ("Looks right"), built, tested and on his phone; the order
+itself waits for his next workout ·
 **Path:** demo first (no database change, so nothing can be lost); the progress dashboard gets its own full design
 later.
 
-## Status (2026-11-01, 11:00; the Uplan chat)
-- **Built and tested, not yet tried on the phone.** The rules (`lib/features/workout/domain/smart_order.dart`), the
+## Status (2026-11-01, 11:05; the Uplan chat)
+- **Built and tested.** The rules (`lib/features/workout/domain/smart_order.dart`), the
   history read (`WorkoutDao.recentExerciseOrders`), Start (`ActiveWorkout.start`), the switch (`SmartOrderEnabled`,
   shown in the workout's editor) and the two lines on the workout screen. While the smart order is on, the workout
   screen's "Group by Push/Pull/Legs" (on by default) is off and greyed out, because its fixed sections would undo the
   mixing. 26 new tests (`smart_order_test`, `recent_exercise_orders_test`, `smart_order_start_test`), each watched
   failing first; the code checker is clean and all 329 tests pass. The two screens have no widget test: they get the
   real try.
-- **Next:** with Ahmed's OK, install the debug build on the phone (`adb install -r` after the certificate check in
-  the device skill; never a release build, so the phone stays debuggable) and look at the switch in the editor.
-  Starting a workout on his phone adds an entry to his history, so the order itself is tried by Ahmed at his next
-  workout, or on the Tester's emulator once it runs. Then the weekly cardio switch, then the progress dashboard (full
+- **On the phone (11:03, Ahmed: "Yes, install"):** the debug build (certificate SHA-256 `5b269323…c7ac5`, Uplan's own
+  key) went in with `adb install -r`: updated in place, still debuggable, data kept. Tried for real: the app opens;
+  Workout > My Workouts > ✎ on "Push" shows the Smart order switch; switching it on saved the workout's id in the
+  app's settings (`smart_order_session_ids` = ["8"]), switching it off removed it. Left off, as it was.
+- **Not tried on the phone:** starting a workout (the order and the two lines). Starting one adds an entry to his
+  history even when discarded, so Ahmed tries it at his next workout (or the Tester's emulator once it runs).
+- **Found in the try:** his "Push" list plans 2–3 sets per exercise (2 × 10, 3 × 10). For 1 set per exercise, set each
+  exercise's target sets to 1 (✎ on the exercise); extra empty rows are removed at finish anyway.
+- **Next:** his first workout with Smart order on, then the weekly cardio switch, then the progress dashboard (full
   design path).
 
 ## What Ahmed wants (his words, condensed)

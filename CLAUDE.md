@@ -7,8 +7,8 @@ Every AI working here reads this block first, then the current task (pulled in b
 - **What this is:** Uplan, Ahmed's own Android app (Flutter) for habits, tasks, notes, workouts, work shifts and planning, which he uses daily on his Samsung Z Flip 6. Package `com.lifetracker.life_tracker`. Code in `manjo00/trackerapp`; updates ship through `manjo00/uplan-releases`.
 - **Where it stands:** the code is v1.18.0+27 (last app work 2026-09-30: Play-safe alarms, G4). The phone runs v1.18.0+27 as a debuggable build, signed since 2026-11-01 with Uplan's own key (moved by a full copy of its private folder; nothing lost). The last public release is still **v1.15.1 (2026-08-20)**: v1.16.0, v1.17.0 and v1.18.0 are **not released** on `manjo00/uplan-releases`. The build tools are in `D:\dev`: on 2026-11-01 the code checker was clean and all 303 tests passed.
 - **What's next:** `docs/_Master_Plan.md` (← we are here) and the current task below.
-- **Gym, alongside the Tester (the Uplan chat, 2026-11-01):** the smart order is built and tested (329 tests pass) but
-  not yet tried on the phone; its status and next step are at the top of
+- **Gym, alongside the Tester (the Uplan chat, 2026-11-01):** the smart order is built, tested (329 tests pass) and on
+  the phone (debug build, switch checked); its first real workout is Ahmed's next one. Status and next step at the top of
   `docs/superpowers/specs/2026-11-01-gym-smart-order-design.md`. Then the weekly cardio switch and the progress
   dashboard.
 - **Traps:**
