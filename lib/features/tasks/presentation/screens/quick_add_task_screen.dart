@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -28,6 +30,10 @@ class QuickAddTaskScreen extends ConsumerStatefulWidget {
 class _QuickAddTaskScreenState extends ConsumerState<QuickAddTaskScreen> {
   final TextEditingController _titleCtrl = TextEditingController();
   final TextEditingController _noteCtrl = TextEditingController();
+  final FocusNode _titleFocus = FocusNode();
+  final FocusNode _noteFocus = FocusNode();
+  late final AppLifecycleListener _lifecycle;
+  Timer? _keyboardRetry;
   DateTime? _dueDate;
   TimeOfDay? _dueTime;
   TaskPriority _priority = TaskPriority.medium;
@@ -42,15 +48,49 @@ class _QuickAddTaskScreenState extends ConsumerState<QuickAddTaskScreen> {
   @override
   void initState() {
     super.initState();
+    _lifecycle = AppLifecycleListener(onResume: _askForKeyboardAgain);
     WidgetsBinding.instance
         .addPostFrameCallback((_) => StartupTrace.mark('quick_add_shown'));
   }
 
   @override
   void dispose() {
+    _lifecycle.dispose();
+    _keyboardRetry?.cancel();
+    _titleFocus.dispose();
+    _noteFocus.dispose();
     _titleCtrl.dispose();
     _noteCtrl.dispose();
     super.dispose();
+  }
+
+  /// When the widget's "+" brings back a running app, the title field asks
+  /// for the keyboard before Android gives the window focus, and Android
+  /// ignores that ask. Flutter reports "resumed" only once the window has
+  /// focus, so ask again then. Android may still hide the keyboard a moment
+  /// later (it does so as a window comes to the front, since Flutter's view
+  /// isn't a text box for it), so keep asking briefly until it is up.
+  void _askForKeyboardAgain() {
+    _keyboardRetry?.cancel();
+    if (!_askForKeyboard()) return;
+    int asks = 1;
+    _keyboardRetry =
+        Timer.periodic(const Duration(milliseconds: 150), (Timer timer) {
+      if (asks == 5 || !_askForKeyboard()) {
+        timer.cancel();
+      } else {
+        asks++;
+      }
+    });
+  }
+
+  /// Asks for the keyboard while a field has focus and it isn't up yet;
+  /// false when there is nothing to ask for.
+  bool _askForKeyboard() {
+    if (!_titleFocus.hasFocus && !_noteFocus.hasFocus) return false;
+    if (View.of(context).viewInsets.bottom > 0) return false;
+    SystemChannels.textInput.invokeMethod<void>('TextInput.show');
+    return true;
   }
 
   static String _dateStr(DateTime d) =>
@@ -211,6 +251,7 @@ class _QuickAddTaskScreenState extends ConsumerState<QuickAddTaskScreen> {
 
                   TextField(
                     controller: _titleCtrl,
+                    focusNode: _titleFocus,
                     autofocus: true,
                     textCapitalization: TextCapitalization.sentences,
                     textInputAction: TextInputAction.done,
@@ -225,6 +266,7 @@ class _QuickAddTaskScreenState extends ConsumerState<QuickAddTaskScreen> {
                   ),
                   TextField(
                     controller: _noteCtrl,
+                    focusNode: _noteFocus,
                     textCapitalization: TextCapitalization.sentences,
                     style: const TextStyle(fontSize: 14),
                     decoration: const InputDecoration(

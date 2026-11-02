@@ -1,6 +1,8 @@
 package com.lifetracker.life_tracker
 
 import android.content.Intent
+import android.os.Bundle
+import android.view.WindowManager
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.android.FlutterActivityLaunchConfigs.BackgroundMode
 import io.flutter.embedding.engine.FlutterEngine
@@ -101,12 +103,32 @@ class MainActivity : FlutterActivity() {
         return super.getInitialRoute()
     }
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        if (intent?.data?.host == "add_task") keepKeyboardForQuickAdd()
+    }
+
     /// Warm start: the app was already running, so route via the method
     /// channel (getInitialRoute only runs on a fresh engine).
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         if (intent.data?.host == "add_task") {
+            keepKeyboardForQuickAdd()
             methodChannel?.invokeMethod("openQuickAdd", null)
         }
+    }
+
+    /// Flutter's view doesn't count as a text box for Android, so whenever
+    /// this window comes back to the front Android hides the keyboard, and
+    /// that hide lands just after the quick-add sheet asks for it. Leave the
+    /// keyboard alone instead, so the sheet's first ask usually wins (if the
+    /// keyboard was up just before, Android still hides it, and the sheet
+    /// asks again). The activity ends when the sheet closes, so the rest of
+    /// the app keeps the default.
+    private fun keepKeyboardForQuickAdd() {
+        window.setSoftInputMode(
+            WindowManager.LayoutParams.SOFT_INPUT_STATE_UNCHANGED or
+                WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE,
+        )
     }
 }
