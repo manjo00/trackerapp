@@ -80,15 +80,22 @@ is a bit laggy."
      `test/features/tasks/quick_add_keyboard_test.dart` (3 failed on the code before them; the 4th fails on an
      always-ask version); 348 pass; analyze clean. No native test exists in this project, so the native line is
      covered by the emulator script only.
-   - ⬜ **← next: the keyboard fix onto his phone** (needs the cable; he unplugged at about 09:24 with my OK). Built
-     from `64091f9` in `D:\projects\trackerapp` (09:55–09:56): `build\app\outputs\flutter-apk\app-profile.apk`,
-     v1.18.0 (27), `application-debuggable`, certificate SHA-256 `5b269323…c7ac5` (Uplan's key; checked). The file is
+   - ✅ **The keyboard fix on his phone** (2026-11-02 15:37–15:41, Ahmed: "Phone plugged in"). Built from `64091f9`
+     in `D:\projects\trackerapp` (09:55–09:56): `build\app\outputs\flutter-apk\app-profile.apk`, v1.18.0 (27),
+     `application-debuggable`, certificate SHA-256 `5b269323…c7ac5` (Uplan's key; checked twice). The file is
      119.4 MiB, but its entries take 97.1 MB like yesterday's (93.0 MiB): the rest is free space the incremental
-     packager left inside the file (checked with Python's `zipfile`). When he plugs in:
-     copy his data off first (signing-key plan Task 4 steps 2–4, into a new `D:\backups\uplan\2026-11-02-keyboard\`),
-     check the APK's fingerprint, `adb install -r` (never uninstall), start Uplan normally, compare the app's booked
-     reminders (`flutter.alarm_notif_*`) before and after, then the real try: open Uplan, Home, the widget's "+" →
-     the keyboard is up (`dumpsys input_method` `mInputShown=true`), and Back closes it with nothing added.
+     packager left inside the file (checked with Python's `zipfile`). Before installing: master and the phone had
+     nothing newer (origin `66a7c14`; the phone's build from 07:24); his folder copied the plan's way to
+     `D:\backups\uplan\2026-11-02-keyboard\` (327 files = the phone's, 569 MB, integrity `ok`, 309 photos and 0
+     missing, database SHA-256 `5325e54a…`, 35 tasks). `install -r` at 15:38: still `DEBUGGABLE`, 327 files, the same
+     3 booked reminders (`flutter.alarm_notif_10105`–`10107`), 57 alarm lines before and after. The real try (the
+     widget's intent sent by adb, not tapped by hand): Uplan open in the background, then "+": keyboard up
+     (`mInputShown=true`; 4 early asks ignored, no hide from Android this time); keyboard up, Home, "+" again: up
+     (Android's `HIDE_WINDOW_GAINED_FOCUS_WITHOUT_EDITOR`, then the sheet's later ask won); Back, Back: keyboard
+     down, sheet closed, his home screen in front; nothing added (35 tasks, 126 notes, integrity `ok`, copy in
+     `after\`).
+   - ⬜ **← next: Ahmed's own try of the "+"** (Manual Test Steps in the chat), then a retro entry with his words,
+     then the hand-back (step 7).
    - ✅ (yesterday's state, kept for the record) the fast build was picked (Ahmed, 2026-11-01 about 14:50: "Fast build", after asking how it
      differs: both builds carry the same fixes; only the speed differs). Built 14:51–14:54 in `D:\projects\trackerapp`
      from `ed1ad20` (code = `44f8d2d`): `build\app\outputs\flutter-apk\app-profile.apk`, 93.0 MB, v1.18.0+27,
@@ -257,7 +264,7 @@ plus this chat about 0.9–1.4M; three helpers about 1.1–1.7M; this chat alone
 - [ ] A ranked round-table report Ahmed has read (a page for his tablet, a copy in `docs/`).
 - [ ] The widget's add-task lag fixed, or explained with numbers from a profile or release build. (Explained with
       numbers on 2026-11-01; batch B built; the fast build on the phone 2026-11-02; the missing keyboard on a running
-      app's "+" found on the phone 2026-11-02 and fixed the same morning (`64091f9`), not on the phone yet.)
+      app's "+" found on the phone 2026-11-02, fixed the same morning (`64091f9`) and on the phone since 15:38.)
 - [ ] The fixes he picked built, analyze clean, all tests green, committed on `master` and pushed.
 - [ ] The handover files updated; Tester hands back and offers to be archived.
 (The signing-key move's own checklist is all done: `docs/superpowers/plans/2026-11-01-signing-key.md` and the history.)

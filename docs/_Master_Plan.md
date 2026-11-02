@@ -27,8 +27,8 @@ Rebuilt on 2026-10-27 from the git log, the public releases, `docs/superpowers/S
      ✅ Batch B (2026-11-01, `44f8d2d`): the sheet sits on the keyboard, quick adds skip the launch work, one Trackers
      title; the time to the sheet did not improve on the emulator. ✅ The fast (profile) build on the phone
      (2026-11-02, Ahmed's pick; data copied off first, nothing lost). ✅ Found on the phone and fixed: the "+" on a
-     running app opened without the keyboard (2026-11-02, `64091f9`; every case on the emulator). ⬜ Next: that fix
-     onto his phone (needs the cable).
+     running app opened without the keyboard (2026-11-02, `64091f9`; every case on the emulator; on his phone since
+     15:38, where both "+" cases brought the keyboard up). ⬜ Next: his own try, then the Tester hands back.
      **Alongside it, gym (Ahmed, 2026-11-01; the Uplan chat):** his new split is a whole-body warm-up, 1 set per
      exercise, every other day; goal: strength and muscle equally, kept casual.
      - ⬜ Smart order (his pick, the tired score, plus his rules: mix the muscles; triceps after the presses, biceps
