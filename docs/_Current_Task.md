@@ -94,8 +94,36 @@ is a bit laggy."
      (Android's `HIDE_WINDOW_GAINED_FOCUS_WITHOUT_EDITOR`, then the sheet's later ask won); Back, Back: keyboard
      down, sheet closed, his home screen in front; nothing added (35 tasks, 126 notes, integrity `ok`, copy in
      `after\`).
-   - ⬜ **← next: Ahmed's own try of the "+"** (Manual Test Steps in the chat), then a retro entry with his words,
-     then the hand-back (step 7).
+   - ⬜ **Ahmed's own try of the "+": no keyboard** (2026-11-02 about 15:45, his words: "no but no problem"). So the
+     fix works when the widget's intent comes over the cable but not when he taps the widget: a real tap differs
+     somehow (my guesses, not checked: the launcher's opening animation delays the window's focus beyond the sheet's
+     0.75 s of asks, or the launcher adds other intent flags). Not investigated yet. Cheapest next look: the next time
+     the phone is on the cable, he taps the widget's "+" once while `adb logcat` records ImeTracker,
+     InputMethodManager and WindowManager lines.
+   - ✅ **Reminders in the quick-add sheet, and a custom 4th one** (2026-11-02 15:45–16:30; `cf5ce41` on `master`).
+     His request: "add also the notification alert options to be added from here too and make a 4th option for
+     alarms which adds a custom time other than i meant reminders by saying alarm." His picks: the custom one is "an
+     amount before due" (not an exact date and time), and look B, "B is cleaner" (chips right in the sheet; the two
+     looks were shown as a sketch first). What it does now: the quick-add sheet has a bell row under date, time and
+     priority (1 day, 3 h, 5 min, + Custom: a number in min, hours or days, up to 30 days, via
+     `lib/features/tasks/presentation/widgets/custom_lead_dialog.dart`); without a date it says "Set a date for
+     reminders to go off"; send saves them (`reminderLeadTimes`) and books them like the full screen (best effort,
+     6 s cap). The full task screen has a 4th tick, "Custom" ("Custom: 30 minutes before" once set). A custom amount
+     equal to a standard one ticks that one. Booking: up to 4 reminders per task; slots 0–2 keep 10000 + id×3 + slot
+     (already-booked reminders still get cancelled), the 4th is 40000 + id
+     (`NotificationService.taskReminderId`, `maxTaskReminders`). Notifications say the exact amount ("Due in 90
+     minutes"; the old wording rounded down). Rules and wording: `lib/features/tasks/domain/reminder_leads.dart`.
+     19 new tests (8 rules, 3 booking numbers, 6 quick-add, 2 full screen; all but the "no reminders saves none"
+     guard failed first); 367 pass; analyze clean. Tried on the Flip emulator's fast build: the bell row looks like
+     look B; all three plus Custom 30 min for 5 Nov booked 10474–10476 and 40158 with the right words, and Android's
+     alarm list holds them (4 Nov 09:00; 5 Nov 06:00, 08:30, 08:55). Not waited for one to fire. Not on the phone
+     yet. The full screen's Custom tick was checked by its 2 widget tests only, not on the emulator.
+   - ⬜ **← next: onto his phone** (the phone wasn't on the cable at 16:31). The fast build from `cf5ce41` is built in
+     `D:\projects\trackerapp\build\app\outputs\flutter-apk\app-profile.apk`. When he plugs in: copy his data off
+     first into a new `D:\backups\uplan\2026-11-02-reminders\` (the plan's Task 4 steps 2–4, `copy_check.py`), check
+     the fingerprint, `install -r`, start Uplan, compare the booked reminders; then ask him to tap the widget's "+"
+     once while `adb logcat` records ImeTracker, InputMethodManager and WindowManager lines (the keyboard question
+     above).
    - ✅ (yesterday's state, kept for the record) the fast build was picked (Ahmed, 2026-11-01 about 14:50: "Fast build", after asking how it
      differs: both builds carry the same fixes; only the speed differs). Built 14:51–14:54 in `D:\projects\trackerapp`
      from `ed1ad20` (code = `44f8d2d`): `build\app\outputs\flutter-apk\app-profile.apk`, 93.0 MB, v1.18.0+27,

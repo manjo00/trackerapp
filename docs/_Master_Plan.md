@@ -28,7 +28,10 @@ Rebuilt on 2026-10-27 from the git log, the public releases, `docs/superpowers/S
      title; the time to the sheet did not improve on the emulator. ✅ The fast (profile) build on the phone
      (2026-11-02, Ahmed's pick; data copied off first, nothing lost). ✅ Found on the phone and fixed: the "+" on a
      running app opened without the keyboard (2026-11-02, `64091f9`; every case on the emulator; on his phone since
-     15:38, where both "+" cases brought the keyboard up). ⬜ Next: his own try, then the Tester hands back.
+     15:38, where both "+" cases brought it up over the cable, but his own tap still didn't: open). ✅ Reminders in
+     the quick-add sheet plus a custom 4th one in both task screens (2026-11-02, Ahmed's request, look B; `cf5ce41`;
+     booked for real on the emulator). ⬜ Next: onto his phone, with one real tap of the "+" for the keyboard log;
+     then the Tester hands back.
      **Alongside it, gym (Ahmed, 2026-11-01; the Uplan chat):** his new split is a whole-body warm-up, 1 set per
      exercise, every other day; goal: strength and muscle equally, kept casual.
      - ⬜ Smart order (his pick, the tired score, plus his rules: mix the muscles; triceps after the presses, biceps
