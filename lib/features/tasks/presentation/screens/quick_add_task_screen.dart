@@ -6,14 +6,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/database/database_provider.dart';
 import '../../../../core/diagnostics/startup_trace.dart';
+import '../../../../core/notifications/notification_service.dart';
 import '../../../../core/widget/home_widget_service.dart';
 import '../../../shifts/data/models/work_shift_model.dart';
 import '../../../shifts/presentation/providers/shifts_providers.dart';
 import '../../../shifts/presentation/shift_style.dart';
 import '../../../shifts/presentation/widgets/shift_date_picker_sheet.dart';
+import '../../data/models/task_model.dart';
 import '../../data/models/task_priority.dart';
+import '../../domain/reminder_leads.dart';
 import '../providers/lists_providers.dart';
 import '../providers/tasks_providers.dart';
+import '../widgets/custom_lead_dialog.dart';
 
 /// A lightweight quick-add half-sheet, opened by the home-screen widget "+".
 ///
@@ -38,6 +42,8 @@ class _QuickAddTaskScreenState extends ConsumerState<QuickAddTaskScreen> {
   TimeOfDay? _dueTime;
   TaskPriority _priority = TaskPriority.medium;
   int? _listId; // null = Captured
+  final Set<int> _leadPresets = <int>{}; // reminders, minutes before due
+  int? _customLead;
   bool _saving = false;
 
   static const List<String> _months = [
@@ -136,6 +142,32 @@ class _QuickAddTaskScreenState extends ConsumerState<QuickAddTaskScreen> {
     });
   }
 
+  bool get _hasReminders => _leadPresets.isNotEmpty || _customLead != null;
+
+  void _togglePreset(int minutes) {
+    setState(() {
+      if (!_leadPresets.remove(minutes)) _leadPresets.add(minutes);
+    });
+  }
+
+  /// Asks for a custom reminder, or removes the one that is set. An amount
+  /// equal to a standard reminder ticks that one instead.
+  Future<void> _toggleCustom() async {
+    if (_customLead != null) {
+      setState(() => _customLead = null);
+      return;
+    }
+    final int? minutes = await showCustomLeadDialog(context);
+    if (minutes == null || !mounted) return;
+    setState(() {
+      if (kPresetLeadMinutes.contains(minutes)) {
+        _leadPresets.add(minutes);
+      } else {
+        _customLead = minutes;
+      }
+    });
+  }
+
   Future<void> _save() async {
     final String title = _titleCtrl.text.trim();
     if (title.isEmpty) {
@@ -144,22 +176,56 @@ class _QuickAddTaskScreenState extends ConsumerState<QuickAddTaskScreen> {
     }
     StartupTrace.mark('quick_add_send');
     setState(() => _saving = true);
-    await ref.read(addTaskProvider.notifier).add(
+    final String? note =
+        _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim();
+    final String? dueDate = _dueDate != null ? _dateStr(_dueDate!) : null;
+    final String? dueTime = _dueTime != null
+        ? '${_dueTime!.hour.toString().padLeft(2, '0')}:${_dueTime!.minute.toString().padLeft(2, '0')}'
+        : null;
+    final String? leads = leadTimesCsv(_leadPresets, _customLead);
+    final int? newId = await ref.read(addTaskProvider.notifier).add(
           title,
-          note: _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
-          dueDate: _dueDate != null ? _dateStr(_dueDate!) : null,
-          dueTime: _dueTime != null
-              ? '${_dueTime!.hour.toString().padLeft(2, '0')}:${_dueTime!.minute.toString().padLeft(2, '0')}'
-              : null,
+          note: note,
+          dueDate: dueDate,
+          dueTime: dueTime,
           priority: _priority,
+          reminderEnabled: leads != null,
+          reminderLeadTimes: leads,
           listId: _listId,
         );
     StartupTrace.mark('quick_add_saved');
+    if (newId != null && leads != null && dueDate != null) {
+      await _bookReminders(TaskModel(
+        id: newId,
+        title: title,
+        note: note,
+        dueDate: dueDate,
+        dueTime: dueTime,
+        priority: _priority,
+        isCompleted: false,
+        createdAt: DateTime.now(),
+        reminderEnabled: true,
+        reminderLeadTimes: leads,
+      ));
+    }
     // Push the new task to the home-screen widgets *before* closing — once the
     // activity finishes, the lifecycle sync may not complete in time.
     await HomeWidgetService.sync(ref.read(appDatabaseProvider));
     StartupTrace.mark('quick_add_closing');
     _dismiss();
+  }
+
+  /// Books the new task's reminders, as the full task screen does. Best
+  /// effort and time-bounded: notification calls can stall on some phones
+  /// (Samsung) and must never keep the sheet from closing.
+  Future<void> _bookReminders(TaskModel task) async {
+    try {
+      await NotificationService.instance
+          .scheduleTaskReminders(task)
+          .timeout(const Duration(seconds: 6), onTimeout: () => false);
+    } catch (e) {
+      debugPrint('[QuickAdd] reminder booking failed: $e');
+    }
   }
 
   @override
@@ -323,11 +389,54 @@ class _QuickAddTaskScreenState extends ConsumerState<QuickAddTaskScreen> {
                     ),
                   ),
 
+                  const SizedBox(height: 8),
+
+                  // Reminders before the due time: the standard three and a
+                  // custom amount (look B, Ahmed 2026-11-02).
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        Icon(Icons.notifications_none_rounded,
+                            size: 18, color: cs.onSurface.withAlpha(150)),
+                        for (final int minutes in kPresetLeadMinutes) ...[
+                          const SizedBox(width: 8),
+                          _Chip(
+                            label: leadChipLabel(minutes),
+                            active: _leadPresets.contains(minutes),
+                            activeColor: cs.primary,
+                            onTap: () => _togglePreset(minutes),
+                          ),
+                        ],
+                        const SizedBox(width: 8),
+                        _Chip(
+                          icon: _customLead == null ? Icons.add_rounded : null,
+                          label: _customLead == null
+                              ? 'Custom'
+                              : leadChipLabel(_customLead!),
+                          active: _customLead != null,
+                          activeColor: cs.primary,
+                          onTap: _toggleCustom,
+                        ),
+                      ],
+                    ),
+                  ),
+
                   const SizedBox(height: 12),
 
                   Row(
                     children: [
-                      if (shift != null && _dueDate != null)
+                      if (_hasReminders && _dueDate == null)
+                        Expanded(
+                          child: Text(
+                            'Set a date for reminders to go off',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.amber.shade800,
+                            ),
+                          ),
+                        )
+                      else if (shift != null && _dueDate != null)
                         Expanded(
                           child: Text(
                             'Heads up: ${shift.type.label.toLowerCase()} that day',
@@ -375,14 +484,14 @@ class _QuickAddTaskScreenState extends ConsumerState<QuickAddTaskScreen> {
 
 class _Chip extends StatelessWidget {
   const _Chip({
-    required this.icon,
+    this.icon,
     required this.label,
     required this.active,
     required this.activeColor,
     required this.onTap,
   });
 
-  final IconData icon;
+  final IconData? icon;
   final String label;
   final bool active;
   final Color activeColor;
@@ -406,8 +515,10 @@ class _Chip extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 16, color: fg),
-            const SizedBox(width: 6),
+            if (icon != null) ...[
+              Icon(icon, size: 16, color: fg),
+              const SizedBox(width: 6),
+            ],
             Text(label, style: TextStyle(fontSize: 13, color: fg)),
           ],
         ),

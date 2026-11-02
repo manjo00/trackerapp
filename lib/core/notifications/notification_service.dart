@@ -7,6 +7,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../features/habits/data/models/habit_model.dart';
 import '../../features/tasks/data/models/task_model.dart';
+import '../../features/tasks/domain/reminder_leads.dart';
 import '../../features/trackers/data/models/tracker_model.dart';
 
 // ── Channel identifiers (shared by the app + the background alarm isolate) ────
@@ -71,7 +72,8 @@ Future<void> alarmNotificationCallback(int id) async {
 ///
 /// ## Notification / alarm ID ranges (never overlap)
 /// | 0 | daily reminder · 1–9999 habits · 10000+id×3+slot tasks
-/// | 30000+id trackers · 997 scheduled test · 998 rest · 999 immediate test
+/// | 30000+id trackers · 40000+id a task's 4th (custom) reminder
+/// | 997 scheduled test · 998 rest · 999 immediate test
 /// | 50001 live dashboard (FGS — LiveDashboardService.kt)
 /// | 50002 rest-timer Live Update / Now Bar (RestLiveUpdate.kt)
 class NotificationService {
@@ -80,7 +82,14 @@ class NotificationService {
 
   static const int _dailyReminderId = 0;
   static int _habitId(int habitId) => habitId;
-  static int _taskId(int taskId, int slot) => 10000 + taskId * 3 + slot;
+
+  /// Each task books up to [maxTaskReminders] reminders. The first three keep
+  /// the numbers they have always had (10000 + id×3 + slot); a 4th, the
+  /// custom amount, would take the next task's first number there, so it gets
+  /// its own range.
+  static const int maxTaskReminders = 4;
+  static int taskReminderId(int taskId, int slot) =>
+      slot < 3 ? 10000 + taskId * 3 + slot : 40000 + taskId;
   static int _trackerId(int trackerId) => 30000 + trackerId;
   static const int _testId = 999;
   static const int _testScheduledId = 997;
@@ -320,16 +329,18 @@ class NotificationService {
     due = DateTime(due.year, due.month, due.day, dueTime.hour, dueTime.minute);
 
     bool any = false;
-    for (int slot = 0; slot < leadTimes.length; slot++) {
+    for (int slot = 0;
+        slot < leadTimes.length && slot < maxTaskReminders;
+        slot++) {
       final DateTime fireTime =
           due.subtract(Duration(minutes: leadTimes[slot]));
       if (fireTime.isBefore(DateTime.now())) continue;
       await _scheduleOneShot(
-        id: _taskId(task.id, slot),
+        id: taskReminderId(task.id, slot),
         when: fireTime,
         channelId: kItemChannelId,
         title: task.title,
-        body: 'Due ${_leadLabel(leadTimes[slot])} ⏰',
+        body: 'Due in ${leadAmount(leadTimes[slot])} ⏰',
       );
       any = true;
     }
@@ -337,8 +348,8 @@ class NotificationService {
   }
 
   Future<void> cancelTaskReminders(int taskId) async {
-    for (int slot = 0; slot < 3; slot++) {
-      await _cancel(_taskId(taskId, slot));
+    for (int slot = 0; slot < maxTaskReminders; slot++) {
+      await _cancel(taskReminderId(taskId, slot));
     }
   }
 
@@ -477,15 +488,5 @@ class NotificationService {
     if (hour == null || minute == null) return null;
     if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
     return TimeOfDay(hour: hour, minute: minute);
-  }
-
-  String _leadLabel(int minutes) {
-    if (minutes >= 1440) {
-      return 'in ${minutes ~/ 1440} day${minutes >= 2880 ? 's' : ''}';
-    }
-    if (minutes >= 60) {
-      return 'in ${minutes ~/ 60} hour${minutes >= 120 ? 's' : ''}';
-    }
-    return 'in $minutes minute${minutes != 1 ? 's' : ''}';
   }
 }

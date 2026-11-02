@@ -9,8 +9,10 @@ import '../../../../core/notifications/notification_service.dart';
 import '../../../shifts/presentation/widgets/shift_date_picker_sheet.dart';
 import '../../data/models/task_model.dart';
 import '../../data/models/task_priority.dart';
+import '../../domain/reminder_leads.dart';
 import '../providers/lists_providers.dart';
 import '../providers/tasks_providers.dart';
+import '../widgets/custom_lead_dialog.dart';
 import '../widgets/label_picker_row.dart';
 
 /// Typed extra for the `/tasks/add` route — carries optional pre-fills
@@ -90,6 +92,7 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
   bool _lead1d = false;
   bool _lead3h = false;
   bool _lead5m = false;
+  int? _customLead; // a 4th reminder, minutes before the due time
   bool _saving = false;
 
   bool get _isEditing => widget.task != null;
@@ -113,6 +116,7 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
       _lead1d = leads.contains(1440);
       _lead3h = leads.contains(180);
       _lead5m = leads.contains(5);
+      _customLead = splitLeadTimes(leads).custom;
     } else {
       // Create mode — blank form, optional pre-fills (planner date or the
       // list/section whose "+" opened this screen).
@@ -189,16 +193,37 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
     };
   }
 
-  /// Builds the lead-times CSV (e.g. "1440,180") from the checkbox state.
+  /// Builds the lead-times CSV (e.g. "1440,180,30") from the checkbox state.
   /// Returns null when no boxes are ticked or reminders are off.
   String? _buildLeadTimesStr() {
     if (!_reminderEnabled) return null;
-    final List<int> selected = [
-      if (_lead1d) 1440,
-      if (_lead3h) 180,
-      if (_lead5m) 5,
-    ];
-    return selected.isEmpty ? null : selected.join(',');
+    return leadTimesCsv(
+      {if (_lead1d) 1440, if (_lead3h) 180, if (_lead5m) 5},
+      _customLead,
+    );
+  }
+
+  /// Asks for a custom reminder, or removes the one that is set. An amount
+  /// equal to a standard reminder ticks that one instead.
+  Future<void> _toggleCustomLead() async {
+    if (_customLead != null) {
+      setState(() => _customLead = null);
+      return;
+    }
+    final int? minutes = await showCustomLeadDialog(context);
+    if (minutes == null || !mounted) return;
+    setState(() {
+      switch (minutes) {
+        case 1440:
+          _lead1d = true;
+        case 180:
+          _lead3h = true;
+        case 5:
+          _lead5m = true;
+        default:
+          _customLead = minutes;
+      }
+    });
   }
 
   // ── Date / time pickers ───────────────────────────────────────────────────
@@ -703,6 +728,16 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
                 title: const Text('5 minutes before'),
                 value: _lead5m,
                 onChanged: (bool? v) => setState(() => _lead5m = v ?? false),
+                controlAffinity: ListTileControlAffinity.leading,
+                dense: true,
+              ),
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(_customLead == null
+                    ? 'Custom'
+                    : 'Custom: ${leadAmount(_customLead!)} before'),
+                value: _customLead != null,
+                onChanged: (_) => _toggleCustomLead(),
                 controlAffinity: ListTileControlAffinity.leading,
                 dense: true,
               ),
