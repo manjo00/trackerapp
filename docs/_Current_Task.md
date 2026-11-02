@@ -60,15 +60,35 @@ is a bit laggy."
      57), Home shows his data, the widget intent opened the sheet and Back closed it with nothing added (34 tasks,
      integrity `ok`). Not timed on the phone. Note: the Z Flip 6 has two screens, so `screencap` needs `-d <id>` from
      `dumpsys SurfaceFlinger --display-id` (without it a warning lands in front of the PNG).
-   - ⬜ **← next: the "+" on a running app opens without the keyboard** (found on his phone 2026-11-02 07:25, his yes
-     to fix pending). His live notification keeps Uplan running, so the "+" usually takes the running-app path
-     (`onNewIntent` → `openQuickAdd`). The phone's log: Flutter called `showSoftInput` twice at 07:25:49.873 and .881,
-     both "Ignoring showSoftInput() … is not served" (ImeTracker `onFailed at PHASE_CLIENT_VIEW_SERVED`); the window
-     gained focus at .914 (`startInputOrWindowGainedFocus`, `WINDOW_FOCUS_GAIN`) and nothing asked again, so
-     `mInputShown=false` with the cursor in "Task name". A cold start doesn't hit it (the window has focus before
-     Flutter's first frame). Likely fix: ask for the keyboard again when the app's window comes back to the front
-     (`AppLifecycleListener(onResume:)` in the quick-add screen, if the title field has focus), with a test that fails
-     on today's code.
+   - ✅ **The "+" on a running app brings the keyboard up** (2026-11-02 09:20–10:00, Ahmed: "Yes, fix it"; `64091f9`
+     on `master`). Found on his phone at 07:25: the phone's log showed Flutter's two `showSoftInput` calls ignored
+     ("… is not served") about 40 ms before the window gained focus. The emulator reproduced it (Flip, fast build:
+     0 of 3 runs with a keyboard), and its full log showed the second half: Flutter's view doesn't count as a text box
+     for Android (`FlutterView` has no `onCheckIsTextEditor`), so as the window comes to the front Android hides the
+     keyboard (`HIDE_UNSPECIFIED_WINDOW` under the manifest's `adjustResize`, and
+     `HIDE_WINDOW_GAINED_FOCUS_WITHOUT_EDITOR` whenever the keyboard was up just before), a hide that reached the app
+     20–90 ms after focus, just after any ask made then. The fix: `quick_add_task_screen.dart` asks again on Flutter's
+     "resumed" (sent only once the window has focus) and every 150 ms after, at most 5 times, while a field has focus
+     and the keyboard isn't up; `MainActivity.keepKeyboardForQuickAdd` sets `SOFT_INPUT_STATE_UNCHANGED` while the
+     activity shows the quick-add (cold or warm; the activity ends when the sheet closes), which stops the first hide
+     so the first ask usually wins. Tried one half at a time first: the ask on "resumed" alone, 0 of 3; the native
+     line alone, 0 of 2; both without the repeat: 3 of 3, but 0 of 3 after leaving with the keyboard up. The whole fix:
+     every case with a keyboard (3 of 3 warm, cold, a cold sheet left with Home and reopened from the icon, and 3 of 3
+     "+" after leaving with the keyboard up, where the log shows Android's hide and then the sheet's second ask
+     winning); a normal start still has no keyboard. Check script: `tool/emulator/kb_check.sh <serial> <label> <runs>`
+     (`.gitattributes` now keeps `*.sh` in Unix line endings, which Git Bash needs). 4 new tests in
+     `test/features/tasks/quick_add_keyboard_test.dart` (3 failed on the code before them; the 4th fails on an
+     always-ask version); 348 pass; analyze clean. No native test exists in this project, so the native line is
+     covered by the emulator script only.
+   - ⬜ **← next: the keyboard fix onto his phone** (needs the cable; he unplugged at about 09:24 with my OK). Built
+     from `64091f9` in `D:\projects\trackerapp` (09:55–09:56): `build\app\outputs\flutter-apk\app-profile.apk`,
+     v1.18.0 (27), `application-debuggable`, certificate SHA-256 `5b269323…c7ac5` (Uplan's key; checked). The file is
+     119.4 MiB, but its entries take 97.1 MB like yesterday's (93.0 MiB): the rest is free space the incremental
+     packager left inside the file (checked with Python's `zipfile`). When he plugs in:
+     copy his data off first (signing-key plan Task 4 steps 2–4, into a new `D:\backups\uplan\2026-11-02-keyboard\`),
+     check the APK's fingerprint, `adb install -r` (never uninstall), start Uplan normally, compare the app's booked
+     reminders (`flutter.alarm_notif_*`) before and after, then the real try: open Uplan, Home, the widget's "+" →
+     the keyboard is up (`dumpsys input_method` `mInputShown=true`), and Back closes it with nothing added.
    - ✅ (yesterday's state, kept for the record) the fast build was picked (Ahmed, 2026-11-01 about 14:50: "Fast build", after asking how it
      differs: both builds carry the same fixes; only the speed differs). Built 14:51–14:54 in `D:\projects\trackerapp`
      from `ed1ad20` (code = `44f8d2d`): `build\app\outputs\flutter-apk\app-profile.apk`, 93.0 MB, v1.18.0+27,
@@ -237,7 +257,7 @@ plus this chat about 0.9–1.4M; three helpers about 1.1–1.7M; this chat alone
 - [ ] A ranked round-table report Ahmed has read (a page for his tablet, a copy in `docs/`).
 - [ ] The widget's add-task lag fixed, or explained with numbers from a profile or release build. (Explained with
       numbers on 2026-11-01; batch B built; the fast build on the phone 2026-11-02; the missing keyboard on a running
-      app's "+" found on the phone 2026-11-02, its fix waits on his yes.)
+      app's "+" found on the phone 2026-11-02 and fixed the same morning (`64091f9`), not on the phone yet.)
 - [ ] The fixes he picked built, analyze clean, all tests green, committed on `master` and pushed.
 - [ ] The handover files updated; Tester hands back and offers to be archived.
 (The signing-key move's own checklist is all done: `docs/superpowers/plans/2026-11-01-signing-key.md` and the history.)
