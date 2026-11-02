@@ -52,10 +52,39 @@ is a bit laggy."
      first frame, so it was reverted. What still makes the "+" slow: Android starting the app and its engine (every
      "+" starts it again) and the debug build. Next real levers: the fast build on the phone, keeping the app warm
      after a quick add (W6), a Perfetto trace of the busy main thread.
-   - ⬜ **← next: ask Ahmed about his phone**: install A + B (master `44f8d2d`) as the fast profile build or the same
-     debug kind as now; copy his data off first either way (signing-key plan, Task 4); check the fingerprint; then a
-     10-minute timing check on the phone with the stopwatch build if he agrees. The Uplan chat also installs on the
-     phone (gym smart order): tell it before installing.
+   - ✅ **The fast build on his phone** (2026-11-02 07:24; Ahmed: "Phone plugged in"). First his Uplan folder was copied
+     the plan's way to `D:\backups\uplan\2026-11-02-fast-build\` (327 files = the phone's count, 569 MB in 38 s,
+     integrity `ok`, 309 photos and 0 missing, database SHA-256 `199f598f…`; `phone_counts.txt` and `counts.txt` there),
+     then `install -r` (fingerprint checked again). After it: v1.18.0+27, `DEBUGGABLE`, 327 files, the app's 3 booked
+     reminders (`flutter.alarm_notif_*`) the same 3 before and after (the crude `dumpsys alarm` line count went 58 →
+     57), Home shows his data, the widget intent opened the sheet and Back closed it with nothing added (34 tasks,
+     integrity `ok`). Not timed on the phone. Note: the Z Flip 6 has two screens, so `screencap` needs `-d <id>` from
+     `dumpsys SurfaceFlinger --display-id` (without it a warning lands in front of the PNG).
+   - ⬜ **← next: the "+" on a running app opens without the keyboard** (found on his phone 2026-11-02 07:25, his yes
+     to fix pending). His live notification keeps Uplan running, so the "+" usually takes the running-app path
+     (`onNewIntent` → `openQuickAdd`). The phone's log: Flutter called `showSoftInput` twice at 07:25:49.873 and .881,
+     both "Ignoring showSoftInput() … is not served" (ImeTracker `onFailed at PHASE_CLIENT_VIEW_SERVED`); the window
+     gained focus at .914 (`startInputOrWindowGainedFocus`, `WINDOW_FOCUS_GAIN`) and nothing asked again, so
+     `mInputShown=false` with the cursor in "Task name". A cold start doesn't hit it (the window has focus before
+     Flutter's first frame). Likely fix: ask for the keyboard again when the app's window comes back to the front
+     (`AppLifecycleListener(onResume:)` in the quick-add screen, if the title field has focus), with a test that fails
+     on today's code.
+   - ✅ (yesterday's state, kept for the record) the fast build was picked (Ahmed, 2026-11-01 about 14:50: "Fast build", after asking how it
+     differs: both builds carry the same fixes; only the speed differs). Built 14:51–14:54 in `D:\projects\trackerapp`
+     from `ed1ad20` (code = `44f8d2d`): `build\app\outputs\flutter-apk\app-profile.apk`, 93.0 MB, v1.18.0+27,
+     certificate SHA-256 `5b269323…c7ac5` (Uplan's key), `application-debuggable` (so `run-as` stays open). Tried for
+     real on the Flip emulator with the worktree's profile APK (same code, debug key): Settings › Diagnostics › "Test
+     scheduled reminder (1 min)" went off with the app's process killed (scheduled 14:54:30; Android started the app
+     for the alarm at 14:55:28; notification 997 posted by 14:55:31), and a live-notification snooze broadcast
+     (`uplan://live?action=snooze&type=task&id=1`) ran `liveBackgroundCallback` from a cold start (`live_snoozes`
+     `{}` → `task:1`). Both background entry points carry `@pragma('vm:entry-point')` (checked); nothing in the app's
+     own code acts differently between debug and profile (only generated Riverpod hashes read `dart.vm.product`).
+     **Waiting: the phone wasn't on the cable** (`adb devices` empty at 14:47 and 14:56). When it is: copy his data off
+     (signing-key plan Task 4 steps 2–4, into a new `D:\backups\uplan\2026-11-01-fast-build\`, never the morning's
+     folder), `adb -s R5CX631BMJB install -r` that APK (never uninstall), start it normally (re-books the reminders
+     that the copy's force-stop cancelled), compare Uplan's alarm count before and after, open the widget's quick-add
+     once and close it with Back. No stopwatch build on his phone (not asked). The Uplan chat was idle since 11:06 and
+     wasn't woken; it learns of the fast build from these files and START HERE.
 7. ⬜ Hand back: state into these files, then offer to be archived.
 
 ## Checked so far (2026-11-01, read only; nothing on the PC or the phone changed)
@@ -127,8 +156,8 @@ plus this chat about 0.9–1.4M; three helpers about 1.1–1.7M; this chat alone
 4.1 GB download above.
 
 ## Must know (from the Uplan chat's brief)
-- The phone's Uplan is a debug build (slow): judge speed on a profile or release build (an emulator, or his phone
-  with his OK). A release build on the phone closes `adb run-as`, today the only full copy of its data: his call.
+- The phone's Uplan is a fast (profile) build since 2026-11-02, still debuggable (`run-as` works): judge speed on a
+  profile or release build (an emulator, or his phone with his OK). A release build on the phone closes `adb run-as`, today the only full copy of its data: his call.
 - Never uninstall the phone's app. Check an APK's fingerprint before `adb install -r` (device skill), and copy his
   data off first the way the move did (`docs/superpowers/plans/2026-11-01-signing-key.md`, Task 4).
 - Stay on Flutter 3.44. Android CLI commands need `--no-metrics`. Never change Smart App Control.
@@ -207,7 +236,8 @@ plus this chat about 0.9–1.4M; three helpers about 1.1–1.7M; this chat alone
 ## Done means (Tester)
 - [ ] A ranked round-table report Ahmed has read (a page for his tablet, a copy in `docs/`).
 - [ ] The widget's add-task lag fixed, or explained with numbers from a profile or release build. (Explained with
-      numbers on 2026-11-01; the fix waits on his pick of batch B.)
+      numbers on 2026-11-01; batch B built; the fast build on the phone 2026-11-02; the missing keyboard on a running
+      app's "+" found on the phone 2026-11-02, its fix waits on his yes.)
 - [ ] The fixes he picked built, analyze clean, all tests green, committed on `master` and pushed.
 - [ ] The handover files updated; Tester hands back and offers to be archived.
 (The signing-key move's own checklist is all done: `docs/superpowers/plans/2026-11-01-signing-key.md` and the history.)

@@ -25,7 +25,9 @@ Rebuilt on 2026-10-27 from the git log, the public releases, `docs/superpowers/S
      typed and left without Enter vanishes; the widget "+" shows nothing for 1.2–5.4 s). Ahmed picked "A, then B".
      ✅ Batch A (2026-11-01, `fcaab82`): notes keep typed lines, cursor in new lines, "Last backup" in Settings.
      ✅ Batch B (2026-11-01, `44f8d2d`): the sheet sits on the keyboard, quick adds skip the launch work, one Trackers
-     title; the time to the sheet did not improve on the emulator. ⬜ Then the phone try (fast build or not: his call).
+     title; the time to the sheet did not improve on the emulator. ✅ The fast (profile) build on the phone
+     (2026-11-02, Ahmed's pick; data copied off first, nothing lost). ⬜ Next, found on the phone: the "+" on a running
+     app opens without the keyboard (his yes to fix pending).
      **Alongside it, gym (Ahmed, 2026-11-01; the Uplan chat):** his new split is a whole-body warm-up, 1 set per
      exercise, every other day; goal: strength and muscle equally, kept casual.
      - ⬜ Smart order (his pick, the tired score, plus his rules: mix the muscles; triceps after the presses, biceps
