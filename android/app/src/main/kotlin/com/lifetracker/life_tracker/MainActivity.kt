@@ -12,6 +12,10 @@ class MainActivity : FlutterActivity() {
     private val channelName = "uplan/widget"
     private var methodChannel: MethodChannel? = null
 
+    /// Tells the quick-add sheet when Android gives this window focus.
+    private var quickAddChannel: MethodChannel? = null
+    private var showingQuickAdd = false
+
     companion object {
         /// Live-dashboard channel handle. Static so native components that
         /// outlive this activity (e.g. notification action receivers) can
@@ -33,6 +37,10 @@ class MainActivity : FlutterActivity() {
         methodChannel = MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
             channelName,
+        )
+        quickAddChannel = MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            "uplan/quick_add",
         )
 
         // Live dashboard: Flutter drives the foreground service through here.
@@ -105,16 +113,29 @@ class MainActivity : FlutterActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (intent?.data?.host == "add_task") keepKeyboardForQuickAdd()
+        showingQuickAdd = intent?.data?.host == "add_task"
+        if (showingQuickAdd) keepKeyboardForQuickAdd()
     }
 
     /// Warm start: the app was already running, so route via the method
     /// channel (getInitialRoute only runs on a fresh engine).
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        if (intent.data?.host == "add_task") {
+        showingQuickAdd = intent.data?.host == "add_task"
+        if (showingQuickAdd) {
             keepKeyboardForQuickAdd()
             methodChannel?.invokeMethod("openQuickAdd", null)
+        }
+    }
+
+    /// Android accepts keyboard requests only once this window has focus, and
+    /// on a fast phone the sheet's text field asks before that. Flutter can't
+    /// tell the sheet: its engine starts each window believing it has focus,
+    /// so its "resumed" comes too early. Pass Android's own signal on.
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus && showingQuickAdd) {
+            quickAddChannel?.invokeMethod("windowFocused", null)
         }
     }
 

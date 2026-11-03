@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:life_tracker/features/tasks/presentation/providers/lists_providers.dart';
@@ -30,6 +31,20 @@ void main() {
 
   Iterable<String> keyboardCalls(WidgetTester tester) =>
       tester.testTextInput.log.map((call) => call.method);
+
+  int keyboardAsks(WidgetTester tester) =>
+      keyboardCalls(tester).where((m) => m == 'TextInput.show').length;
+
+  /// What MainActivity sends when Android gives the window focus.
+  Future<void> androidGivesWindowFocus(WidgetTester tester) async {
+    await tester.binding.defaultBinaryMessenger.handlePlatformMessage(
+      'uplan/quick_add',
+      const StandardMethodCodec()
+          .encodeMethodCall(const MethodCall('windowFocused')),
+      (_) {},
+    );
+    await tester.pump();
+  }
 
   testWidgets('asks for the keyboard again once the window has focus',
       (tester) async {
@@ -73,8 +88,59 @@ void main() {
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
     await tester.pump(const Duration(seconds: 5));
 
-    expect(keyboardCalls(tester).where((m) => m == 'TextInput.show').length,
-        inInclusiveRange(2, 5));
+    expect(keyboardAsks(tester), inInclusiveRange(2, 8));
+  });
+
+  // Regression (2026-11-03, the Z Flip 6): Flutter's engine starts each window
+  // believing it has focus, so a new window reports "resumed" before Android
+  // gives it focus. On the phone the sheet's first frame and keyboard asks
+  // came about 60 ms before the focus, all ignored, and nothing asked after
+  // (no keyboard in 3 of 3). MainActivity now forwards Android's own focus.
+  testWidgets('asks when Android gives the window focus', (tester) async {
+    await tester.pumpWidget(ProviderScope(
+      overrides: [taskListsProvider.overrideWith((ref) => Stream.value(const []))],
+      child: const MaterialApp(home: QuickAddTaskScreen()),
+    ));
+    await tester.pump();
+    tester.testTextInput.log.clear();
+
+    await androidGivesWindowFocus(tester);
+
+    expect(keyboardCalls(tester), contains('TextInput.show'));
+  });
+
+  testWidgets('asks even if a keyboard looked up when the app left',
+      (tester) async {
+    // Leaving with the keyboard up can leave its height in Flutter's view
+    // insets; the sheet must not take that for a keyboard that is up now.
+    await openSheetBeforeWindowFocus(tester);
+    tester.view.viewInsets = const FakeViewPadding(bottom: 800);
+    addTearDown(tester.view.reset);
+    await tester.pump();
+    tester.testTextInput.log.clear();
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump();
+
+    expect(keyboardCalls(tester), contains('TextInput.show'));
+  });
+
+  testWidgets('asks once the field gets its focus back a moment later',
+      (tester) async {
+    await openSheetBeforeWindowFocus(tester);
+    final FocusNode title =
+        tester.widget<TextField>(find.byType(TextField).first).focusNode!;
+    title.unfocus();
+    await tester.pump();
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await androidGivesWindowFocus(tester);
+
+    title.requestFocus();
+    await tester.pump();
+    tester.testTextInput.log.clear(); // the field's own ask as it takes focus
+    await tester.pump(const Duration(milliseconds: 150));
+
+    expect(keyboardCalls(tester), contains('TextInput.show'));
   });
 
   testWidgets('does not bring the keyboard up when nothing is being typed',

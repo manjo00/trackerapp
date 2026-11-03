@@ -51,16 +51,24 @@ class _QuickAddTaskScreenState extends ConsumerState<QuickAddTaskScreen> {
     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
   ];
 
+  /// MainActivity sends `windowFocused` here when Android gives the app's
+  /// window focus, the moment Android starts accepting keyboard requests.
+  static const MethodChannel _windowChannel = MethodChannel('uplan/quick_add');
+
   @override
   void initState() {
     super.initState();
     _lifecycle = AppLifecycleListener(onResume: _askForKeyboardAgain);
+    _windowChannel.setMethodCallHandler((MethodCall call) async {
+      if (call.method == 'windowFocused') _askForKeyboardAgain();
+    });
     WidgetsBinding.instance
         .addPostFrameCallback((_) => StartupTrace.mark('quick_add_shown'));
   }
 
   @override
   void dispose() {
+    _windowChannel.setMethodCallHandler(null);
     _lifecycle.dispose();
     _keyboardRetry?.cancel();
     _titleFocus.dispose();
@@ -70,33 +78,36 @@ class _QuickAddTaskScreenState extends ConsumerState<QuickAddTaskScreen> {
     super.dispose();
   }
 
-  /// When the widget's "+" brings back a running app, the title field asks
-  /// for the keyboard before Android gives the window focus, and Android
-  /// ignores that ask. Flutter reports "resumed" only once the window has
-  /// focus, so ask again then. Android may still hide the keyboard a moment
-  /// later (it does so as a window comes to the front, since Flutter's view
-  /// isn't a text box for it), so keep asking briefly until it is up.
+  /// The text field asks for the keyboard as soon as it is built, which on a
+  /// fast phone is before Android gives the window focus, and Android ignores
+  /// a request made that early. So ask again when the window gets focus
+  /// (Android's own signal through [_windowChannel]; Flutter's "resumed" can
+  /// come too early, since Flutter's engine starts each window believing it
+  /// has focus). Android may still hide the keyboard a moment later (it does
+  /// so as a window comes to the front, since Flutter's view isn't a text box
+  /// for it), and a field may get its focus back a moment late, so keep
+  /// asking briefly: every 150 ms for 1.2 s, while a field has focus, until
+  /// the keyboard comes up.
   void _askForKeyboardAgain() {
     _keyboardRetry?.cancel();
-    if (!_askForKeyboard()) return;
-    int asks = 1;
-    _keyboardRetry =
-        Timer.periodic(const Duration(milliseconds: 150), (Timer timer) {
-      if (asks == 5 || !_askForKeyboard()) {
-        timer.cancel();
-      } else {
-        asks++;
+    // A keyboard that was up when the app left can stay in the insets, so
+    // only a keyboard that comes up from here on ends the asking early.
+    final bool keyboardWasUp = View.of(context).viewInsets.bottom > 0;
+    int ticks = 0;
+    void tick() {
+      final bool cameUp = !keyboardWasUp && View.of(context).viewInsets.bottom > 0;
+      if (cameUp || ticks++ == 8) {
+        _keyboardRetry?.cancel();
+        return;
       }
-    });
-  }
+      if (_titleFocus.hasFocus || _noteFocus.hasFocus) {
+        SystemChannels.textInput.invokeMethod<void>('TextInput.show');
+      }
+    }
 
-  /// Asks for the keyboard while a field has focus and it isn't up yet;
-  /// false when there is nothing to ask for.
-  bool _askForKeyboard() {
-    if (!_titleFocus.hasFocus && !_noteFocus.hasFocus) return false;
-    if (View.of(context).viewInsets.bottom > 0) return false;
-    SystemChannels.textInput.invokeMethod<void>('TextInput.show');
-    return true;
+    tick();
+    _keyboardRetry =
+        Timer.periodic(const Duration(milliseconds: 150), (_) => tick());
   }
 
   static String _dateStr(DateTime d) =>
