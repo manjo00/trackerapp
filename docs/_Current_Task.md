@@ -405,6 +405,14 @@ plus this chat about 0.9–1.4M; three helpers about 1.1–1.7M; this chat alone
 - `D:\backups\uplan\2026-11-01\` until Ahmed decides.
 
 ## Noticed (not fixing now)
+- **The main app no longer needs a see-through window** (found 2026-11-03, building the sheet's own window): only
+  the quick-add sheet shows the home screen behind it, and it now has a window of its own. MainActivity is still
+  see-through (`windowIsTranslucent` in `LaunchTheme`, `getBackgroundMode()` transparent), which keeps every app
+  screen on Flutter's slower texture drawing (`FlutterActivity.getRenderMode`) and gives no start screen between a
+  tap on the icon and Flutter's first frame. An ordinary window for MainActivity (its own theme, QuickAddActivity
+  keeping the see-through one) would fix both; a "+" drawn before the update would then open the sheet over the
+  app's window background instead of the home screen, until the widgets redraw. Worth doing once the own window is
+  on his phone; it changes how the app's start looks, so show it first.
 - **v1.18.0 can't restore a backup made by an older version** (checked in the code, not by a test): schema 24 added
   `notes.isFavorite` and 25 added `notebooks.isFavorite`, both required booleans, and the generated `fromJson` throws
   on a missing key, so the whole import rolls back. Not needed for the signing-key move (the phone is on v1.18.0);
