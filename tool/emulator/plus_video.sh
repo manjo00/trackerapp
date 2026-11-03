@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # Tester chat: film what the screen shows when the widget's "+" is tapped.
-# Usage: plus_video.sh <serial> <label> <warm|again|cold|dead> [display id]
+# Usage: [TARGET=.MainActivity] plus_video.sh <serial> <label> <warm|again|cold|dead> [display id]
+# The "+" goes to $TARGET: .QuickAddActivity by default, the sheet's own window since
+# 2026-11-03 (not exported, so run `adb root` on the emulator first); .MainActivity is
+# the old way, still used by widget buttons drawn before that update.
 #   warm  = Uplan opened normally (its main screen), sent away with Home, then "+"
 #   again = a "+" sheet left open, sent away with Home, then "+" again
 #   cold  = a "+" sheet opened and closed with Back (activity gone, app alive), then "+"
@@ -12,7 +15,8 @@ S=$1; LABEL=$2; MODE=$3; DISPLAY_ID=${4:-}
 P=com.lifetracker.life_tracker
 OUT=${OUT:-C:/Users/kille/AppData/Local/Temp/claude/D--projects-trackerapp/c8c479bc-9817-44c2-8220-600016f6dfea/scratchpad/video}
 FF=$(ls -d "$LOCALAPPDATA"/Microsoft/WinGet/Packages/Gyan.FFmpeg.Essentials*/ffmpeg-*/bin | head -1)
-PLUS="am start -a es.antonborri.home_widget.action.LAUNCH -d uplan://add_task -n $P/.MainActivity"
+TARGET=${TARGET:-.QuickAddActivity}
+PLUS="am start -a es.antonborri.home_widget.action.LAUNCH -d uplan://add_task -n $P/$TARGET"
 mkdir -p "$OUT"
 case "$MODE" in
   warm)
