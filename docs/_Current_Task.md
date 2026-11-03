@@ -141,9 +141,41 @@ is a bit laggy."
      restored focus reopening the text field), so the sheet's one-time check ran while its field had no focus yet and
      didn't start the repeats, and the real focus brought no new "resumed". Logs: the Tester's scratchpad
      `tap_log2.txt` (not in the repo).
-   - ⬜ **← next: his call on tap 2's gap.** Proposed small fix: on "resumed", start the repeat even when no field has
-     focus yet (each tick asks only if a field has focus and the keyboard isn't up) and run it a little longer
-     (about 1.5 s), with a test where the field gets its focus back a moment after "resumed". Then the hand-back.
+   - ✅ **The "+" investigated properly** (2026-11-03 15:45–16:15; Ahmed: "some times it comes sometimes no and the
+     first time i open it after awhile i think the apps pops up in the background for a split second and disappears.
+     you work in that, no shortcuts and token preservation nor time restrictions take your time"). Tools made in the
+     worktree's `tool/emulator/`: `plus_video.sh` (films a "+" in one situation; `TAP="x y"` taps the widget instead
+     of sending its intent), `frame_times.py` (each frame's time and brightness), `phone_plus.sh` (real widget taps in
+     four situations), `fresh_plus.sh` (a "+" on a truly closed sheet, with a check of the window in front before every
+     tap). Videos and logs: the Tester's scratchpad (`video\`, `phone_runs\`; his data, not in the repo). Found:
+     1. **The flash** (checked on video): when Uplan's own window is open in the background, the "+" reuses it
+        (`onNewIntent` → `openQuickAdd` → `appRouter.go('/quick-add')`, and `/quick-add` uses the default page
+        transition), so his last app screen shows first: emulator 1.14–1.33 s fully on screen (light mode), phone about
+        0.2 s behind the sheet (dark mode). No flash when the sheet gets a new window, or when it was left open.
+     2. **His place in the app is lost**: the reused window's screen is replaced by the sheet. On the emulator, Back
+        then closed the app and reopening showed a fresh Home; on his phone (Samsung), Back only sends the app back, so
+        **tapping Uplan's icon afterwards showed the add-task sheet** instead of his app (screenshot, 16:02).
+     3. **The keyboard**: Flutter's engine starts each window believing it has focus
+        (`LifecycleChannel.java:41`, `private boolean lastFocus = true;`), so a new window reports "resumed" at
+        `onResume`, before Android gives it focus, and nothing new when the focus comes. His phone is fast: on a "+"
+        with a new window (the sheet closed with its dimmed area first, `fresh_plus.sh`), Dart's `main()` printed at
+        +0.047 s, the first frame at +0.075 s, the text field's two keyboard requests at +0.088 and +0.102 s (both
+        "not served"), the window's focus at +0.150 s, and then nothing: **no keyboard in 3 of 3**. The emulator is
+        slower, so its first frame came after the focus and it never missed. In the reused-window cases the order
+        varied (keyboard 9 of 9 in scripted real taps, but his tap 2 at 15:32 missed), and a keyboard left up when
+        leaving may also leave Flutter's view insets stale, which makes the sheet's re-ask skip.
+     4. **After `am force-stop`** the widget's "+" does nothing on the first tap: force-stop cancels the app's
+        shortcuts (the widget's PendingIntents); the tap only made Android refresh the widget (`APPWIDGET_UPDATE`).
+        Only matters after a Force stop; a normal background kill keeps them.
+     Also learned: Back on the sheet doesn't close Uplan on his phone (Samsung moves the task back), but the sheet's
+     own send or a tap on its dimmed area does (`SystemNavigator.pop()` → `activity.finish()`). Mistake: my first
+     scripted runs pressed Home while his home screen was already showing, which jumps to his first page; taps then
+     hit his date and weather widget and opened Weather and Google Calendar (nothing changed in them; his phone was
+     left on his first home page). The scripts now check the window in front before every tap.
+   - ⬜ **← next: the fixes.** (a) Keyboard: ask when Android reports the window's real focus
+     (`onWindowFocusChanged(true)` → a channel message → the sheet asks, repeating briefly, not trusting view insets
+     left over from before). (b) Flash and lost place: give the sheet its own window and task (a `QuickAddActivity`,
+     out of recents), so the "+" never touches the open app; a design for his OK first. Then the hand-back.
    - ✅ (yesterday's state, kept for the record) the fast build was picked (Ahmed, 2026-11-01 about 14:50: "Fast build", after asking how it
      differs: both builds carry the same fixes; only the speed differs). Built 14:51–14:54 in `D:\projects\trackerapp`
      from `ed1ad20` (code = `44f8d2d`): `build\app\outputs\flutter-apk\app-profile.apk`, 93.0 MB, v1.18.0+27,
