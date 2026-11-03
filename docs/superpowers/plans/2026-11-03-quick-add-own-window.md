@@ -62,10 +62,10 @@ adb scripts on the emulator and the Z Flip 6.
   `am start -a es.antonborri.home_widget.action.LAUNCH -d uplan://add_task -n com.lifetracker.life_tracker/$TARGET`
   (`TARGET` defaults to `.QuickAddActivity`, which is not exported, so the emulator needs `adb root` first).
 
-- [ ] **Step 1:** Merge `master` into `tester/speed` (only docs are new since `a1fb63c`).
-- [ ] **Step 2:** Give `plus_video.sh`, `kb_check.sh` and `fresh_plus.sh` the `TARGET` variable for their `PLUS`
+- [x] **Step 1:** Merge `master` into `tester/speed` (only docs are new since `a1fb63c`).
+- [x] **Step 2:** Give `plus_video.sh`, `kb_check.sh` and `fresh_plus.sh` the `TARGET` variable for their `PLUS`
   line.
-- [ ] **Step 3:** Write `own_window_check.sh`. Start Uplan with its launcher intent plus `--es route /notes` (a
+- [x] **Step 3:** Write `own_window_check.sh`. Start Uplan with its launcher intent plus `--es route /notes` (a
   screen other than the start tab), wait 8 s, take screenshot S1, then press Home. The cases:
   1. **own task:** after the "+", the focused window is `$TARGET`, and its task (`t<N>` in `dumpsys activity
      activities`) differs from MainActivity's.
@@ -77,28 +77,29 @@ adb scripts on the emulator and the Z Flip 6.
      shows S1 again.
   5. **a sheet left with Home comes back:** "+", type `milk`, Home, "+": the same task number as before. A
      screenshot shows the text, checked by eye.
-- [ ] **Step 4:** Build the profile APK in the worktree (`flutter build apk --profile`) and go on only after
+- [x] **Step 4:** Build the profile APK in the worktree (`flutter build apk --profile`) and go on only after
   "Built build".
-- [ ] **Step 5:** Boot `uplan_flip_a16` on its own, run `adb root`, then `prepare.sh` (install, demo data,
+- [x] **Step 5:** Boot `uplan_flip_a16` on its own, run `adb root`, then `prepare.sh` (install, demo data,
   permissions).
-- [ ] **Step 6:** `TARGET=.MainActivity own_window_check.sh` must FAIL cases 1, 2, 3 and 4. This is the red run.
-- [ ] **Step 7:** `TARGET=.MainActivity plus_video.sh … warm` must show app frames between the "+" and the sheet
+- [x] **Step 6:** `TARGET=.MainActivity own_window_check.sh` must FAIL cases 1, 2, 3 and 4. This is the red run.
+- [x] **Step 7:** `TARGET=.MainActivity plus_video.sh … warm` must show app frames between the "+" and the sheet
   (the flash).
-- [ ] **Step 8:** The owed device check of the keyboard fix: `TARGET=.MainActivity kb_check.sh` and
+- [x] **Step 8:** The owed device check of the keyboard fix: `TARGET=.MainActivity kb_check.sh` and
   `fresh_plus.sh` must show the keyboard up in every case.
 
 ### Task 2: Tasks written by another window show up when the app comes back
 
 **Files:**
-- Modify: `lib/core/database/app_database.dart` (one method on `AppDatabase`)
+- Create: `lib/core/database/changed_elsewhere.dart` (an extension on `AppDatabase`; not inside
+  `app_database.dart`, which the Uplan chat is changing for the workout log, uncommitted on 2026-11-03)
 - Modify: `lib/app.dart` (`didChangeAppLifecycleState`, `resumed`)
 - Test: `test/core/database/changed_elsewhere_test.dart`
 
 **Interfaces:**
-- Produces: `void AppDatabase.markTasksChangedElsewhere()`, which re-runs this connection's stream queries that read
-  `tasks` or `task_lists`.
+- Produces: `extension ChangedElsewhere on AppDatabase { void markTasksChangedElsewhere() }`, which re-runs this
+  connection's stream queries that read `tasks` or `task_lists`.
 
-- [ ] **Step 1: Write the failing tests.** Open two `AppDatabase.forTesting(NativeDatabase(file))` on one temp
+- [x] **Step 1: Write the failing tests.** Open two `AppDatabase.forTesting(NativeDatabase(file))` on one temp
   file, called "the app" and "the sheet".
   - `'a list screen shows a task the sheet added, once told'`: the app listens to
     `TasksDao(app).watchTasksForList(listId)`, and the sheet calls
@@ -107,12 +108,12 @@ adb scripts on the emulator and the Z Flip 6.
   - `'the sheet's list chips show a list the app added, once told'`: the sheet listens to
     `ListsDao(sheet).watchLists()`, and the app inserts a list named `Gym`. It is not seen after 300 ms. After
     `sheet.markTasksChangedElsewhere()`, the names include `Gym`.
-- [ ] **Step 2:** Add an empty `markTasksChangedElsewhere() {}`. Run
+- [x] **Step 2:** Add an empty `markTasksChangedElsewhere() {}`. Run
   `flutter test test/core/database/changed_elsewhere_test.dart`: both tests must FAIL on the "arrives" check.
-- [ ] **Step 3:** Implement it as `markTablesUpdated([tasks, taskLists])`. Run the same test: PASS.
-- [ ] **Step 4:** Call it from `app.dart` on `resumed`, with a comment naming the two writers: the quick-add sheet's
+- [x] **Step 3:** Implement it as `markTablesUpdated([tasks, taskLists])`. Run the same test: PASS.
+- [x] **Step 4:** Call it from `app.dart` on `resumed`, with a comment naming the two writers: the quick-add sheet's
   own window and the live notification's background engine.
-- [ ] **Step 5:** `flutter analyze` must be clean and `flutter test` all green. Commit
+- [x] **Step 5:** `flutter analyze` must be clean and `flutter test` all green. Commit
   `fix(tasks): re-read tasks and lists another window wrote, on resume`.
 
 ### Task 3: The sheet's own window
@@ -144,31 +145,31 @@ adb scripts on the emulator and the Z Flip 6.
   the theme `@style/LaunchTheme` plus the NormalTheme meta-data, the same `configChanges` as MainActivity,
   `hardwareAccelerated="true"`, and `windowSoftInputMode="stateUnchanged|adjustResize"`.
 
-- [ ] **Step 1:** The failing check is Task 1's red run. This project has no native test harness, so the scripts are
+- [x] **Step 1:** The failing check is Task 1's red run. This project has no native test harness, so the scripts are
   the native tests (spec, "Checks").
-- [ ] **Step 2:** Write `UplanEngineSetup`. MainActivity uses it (`liveChannel = UplanEngineSetup.configure(this,
+- [x] **Step 2:** Write `UplanEngineSetup`. MainActivity uses it (`liveChannel = UplanEngineSetup.configure(this,
   flutterEngine)`). MainActivity's `add_task` handling stays as the fallback for widget buttons drawn before the
   update, and its comments say so.
-- [ ] **Step 3:** Write `QuickAddActivity` and its manifest entry.
-- [ ] **Step 4:** Point the three "+" `HomeWidgetLaunchIntent.getActivity` calls at `QuickAddActivity::class.java`.
-- [ ] **Step 5:** Update the comments in Dart.
-- [ ] **Step 6:** `flutter analyze` clean, `flutter test` all green, and `flutter build apk --profile` until "Built
+- [x] **Step 3:** Write `QuickAddActivity` and its manifest entry.
+- [x] **Step 4:** Point the three "+" `HomeWidgetLaunchIntent.getActivity` calls at `QuickAddActivity::class.java`.
+- [x] **Step 5:** Update the comments in Dart.
+- [x] **Step 6:** `flutter analyze` clean, `flutter test` all green, and `flutter build apk --profile` until "Built
   build" (that compiles the Kotlin). Commit `feat(widget): the quick-add sheet opens in a window of its own`.
 
 ### Task 4: The checks on the new build (emulator)
 
-- [ ] **Step 1:** `adb install -r` the new APK on the same AVD, then start Uplan once normally.
-- [ ] **Step 2:** `own_window_check.sh` (default `TARGET`, `adb root`) must PASS cases 1–5.
-- [ ] **Step 3:** `plus_video.sh` in the warm, again, cold and dead modes must show no app frame before the sheet
+- [x] **Step 1:** `adb install -r` the new APK on the same AVD, then start Uplan once normally.
+- [x] **Step 2:** `own_window_check.sh` (default `TARGET`, `adb root`) must PASS cases 1–5.
+- [x] **Step 3:** `plus_video.sh` in the warm, again, cold and dead modes must show no app frame before the sheet
   (contact sheets plus `frame_times.py`).
-- [ ] **Step 4:** `kb_check.sh` and `fresh_plus.sh` must show the keyboard up in every case.
-- [ ] **Step 5 (Review Focus 3):** Uplan open on a list (`--es route /lists/<id>`, the id read from the demo
+- [x] **Step 4:** `kb_check.sh` and `fresh_plus.sh` must show the keyboard up in every case.
+- [x] **Step 5 (Review Focus 3):** Uplan open on a list (`--es route /lists/<id>`, the id read from the demo
   database), then Home and "+". Type `Milk`, pick that list's chip and send. The launcher intent must then show the
   list with "Milk".
-- [ ] **Step 6 (Review Focus 4):** A "+" sent the old way (`TARGET=.MainActivity`) must still open the sheet. Close
+- [x] **Step 6 (Review Focus 4):** A "+" sent the old way (`TARGET=.MainActivity`) must still open the sheet. Close
   it afterwards.
-- [ ] **Step 7 (Review Focus 5):** Over steps 2–6, `adb logcat -d | grep -c MissingPluginException` must give `0`.
-- [ ] **Step 8 (only if case 4 failed because the sheet's task was parked instead of closed):**
+- [x] **Step 7 (Review Focus 5):** Over steps 2–6, `adb logcat -d | grep -c MissingPluginException` must give `0`.
+- [x] **Step 8 (not needed: case 4 passed) (only if case 4 failed because the sheet's task was parked instead of closed):**
   - Add a failing widget test, `'Back closes the sheet'`, to `test/features/tasks/quick_add_sheet_test.dart`: a
     Back press sends `SystemNavigator.pop`.
   - Wrap the sheet in `PopScope(canPop: false, onPopInvokedWithResult: …)` that calls `_dismiss()`.
@@ -176,10 +177,12 @@ adb scripts on the emulator and the Z Flip 6.
 
 ### Task 5: Onto master and his phone
 
-- [ ] **Step 1:** Fetch, then merge `tester/speed` into `master` in `D:\projects\trackerapp`. Run the suite there.
+- [x] **Step 1:** Fetch, then merge `tester/speed` into `master` in `D:\projects\trackerapp`. Run the suite there.
   Push (the secret check prints counts only).
-- [ ] **Step 2:** Build the profile APK in `D:\projects\trackerapp` and wait for "Built build". Check the certificate
-  SHA-256 and `application-debuggable`.
+- [x] **Step 2:** Build the profile APK in `D:\projects\trackerapp` and wait for "Built build". Check the certificate
+  SHA-256 and `application-debuggable`. **Only from a clean tree:** if `git status` shows another chat's
+  uncommitted work (on 2026-11-03 the Uplan chat's workout-log change, a database migration), don't build. Ask
+  that chat first, because a build would carry its half-done migration onto his phone.
 - [ ] **Step 3:** When he plugs in:
   - copy his data off into `D:\backups\uplan\<date>-own-window\`, with the counts and the integrity check;
   - `adb install -r`;

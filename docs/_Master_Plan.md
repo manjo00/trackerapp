@@ -30,8 +30,13 @@ Rebuilt on 2026-10-27 from the git log, the public releases, `docs/superpowers/S
      running app opened without the keyboard (2026-11-02, `64091f9`; every case on the emulator; on his phone since
      15:38, where both "+" cases brought it up over the cable, but his own tap still didn't: open). ✅ Reminders in
      the quick-add sheet plus a custom 4th one in both task screens (2026-11-02, Ahmed's request, look B; `cf5ce41`;
-     booked for real on the emulator; on his phone since 2026-11-03 15:16, data copied first). ⬜ Next: one real tap
-     of the "+" with the phone's log recording, for the keyboard; then the Tester hands back.
+     booked for real on the emulator; on his phone since 2026-11-03 15:16, data copied first). ✅ The "+" looked at
+     properly on his phone (2026-11-03): it borrowed the app's open window (the app flashed behind the sheet and his
+     place was lost), and on a new window the sheet asked for the keyboard before Android gave the window focus.
+     ✅ Fixed (Ahmed: "Yes, build it"): the sheet in a window of its own, the keyboard asked again on window focus,
+     and the app re-reads tasks another window added (`b7c92c8` on `master`, 2026-11-03; every check on the emulator
+     passed). ⬜ Next: one install on his phone carrying both this and the workout log's demo 1; then the Tester hands
+     back.
      **Alongside it, gym (Ahmed, 2026-11-01; the Uplan chat):** his new split is a whole-body warm-up, 1 set per
      exercise, every other day; goal: strength and muscle equally, kept casual.
      - ⬜ Smart order (his pick, the tired score, plus his rules: mix the muscles; triceps after the presses, biceps

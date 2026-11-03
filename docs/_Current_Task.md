@@ -172,22 +172,51 @@ is a bit laggy."
      scripted runs pressed Home while his home screen was already showing, which jumps to his first page; taps then
      hit his date and weather widget and opened Weather and Google Calendar (nothing changed in them; his phone was
      left on his first home page). The scripts now check the window in front before every tap.
-   - 🟡 **The keyboard fix, written, not yet tried on a device** (`f348af0` on `tester/speed`, not on `master`):
-     `MainActivity.onWindowFocusChanged(true)` → `uplan/quick_add` `windowFocused` while it shows the quick-add; the
-     sheet then asks every 150 ms for 1.2 s while a field has focus, until a keyboard comes up, without trusting view
-     insets left from before (`quick_add_task_screen.dart` `_askForKeyboardAgain`). 3 new tests (window-focus
-     message, stale insets, a late focus), each failed first; 370 pass; analyze clean. Its emulator run (16:27) was
-     spoiled twice: the build had failed on a damaged Kotlin cache and my command still installed the old APK (the pipe
-     into `grep` hid the failure), then the emulator starved: **the PC had 0.2 GB free** because Ahmed was playing
-     Phantom Blade Zero (`PBZ.exe`, about 13 GB reserved) while my Gradle and two Kotlin daemons held about 5 GB (I
-     stopped them; they restart with the next build). Two damaged build caches went to the Recycle Bin
+   - ✅ **The keyboard fix, tried on the emulator** (`f348af0`: `onWindowFocusChanged(true)` → `uplan/quick_add`
+     `windowFocused`, then the sheet asks every 150 ms for 1.2 s while a field has focus, until a keyboard comes up,
+     without trusting view insets left from before; 3 new tests, each failed first). On the Flip emulator's fast build
+     (`3946054`, 2026-11-03 20:40–20:44) the keyboard came up in every case: the "+" on a running app 3 of 3 (Android
+     ignored the first two asks each time), a stopped app, keyboard up then Home then "+", a fresh window 3 of 3
+     (drawn about 1.0 s after the "+"). Its first emulator run (16:27) had been spoiled twice: the build had failed on
+     a damaged Kotlin cache and my command still installed the old APK (the pipe into `grep` hid the failure), then
+     **the PC had 0.2 GB free** while Ahmed played Phantom Blade Zero (`PBZ.exe`, about 13 GB) and my Gradle and two
+     Kotlin daemons held about 5 GB (stopped). Two damaged build caches went to the Recycle Bin
      (`D:\dev\pub-cache\hosted\pub.dev\jni-1.0.0\android\.cxx`, the side checkout's
-     `build\app\kotlin\compileProfileKotlin`); the next build recreated them and worked. **Heavy work (emulator,
-     builds) is paused while he plays.**
-   - ⬜ **← next:** (1) when the PC is free: emulator check of `f348af0` (`kb_check.sh`, `fresh_plus.sh`), then
-     `master`, a phone build, his data copied off, install, and `fresh_plus.sh` on the phone (expect the keyboard
-     3 of 3 where it was 0 of 3). (2) His OK on the design `docs/superpowers/specs/2026-11-03-quick-add-own-window-design.md`
-     (the sheet in its own window: no flash, his place kept). Then the hand-back.
+     `build\app\kotlin\compileProfileKotlin`). Since then a build goes on only after "Built build", and one emulator or
+     one build runs at a time.
+   - ✅ **The sheet in its own window** (Ahmed, 2026-11-03: "Yes, build it"; 20:23–21:15; design
+     `docs/superpowers/specs/2026-11-03-quick-add-own-window-design.md`, plan
+     `docs/superpowers/plans/2026-11-03-quick-add-own-window.md`; `7d33c89`, `c2dee3f`, `2f87784`, merged with the Uplan
+     chat's workout log as `b7c92c8` on `master`, pushed). What it does now: the widgets' "+" opens `QuickAddActivity`,
+     the sheet in a window and a task of its own (`taskAffinity ""`, `singleTask`, `excludeFromRecents`, not
+     exported), with its own Flutter engine; `UplanEngineSetup.kt` holds what both windows set up (the widgets'
+     midnight refresh, the `uplan/live` channel); MainActivity keeps the old `uplan://add_task` path for a "+" drawn
+     before the update (the app's next start redraws the widgets). Whenever the app comes back to the front it re-reads
+     tasks and lists another window wrote (`lib/core/database/changed_elsewhere.dart`, `markTasksChangedElsewhere`).
+     Checked: 2 new tests (two connections to one database file; both failed first on an empty stub); 388 pass with
+     the workout log; analyze clean. On the Flip emulator, `tool/emulator/own_window_check.sh` (new) failed cases 1–4
+     on today's build (the "+" in the app's task, closing ended the app's window, the icon then showed Home instead of
+     Notes) and passes all 5 on the new one (its own task; the app untouched; Notes again from the icon, difference
+     0.0; Back, Back closes the sheet for good; a sheet left with Home comes back with its text). Videos (warm, again,
+     cold, dead): no app frame before the sheet (today's build showed the app's Home for about 0.3–0.4 s). The
+     keyboard came up in every case; fresh windows were drawn about 0.8 s after the "+" (1.0 s before). A task filed
+     into Errands from the sheet while the app sat on Lists: Errands went 17 → 18 when the app came back. An old-style
+     "+" still opens the sheet. With only the sheet's window alive and the live dashboard switched on (emulator only,
+     off again after), the dashboard's service started, so the new window answers `uplan/live`. The log over 21 sheet
+     openings: no missing-channel errors, crashes or Flutter errors. **One difference from the design:** the sheet's
+     card shows in Recents right after he leaves an open sheet with Home (Android keeps the newest task even when it is
+     marked hidden), until he opens another app; tapping it brings the sheet back as it was. Not on the phone yet.
+   - ⬜ **← next: one install on his phone for both** (this window and the Uplan chat's workout log demo 1, schema
+     26; agreed with the Uplan chat at 21:14, its `b8098c5`: whichever chat Ahmed tells "Phone plugged in" does it,
+     and the other doesn't reinstall). The fast build from `b7c92c8` is ready (built 21:14 from a tree with only docs
+     uncommitted): `D:\projects\trackerapp\build\app\outputs\flutter-apk\app-profile.apk`, v1.18.0 (27), Uplan's key
+     (certificate checked: `5b269323…c7ac5`), `application-debuggable`, `QuickAddActivity` in its manifest. It
+     replaced the Uplan chat's 20:45 build from `212f4e3`. When he plugs in: copy his data off (signing-key plan Task 4
+     steps 2–4) into a new `D:\backups\uplan\<date>-own-window\`, check the fingerprint again, `install -r`, start
+     Uplan from its launcher intent (redraws the widgets, re-books his reminders), compare his booked reminders. Then
+     real taps on his widget's "+", each after checking the window in front: its own task, keyboard up, the icon shows
+     his app where he left it, Back, Back closes it. A second copy of his folder afterwards should say schema 26 with
+     the same 77 workouts and 308 sets as today's backup (the Uplan chat's check). Then the hand-back.
    - ✅ (yesterday's state, kept for the record) the fast build was picked (Ahmed, 2026-11-01 about 14:50: "Fast build", after asking how it
      differs: both builds carry the same fixes; only the speed differs). Built 14:51–14:54 in `D:\projects\trackerapp`
      from `ed1ad20` (code = `44f8d2d`): `build\app\outputs\flutter-apk\app-profile.apk`, 93.0 MB, v1.18.0+27,

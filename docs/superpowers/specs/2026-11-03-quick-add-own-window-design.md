@@ -1,6 +1,8 @@
 # The quick-add sheet gets its own window (design)
 
-**Date:** 2026-11-03 · **Status:** proposed, waiting for Ahmed's OK · **By:** the Tester chat
+**Date:** 2026-11-03 · **Status:** approved by Ahmed ("Yes, build it", 2026-11-03); built and checked on the
+emulator the same evening (`b7c92c8` on `master`); not on his phone yet · **By:** the Tester chat · **Plan:**
+`docs/superpowers/plans/2026-11-03-quick-add-own-window.md`
 
 Ahmed, 2026-11-03: "some times it comes sometimes no and the first time i open it after awhile i think the apps pops
 up in the background for a split second and disappears. you work in that, no shortcuts and token preservation nor
@@ -36,7 +38,9 @@ What Ahmed would notice:
 - Speed stays the same. With Uplan in memory a new window is fast on his phone (measured 2026-11-03: Dart running at
   +0.05 s, the first frame at +0.08 s after the tap); with Uplan not in memory it takes 1–3 s, as today.
 - Leaving the sheet with Home and tapping "+" again brings the same sheet back with what he typed.
-- The sheet doesn't show up in recent apps.
+- The sheet doesn't show up in recent apps. (Found while building, 2026-11-03: it does show there right after he
+  leaves an open sheet with Home, until he opens another app, because Android keeps the newest task in Recents even
+  when it is marked hidden. Tapping that card brings the sheet back as it was.)
 
 ## How it works
 
@@ -93,4 +97,5 @@ from before. Root cause and evidence: `docs/_Current_Task.md`, "The '+' investig
 
 ## Decision
 
-Waiting on Ahmed.
+Approved by Ahmed, 2026-11-03: "Yes, build it". Built the same evening; what was checked is in
+`docs/_Current_Task.md` ("The sheet in its own window").
