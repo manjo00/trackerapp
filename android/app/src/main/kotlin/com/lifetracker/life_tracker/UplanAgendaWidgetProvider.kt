@@ -45,10 +45,10 @@ class UplanAgendaWidgetProvider : HomeWidgetProvider() {
             )
             views.setPendingIntentTemplate(R.id.agenda_list, rowTemplate)
 
-            // "+" deep-links to the New Task screen.
+            // "+" opens the quick-add sheet in its own window.
             val addIntent = HomeWidgetLaunchIntent.getActivity(
                 context,
-                MainActivity::class.java,
+                QuickAddActivity::class.java,
                 Uri.parse("uplan://add_task")
             )
             views.setOnClickPendingIntent(R.id.agenda_add, addIntent)

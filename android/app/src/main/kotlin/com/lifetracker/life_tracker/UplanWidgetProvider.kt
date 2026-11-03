@@ -45,10 +45,11 @@ class UplanWidgetProvider : HomeWidgetProvider() {
             )
             views.setOnClickPendingIntent(R.id.widget_root, openIntent)
 
-            // Tapping "+" opens the app and deep-links to the New Task screen.
+            // Tapping "+" opens the quick-add sheet in its own window, leaving
+            // the app (if open) on the screen it was on.
             val addIntent = HomeWidgetLaunchIntent.getActivity(
                 context,
-                MainActivity::class.java,
+                QuickAddActivity::class.java,
                 Uri.parse("uplan://add_task")
             )
             views.setOnClickPendingIntent(R.id.widget_add, addIntent)

@@ -38,6 +38,9 @@ class _LifeTrackerAppState extends ConsumerState<LifeTrackerApp>
     with WidgetsBindingObserver {
   /// Channel MainActivity uses to tell us a widget "+" was tapped while the
   /// app was already running (cold starts are handled by getInitialRoute).
+  /// Only for a "+" drawn before 2026-11-03: since then the "+" opens the
+  /// sheet in a window of its own (QuickAddActivity), and the app's next
+  /// start redraws the widgets.
   static const MethodChannel _widgetChannel = MethodChannel('uplan/widget');
 
   /// Same channel LiveDashboardService commands the native side on — here we

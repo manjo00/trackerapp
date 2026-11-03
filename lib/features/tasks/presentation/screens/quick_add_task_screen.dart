@@ -51,8 +51,10 @@ class _QuickAddTaskScreenState extends ConsumerState<QuickAddTaskScreen> {
     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
   ];
 
-  /// MainActivity sends `windowFocused` here when Android gives the app's
-  /// window focus, the moment Android starts accepting keyboard requests.
+  /// The sheet's own window (QuickAddActivity, or MainActivity for a widget
+  /// "+" drawn before that window existed) sends `windowFocused` here when
+  /// Android gives it focus, the moment Android starts accepting keyboard
+  /// requests.
   static const MethodChannel _windowChannel = MethodChannel('uplan/quick_add');
 
   @override
@@ -122,8 +124,8 @@ class _QuickAddTaskScreenState extends ConsumerState<QuickAddTaskScreen> {
     return '${d.day} ${_months[d.month]}';
   }
 
-  /// Closes the whole activity → returns to the home screen (the widget's
-  /// launch context), rather than dropping the user into the app.
+  /// Closes the sheet's whole window → returns to the home screen (the
+  /// widget's launch context), rather than dropping the user into the app.
   void _dismiss() {
     SystemNavigator.pop();
   }

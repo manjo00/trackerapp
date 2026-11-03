@@ -139,10 +139,10 @@ open class UplanMonthWidgetProvider : HomeWidgetProvider() {
             )
             views.setPendingIntentTemplate(R.id.task_list, rowTemplate)
 
-            // "+" deep-links to the quick-add sheet.
+            // "+" opens the quick-add sheet in its own window.
             val addIntent = HomeWidgetLaunchIntent.getActivity(
                 context,
-                MainActivity::class.java,
+                QuickAddActivity::class.java,
                 Uri.parse("uplan://add_task")
             )
             views.setOnClickPendingIntent(R.id.month_add, addIntent)

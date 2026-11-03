@@ -35,7 +35,8 @@ void main() {
   int keyboardAsks(WidgetTester tester) =>
       keyboardCalls(tester).where((m) => m == 'TextInput.show').length;
 
-  /// What MainActivity sends when Android gives the window focus.
+  /// What the sheet's window (QuickAddActivity) sends when Android gives it
+  /// focus.
   Future<void> androidGivesWindowFocus(WidgetTester tester) async {
     await tester.binding.defaultBinaryMessenger.handlePlatformMessage(
       'uplan/quick_add',
@@ -95,7 +96,8 @@ void main() {
   // believing it has focus, so a new window reports "resumed" before Android
   // gives it focus. On the phone the sheet's first frame and keyboard asks
   // came about 60 ms before the focus, all ignored, and nothing asked after
-  // (no keyboard in 3 of 3). MainActivity now forwards Android's own focus.
+  // (no keyboard in 3 of 3). The sheet's window now forwards Android's own
+  // focus.
   testWidgets('asks when Android gives the window focus', (tester) async {
     await tester.pumpWidget(ProviderScope(
       overrides: [taskListsProvider.overrideWith((ref) => Stream.value(const []))],

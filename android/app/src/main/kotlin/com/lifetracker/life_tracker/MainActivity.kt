@@ -19,21 +19,19 @@ class MainActivity : FlutterActivity() {
     companion object {
         /// Live-dashboard channel handle. Static so native components that
         /// outlive this activity (e.g. notification action receivers) can
-        /// invoke Dart while the app process is running.
+        /// invoke Dart while the app process is running. Only the app's own
+        /// engine is kept here, never the quick-add sheet's window.
         var liveChannel: MethodChannel? = null
     }
 
     /// Transparent surface so the quick-add sheet's scrim reveals the home
-    /// screen. Opaque app screens paint over it, so they're unaffected.
+    /// screen (for a widget "+" drawn before QuickAddActivity, see below).
+    /// Opaque app screens paint over it, so they're unaffected.
     override fun getBackgroundMode(): BackgroundMode = BackgroundMode.transparent
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
-        // Re-book the widgets' date-rollover refresh on every launch, so a
-        // dropped alarm (force stop, reboot, OS cleanup) heals itself.
-        MidnightRefreshReceiver.schedule(this)
-        MidnightRefreshReceiver.clearStaleSelection(this)
         methodChannel = MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
             channelName,
@@ -43,69 +41,16 @@ class MainActivity : FlutterActivity() {
             "uplan/quick_add",
         )
 
-        // Live dashboard: Flutter drives the foreground service through here.
-        liveChannel = MethodChannel(
-            flutterEngine.dartExecutor.binaryMessenger,
-            "uplan/live",
-        ).apply {
-            setMethodCallHandler { call, result ->
-                when (call.method) {
-                    "startDashboard", "refreshDashboard" -> {
-                        LiveDashboardService.start(this@MainActivity)
-                        result.success(true)
-                    }
-                    "stopDashboard" -> {
-                        LiveDashboardService.stop(this@MainActivity)
-                        result.success(true)
-                    }
-                    // Rest-timer Live Update (Now Bar) — id 50002.
-                    "startRest" -> {
-                        val endAt = call.argument<Number>("endAtMillis")
-                        val total = call.argument<Number>("totalSeconds")
-                        if (endAt != null && total != null) {
-                            RestLiveUpdate.post(
-                                this@MainActivity, endAt.toLong(), total.toInt())
-                        }
-                        result.success(true)
-                    }
-                    "cancelRest" -> {
-                        RestLiveUpdate.cancel(this@MainActivity)
-                        result.success(true)
-                    }
-                    // Has the OS granted Live Updates promotion (Now Bar)?
-                    "canPromote" -> {
-                        val can = if (android.os.Build.VERSION.SDK_INT >= 36) {
-                            getSystemService(android.app.NotificationManager::class.java)
-                                .canPostPromotedNotifications()
-                        } else {
-                            false
-                        }
-                        result.success(can)
-                    }
-                    // Diagnostics: is the app exempt from battery optimization?
-                    // (Aggressive OEMs — OnePlus/One UI — kill background work
-                    // for non-exempt apps, breaking reminders + the dashboard.)
-                    "isIgnoringBatteryOptimizations" -> {
-                        val pm = getSystemService(android.os.PowerManager::class.java)
-                        result.success(pm.isIgnoringBatteryOptimizations(packageName))
-                    }
-                    // Shows the system "let this app run in background" dialog.
-                    "requestIgnoreBatteryOptimizations" -> {
-                        val intent = Intent(
-                            android.provider.Settings
-                                .ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
-                        ).setData(android.net.Uri.parse("package:$packageName"))
-                        startActivity(intent)
-                        result.success(true)
-                    }
-                    else -> result.notImplemented()
-                }
-            }
-        }
+        // The widgets' midnight refresh and the live dashboard's channel, set
+        // up the same way in the quick-add sheet's own window.
+        liveChannel = UplanEngineSetup.configure(this, flutterEngine)
     }
 
-    /// Cold start: if the widget "+" launched us (uplan://add_task), tell
-    /// go_router to start on the quick-add sheet instead of Today.
+    /// The widgets' "+" opens QuickAddActivity, the sheet's own window, since
+    /// 2026-11-03. A "+" drawn before that update still comes here
+    /// (uplan://add_task) until the widgets redraw, which the app's next start
+    /// does. Cold start: tell go_router to start on the quick-add sheet
+    /// instead of Today.
     override fun getInitialRoute(): String? {
         if (intent?.data?.host == "add_task") return "/quick-add"
         return super.getInitialRoute()
@@ -117,7 +62,7 @@ class MainActivity : FlutterActivity() {
         if (showingQuickAdd) keepKeyboardForQuickAdd()
     }
 
-    /// Warm start: the app was already running, so route via the method
+    /// The same old "+" with the app already running: route via the method
     /// channel (getInitialRoute only runs on a fresh engine).
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
