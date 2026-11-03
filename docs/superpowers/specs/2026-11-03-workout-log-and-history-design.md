@@ -94,7 +94,11 @@ tokens; no helpers. Past twice that, stop and ask.
     repository's `watchAllSessions` and `getAllSessions` leave out workouts with no logged set, which covers the
     history, Recent Sessions, the Home block and the week's count (`empty_workouts_test.dart`).
   - Step 2's "the ✓ read back" isn't needed: nothing reloads a running workout (see Noticed).
-  - 383 tests pass (16 new; each new behaviour test failed first, the 3 guards passed at once); analyze clean.
+  - 383 tests pass, 16 of them new: 12 failed first and then passed; 4 guard behaviour that already held (3 passed
+    at once; the old-backup one was written after the change, as it needs the new columns). The commit and history
+    line say "3 guards"; this line corrects that. Analyze clean.
+  - The fast (profile) build from `212f4e3` is ready: `build\app\outputs\flutter-apk\app-profile.apk`, v1.18.0 (27),
+    Uplan's key (SHA-256 `5b269323…c7ac5`), `application-debuggable`.
   - **Tried for real on a copy of his database** (today's backup, `D:\backups\uplan\2026-11-03-reminders\check`,
     copied to the scratchpad; the original untouched): `tool/migrate_copy_test.dart` upgraded it 25 → 26; every one
     of its 24 tables kept its row count, the workout rows' old columns hash the same, the new columns are empty,
