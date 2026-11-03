@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'core/database/changed_elsewhere.dart';
 import 'core/database/database_provider.dart';
 import 'core/diagnostics/startup_trace.dart';
 import 'core/startup/launch_work.dart';
@@ -93,6 +94,10 @@ class _LifeTrackerAppState extends ConsumerState<LifeTrackerApp>
       // DB connection, so this app's stream queries never hear about those
       // writes — re-subscribing picks them up. Cheap one-shot rebuilds.
       _refreshDateSensitiveProviders();
+      // The widget's quick-add sheet writes through a connection of its own
+      // too (it has its own window) and can file the task into any list, so
+      // re-run every open task and list query, not only the providers above.
+      ref.read(appDatabaseProvider).markTasksChangedElsewhere();
       _syncWidget();
       _upgradeRemindersIfExactChanged();
     } else if (state == AppLifecycleState.paused) {
