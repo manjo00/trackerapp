@@ -127,11 +127,23 @@ is a bit laggy."
      that task's three reminders (11 Jan 2027 12:00; 12 Jan 09:00 and 11:55); the crude `dumpsys alarm` line count
      (65 → 60) moves with Android's removal history, not with pending alarms. The new bell row on his phone: not
      seen by me (his eyes).
-   - ⬜ **← next: one real tap of the "+" with the log recording.** First recording 15:17–15:27 (`timeout 600 adb
-     logcat -v threadtime -T 1`, 24,421 lines): no tap in it (no `add_task` start, no Uplan keyboard request). A
-     second recording started about 15:30 for 15 minutes; if he taps later, dump the phone's buffers (`adb logcat -d
-     -b all`) right after his answer. Look for: `START u0 … add_task` (its flags), Uplan's `ImeTracker`
-     onRequestShow/onFailed lines, `HIDE_*` reasons, `InsetsController` show/hide, and when the window gains focus.
+   - ✅ **His real taps of the "+", logged** (2026-11-03; Ahmed: "Keyboard came up"). The first recording
+     (15:17–15:27, 24,421 lines) caught no tap; the second (from about 15:30) caught two, at 15:32:21 and 15:32:30
+     (both `START u0 {act=…home_widget.action.LAUNCH dat=uplan://add_task … flg=0x10000000}`, the same flags as the
+     cable test). Tap 1 (Uplan open in the background): two early asks ignored (.545, .554), window focus .568, no
+     `HIDE_*` from Android (the native line works), the sheet's ask at .618 shown at 22.333 (0.9 s after the tap).
+     Between the taps he pressed Home with the sheet still open (28.95; the launcher's `HIDE_UNSPECIFIED_WINDOW`).
+     Tap 2 (the same sheet still open, then "+"): two early asks ignored (.872, .878), window focus .926, and then
+     **no ask at all** for 5 s; at 36.115 Android's `HIDE_SAME_WINDOW_FOCUSED_WITHOUT_EDITOR` (the window focused
+     again), then two asks 148 ms apart (the sheet's repeat, so a fresh "resumed") and the keyboard at 36.721. So
+     tap 2 got its keyboard only after a second focus change. The same case passed 3 of 3 on the emulator. My reading
+     (not proven): on his phone Flutter reported "resumed" before the window had focus (the early asks are the
+     restored focus reopening the text field), so the sheet's one-time check ran while its field had no focus yet and
+     didn't start the repeats, and the real focus brought no new "resumed". Logs: the Tester's scratchpad
+     `tap_log2.txt` (not in the repo).
+   - ⬜ **← next: his call on tap 2's gap.** Proposed small fix: on "resumed", start the repeat even when no field has
+     focus yet (each tick asks only if a field has focus and the keyboard isn't up) and run it a little longer
+     (about 1.5 s), with a test where the field gets its focus back a moment after "resumed". Then the hand-back.
    - ✅ (yesterday's state, kept for the record) the fast build was picked (Ahmed, 2026-11-01 about 14:50: "Fast build", after asking how it
      differs: both builds carry the same fixes; only the speed differs). Built 14:51–14:54 in `D:\projects\trackerapp`
      from `ed1ad20` (code = `44f8d2d`): `build\app\outputs\flutter-apk\app-profile.apk`, 93.0 MB, v1.18.0+27,
