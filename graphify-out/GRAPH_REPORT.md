@@ -1,17 +1,17 @@
 # Graph Report - trackerapp  (2026-11-03)
 
 ## Corpus Check
-- 309 files · ~154,511 words
+- 319 files · ~158,252 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 6 file(s) not represented in the graph (top: (none) 5, .pro 1)
 
 ## Summary
-- 4341 nodes · 6489 edges · 249 communities (185 shown, 64 thin omitted)
+- 4415 nodes · 6611 edges · 257 communities (191 shown, 66 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 3 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `212f4e30`
+- Built from commit: `b7c92c89`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -23,7 +23,7 @@
 - add_task_screen.dart
 - archive_service.dart
 - lists_dao.dart
-- notes_overview_screen.dart
+- notes_providers.dart
 - when_parser.dart
 - note_arrange_view.dart
 - package:flutter_test/flutter_test.dart
@@ -33,7 +33,7 @@
 - _
 - app_database.dart
 - note_editor_leave_test.dart
-- notes_providers.dart
+- note_task_linker_test.dart
 - checkbox_block_view.dart
 - tasks_providers.dart
 - program_repository.dart
@@ -48,7 +48,7 @@
 - StatelessWidget
 - trackers_providers.dart
 - program_session_editor_screen.dart
-- package:go_router/go_router.dart
+- habits_dao.dart
 - recently_deleted_test.dart
 - _
 - pinned_note_block.dart
@@ -94,11 +94,10 @@
 - habits_repository.dart
 - lists_repository.dart
 - ConsumerWidget
-- task_list_screen.dart
+- note_grid_card.dart
 - exercise_accordion_card.dart
 - day_time_grid.dart
 - program_exercises_table.dart
-- package:life_tracker/features/tasks/data/models/task_priority.dart
 - .configureFlutterEngine
 - MonthRemoteViewsFactory
 - text_block_view.dart
@@ -116,10 +115,10 @@
 - WidgetDates
 - UplanAgendaWidgetProvider.kt
 - day_grid_layout.dart
-- shiftsByDateProvider
+- taskListsProvider
 - list_form_dialog.dart
 - notebook_form_dialog.dart
-- workout_list_screen.dart
+- planner_providers.dart
 - LiveDashboardService.kt
 - UplanMonthWidgetProvider.kt
 - core/settings/settings_provider.dart
@@ -144,7 +143,7 @@
 - RestLiveUpdate.kt
 - package:flutter_riverpod/flutter_riverpod.dart
 - task_priority.dart
-- app_colors.dart
+- image_storage_service.dart
 - codex_topic_screen.dart
 - live_background_callback.dart
 - widget_settings_screen.dart
@@ -160,7 +159,7 @@
 - String get
 - _
 - time_block_utils.dart
-- build
+- github_feedback_providers.dart
 - notes_table.dart
 - shifts_dao.dart
 - AppDatabase
@@ -168,14 +167,14 @@
 - codex_search.dart
 - Route /workout/active
 - _
-- habit_list_screen_test.dart
+- package:flutter_riverpod/flutter_riverpod.dart
 - custom_lead_dialog.dart
 - workout_actions.dart
 - State
 - return
-- int?
+- archived_item.dart
 - notebooks_table.dart
-- .onGetViewFactory
+- note_task_linker.dart
 - heading_line_view.dart
 - shift_picker_sheet.dart
 - recent_exercise_orders_test.dart
@@ -184,7 +183,7 @@
 - Map
 - startup_trace.dart
 - empty_workouts_test.dart
-- week_utils_test.dart
+- week_attendance_strip.dart
 - Set
 - habits_table.dart
 - VoidCallback
@@ -193,7 +192,7 @@
 - home_block_type.dart
 - priority_badge.dart
 - home_blocks_dao.dart
-- week_utils.dart
+- weekly_scoreboard_card.dart
 - weight_steps.dart
 - program_sessions_table.dart
 - static const String
@@ -202,35 +201,43 @@
 - bool get
 - tracker_item_model.dart
 - codex_screen.dart
-- shift_date_picker_sheet.dart
+- home_blocks_dao_test.dart
+- own_window_check.sh
+- QuickAddActivity
 - reminder_leads.dart
 - _
 - note_sort.dart
 - package:riverpod_annotation/riverpod_annotation.dart
 - package:life_tracker/core/database/app_database.dart
-- task_detail_sheet.dart
+- screen_diff.py
+- shifts_repository_test.dart
 - _
-- note_sort_and_preview_test.dart
+- phone_plus.sh
 - launch_work.dart
 - widget_payload.dart
+- _LifeTrackerAppState
 - @pragma
 - app_strings.dart
 - image_filename.dart
 - SettingsNotifier
 - note_text_style.dart
-- note_arrange_view_test.dart
+- _ArchivedScreenState
 - widget_test.dart
 - kb_check.sh
-- note_search_test.dart
+- int?
+- fresh_plus.sh
+- notebook_picker_sheet.dart
+- _DiagnosticsScreenState
+- plus_video.sh
 
 ## God Nodes (most connected - your core abstractions)
 1. `_` - 62 edges
-2. `AppDatabase` - 35 edges
+2. `AppDatabase` - 37 edges
 3. `_` - 32 edges
 4. `_` - 31 edges
-5. `notesDaoProvider` - 30 edges
-6. `_` - 30 edges
-7. `settingsProvider` - 30 edges
+5. `_` - 30 edges
+6. `settingsProvider` - 30 edges
+7. `notesDaoProvider` - 30 edges
 8. `archiveServiceProvider` - 26 edges
 9. `_` - 24 edges
 10. `taskListsProvider` - 19 edges
@@ -240,17 +247,17 @@
   test/features/tasks/quick_add_reminders_test.dart → lib/features/tasks/presentation/providers/tasks_providers.dart
 - `_RecordingToggle` --inherits--> `ToggleTask`  [EXTRACTED]
   test/features/tasks/task_detail_sheet_test.dart → lib/features/tasks/presentation/providers/tasks_providers.dart
-- `_deleteEmpty` --references--> `notesDaoProvider`  [EXTRACTED]
-  lib/features/home/presentation/widgets/pinned_note_block.dart → lib/features/notes/presentation/providers/notes_providers.dart
-- `_split` --references--> `notesDaoProvider`  [EXTRACTED]
-  lib/features/home/presentation/widgets/pinned_note_block.dart → lib/features/notes/presentation/providers/notes_providers.dart
-- `_toggleFold` --references--> `notesDaoProvider`  [EXTRACTED]
-  lib/features/home/presentation/widgets/pinned_note_block.dart → lib/features/notes/presentation/providers/notes_providers.dart
+- `ChangedElsewhere` --extends--> `AppDatabase`  [EXTRACTED]
+  lib/core/database/changed_elsewhere.dart → lib/core/database/app_database.dart
+- `build` --references--> `settingsProvider`  [EXTRACTED]
+  lib/core/router/shell_scaffold.dart → lib/core/settings/settings_provider.dart
+- `build` --references--> `settingsProvider`  [EXTRACTED]
+  lib/features/notes/presentation/screens/notes_overview_screen.dart → lib/core/settings/settings_provider.dart
 
 ## Import Cycles
 - None detected.
 
-## Communities (249 total, 64 thin omitted)
+## Communities (257 total, 66 thin omitted)
 
 ### Community 0 - "workout_providers.dart"
 Cohesion: 0.03
@@ -273,16 +280,16 @@ Cohesion: 0.04
 Nodes (52): active, AddTaskArgs, _applyDetected, build, _buildLeadTimesStr, createState, _customLead, _DateTimeTile (+44 more)
 
 ### Community 5 - "archive_service.dart"
-Cohesion: 0.03
-Nodes (53): archiveHabit, archiveList, archiveNote, archiveNotebook, archiveTask, archiveTracker, daysLeftInTrash, destroyHabit (+45 more)
+Cohesion: 0.04
+Nodes (45): archiveHabit, archiveList, archiveNote, archiveNotebook, archiveTask, archiveTracker, daysLeftInTrash, destroyHabit (+37 more)
 
 ### Community 6 - "lists_dao.dart"
 Cohesion: 0.04
 Nodes (43): deleteLabel, deleteList, deleteSection, getList, getListForNote, getSection, insertLabel, insertList (+35 more)
 
-### Community 7 - "notes_overview_screen.dart"
-Cohesion: 0.14
-Nodes (12): lastNoteEditByNotebookProvider, noteSearchItemsProvider, _browse, build, _createNotebook, createState, dispose, NotesOverviewScreen (+4 more)
+### Community 7 - "notes_providers.dart"
+Cohesion: 0.07
+Nodes (23): allNotesProvider, db, lastEdit, lastNoteEditByNotebookProvider, names, nbs, notebooks, notes (+15 more)
 
 ### Community 8 - "when_parser.dart"
 Cohesion: 0.04
@@ -290,27 +297,27 @@ Nodes (44): _adjacent, date, _dateAtStart, _dayMonthRe, _dayMonthTightRe, _dayOr
 
 ### Community 9 - "note_arrange_view.dart"
 Cohesion: 0.05
-Nodes (33): _autoDelta, _autoTimer, block, blocks, bottom, build, center, createState (+25 more)
+Nodes (31): _autoDelta, _autoTimer, block, blocks, bottom, build, center, createState (+23 more)
 
 ### Community 10 - "package:flutter_test/flutter_test.dart"
-Cohesion: 0.04
-Nodes (19): main, main, main, main, main, main, main, _tip (+11 more)
+Cohesion: 0.05
+Nodes (16): main, main, main, main, main, main, main, _tip (+8 more)
 
 ### Community 11 - "archived_screen.dart"
 Cohesion: 0.05
-Nodes (38): archivedItemsProvider, deletedItemsProvider, ArchivedScreen, _ArchivedScreenState, build, _confirmDestroy, _confirmEmpty, _count (+30 more)
+Nodes (33): _confirmDestroy, _confirmEmpty, _count, createState, _delete, _destroy, dispose, _Empty (+25 more)
 
 ### Community 12 - "add_tracker_screen.dart"
 Cohesion: 0.06
 Nodes (35): _addItem, AddTrackerScreen, _AddTrackerScreenState, build, _buildCustomiseForm, _buildTemplatePicker, _colorValue, createState (+27 more)
 
 ### Community 13 - "day_detail_view.dart"
-Cohesion: 0.06
-Nodes (28): build, HabitsBlock, DotSummary, habitsDone, habitsForDateProvider, habitsTotal, hasAnyData, tasksCompleted (+20 more)
+Cohesion: 0.09
+Nodes (21): habitsForDateProvider, _buildGrid, _buildHabits, _buildList, createState, date, _dateStr, DayDetailView (+13 more)
 
 ### Community 14 - "_"
-Cohesion: 0.06
-Nodes (28): _, _addExercise, build, _buildItems, _buildSummary, _byMuscle, createState, _deleteSet (+20 more)
+Cohesion: 0.05
+Nodes (32): _, _addExercise, build, _buildItems, _buildSummary, _byMuscle, createState, _DayTimerHeader (+24 more)
 
 ### Community 15 - "app_database.dart"
 Cohesion: 0.05
@@ -320,9 +327,9 @@ Nodes (9): migration, _newRotationColor, _oldRotationColor, _openConnection, _re
 Cohesion: 0.13
 Nodes (11): _block, _lineHasFocus, main, _pump, closeApp, dao, db, leaveApp (+3 more)
 
-### Community 17 - "notes_providers.dart"
-Cohesion: 0.08
-Nodes (30): build, allNotesProvider, db, lastEdit, names, nbs, noteBlocksProvider, notebooks (+22 more)
+### Community 17 - "note_task_linker_test.dart"
+Cohesion: 0.07
+Nodes (27): NotesDao, NoteTaskLinker, dao, db, main, makeBlock, now, blocksFor (+19 more)
 
 ### Community 18 - "checkbox_block_view.dart"
 Cohesion: 0.07
@@ -330,7 +337,7 @@ Nodes (26): add, flushAll, listener, NoteLineSaves, noteLineSavesProvider, remov
 
 ### Community 19 - "tasks_providers.dart"
 Cohesion: 0.08
-Nodes (30): deleteTaskProvider, _fixReminders, listsDaoProvider, add, AddTask, allTasks, build, capturedTasks (+22 more)
+Nodes (29): deleteTaskProvider, listsDaoProvider, add, AddTask, allTasks, build, capturedTasks, dao (+21 more)
 
 ### Community 20 - "program_repository.dart"
 Cohesion: 0.05
@@ -342,11 +349,11 @@ Nodes (33): addCustomExercise, addSet, createSession, _dao, _dateFmt, deleteSess
 
 ### Community 22 - "coach_target.dart"
 Cohesion: 0.12
-Nodes (13): build, child, CoachRegistry, createState, didUpdateWidget, dispose, id, initState (+5 more)
+Nodes (15): build, child, CoachRegistry, CoachTarget, _CoachTargetState, createState, didUpdateWidget, dispose (+7 more)
 
 ### Community 23 - "task_detail_sheet_test.dart"
-Cohesion: 0.05
-Nodes (24): main, openTask, ticked, keyboardCalls, main, openSheetBeforeWindowFocus, add, main (+16 more)
+Cohesion: 0.04
+Nodes (31): main, task, main, task, main, openTask, ticked, androidGivesWindowFocus (+23 more)
 
 ### Community 24 - "set_row.dart"
 Cohesion: 0.06
@@ -365,64 +372,64 @@ Cohesion: 0.06
 Nodes (31): above, aboveContainer, applyDrop, Arrangement, bedSize, ci, containerIdOf, d (+23 more)
 
 ### Community 29 - "StatelessWidget"
-Cohesion: 0.07
-Nodes (32): _DayTimerHeader, _MuscleHeader, _NoExercisesPlaceholder, _SmartOrderNote, _buildChips, color, _createMyWorkout, _deleteMyWorkout (+24 more)
+Cohesion: 0.05
+Nodes (44): _buildChips, color, _createMyWorkout, _deleteMyWorkout, isHighlighted, label, _MiniChip, _ModeToggle (+36 more)
 
 ### Community 30 - "trackers_providers.dart"
-Cohesion: 0.08
-Nodes (25): deleteLogProvider, deleteTrackerProvider, add, AddTracker, build, dao, addTrackerProvider, logChecklistProvider (+17 more)
+Cohesion: 0.07
+Nodes (28): deleteLogProvider, deleteTrackerProvider, _fixReminders, add, AddTracker, build, checklistTrackersForToday, dao (+20 more)
 
 ### Community 31 - "program_session_editor_screen.dart"
 Cohesion: 0.07
 Nodes (30): _addExercise, build, color, createState, _deleteExercise, _editExercise, exercise, _ExerciseEditDialog (+22 more)
 
-### Community 32 - "package:go_router/go_router.dart"
-Cohesion: 0.40
-Nodes (3): kPatchNotesSeenKey, seen, setString
+### Community 32 - "habits_dao.dart"
+Cohesion: 0.10
+Nodes (17): deleteCompletion, deleteHabit, getAllHabits, getCompletionsForHabit, getHabit, insertCompletion, insertHabit, isCompletedOn (+9 more)
 
 ### Community 33 - "recently_deleted_test.dart"
-Cohesion: 0.05
-Nodes (43): ArchiveService, NotesDao, NotesRepository, addHabit, addTask, archive, db, habits (+35 more)
+Cohesion: 0.07
+Nodes (24): ArchiveService, NotesRepository, addHabit, addTask, archive, db, habits, ids (+16 more)
 
 ### Community 34 - "_"
 Cohesion: 0.08
 Nodes (26): deleteHabitProvider, _rescheduleReminders, add, AddHabit, build, dao, addHabitProvider, habitsWithStatusProvider (+18 more)
 
 ### Community 35 - "pinned_note_block.dart"
-Cohesion: 0.09
-Nodes (13): _append, createState, _deleteEmpty, _focusRequestId, _indentStep, kPinnedNoteMaxHeight, _line, PinnedNoteBlock (+5 more)
+Cohesion: 0.07
+Nodes (18): _append, build, createState, _deleteEmpty, _focusRequestId, _indentStep, kPinnedNoteMaxHeight, _line (+10 more)
 
 ### Community 36 - "day_column.dart"
-Cohesion: 0.10
-Nodes (16): isEmpty, _key, color, date, done, _dot, _HabitDots, isFuture (+8 more)
+Cohesion: 0.09
+Nodes (20): isEmpty, _key, ShiftBlock, dayDotSummaryProvider, build, color, date, DayColumn (+12 more)
 
 ### Community 37 - "app.dart"
-Cohesion: 0.07
-Nodes (17): createState, didChangeAppLifecycleState, dispose, initState, LifeTrackerApp, _LifeTrackerAppState, _liveChannel, _maybeOfferUpdate (+9 more)
+Cohesion: 0.08
+Nodes (11): createState, didChangeAppLifecycleState, dispose, initState, _liveChannel, _onLiveMethod, _onWidgetMethod, _refreshDateSensitiveProviders (+3 more)
 
 ### Community 38 - "shift_month_calendar.dart"
 Cohesion: 0.07
 Nodes (25): color, _CountTile, createState, dateStr, day, initialMonth, initState, isSelected (+17 more)
 
 ### Community 39 - "home_blocks_providers.dart"
-Cohesion: 0.07
-Nodes (38): allNotesProvider, dao, ensureSeeded, homeBlockRowsProvider, homeBlocksDaoProvider, shiftGlanceEmptyProvider, watch, watchNoteProvider (+30 more)
+Cohesion: 0.08
+Nodes (31): allNotesProvider, dao, ensureSeeded, homeBlockRowsProvider, homeBlocksDaoProvider, shiftGlanceEmptyProvider, watch, watchNoteProvider (+23 more)
 
 ### Community 40 - "package:flutter/material.dart"
-Cohesion: 0.08
-Nodes (16): AppTheme, _base, dark, light, build, EmptyHabitsPlaceholder, build, streak (+8 more)
+Cohesion: 0.07
+Nodes (18): AppTheme, _base, dark, light, build, EmptyHabitsPlaceholder, build, streak (+10 more)
 
 ### Community 41 - "coach_overlay.dart"
-Cohesion: 0.08
-Nodes (24): CoachOverlay, _CoachOverlayState, CoachStep, createState, hole, _i, index, initState (+16 more)
+Cohesion: 0.05
+Nodes (31): build, CoachOverlay, _CoachOverlayState, CoachStep, createState, hole, _i, index (+23 more)
 
 ### Community 42 - "quick_add_task_screen.dart"
 Cohesion: 0.05
-Nodes (38): active, activeColor, _askForKeyboard, _askForKeyboardAgain, _bookReminders, _Chip, createState, _customLead (+30 more)
+Nodes (36): active, activeColor, _askForKeyboardAgain, _bookReminders, _Chip, createState, _customLead, _cyclePriority (+28 more)
 
 ### Community 43 - "trackers_dao.dart"
-Cohesion: 0.04
-Nodes (39): deleteCompletion, deleteHabit, getAllHabits, getCompletionsForHabit, getHabit, insertCompletion, insertHabit, isCompletedOn (+31 more)
+Cohesion: 0.07
+Nodes (22): deleteItemsForTracker, deleteLog, deleteLogsForDate, deleteTracker, deleteValuesForLog, getAllTrackers, getItemsForTracker, getLogsForDate (+14 more)
 
 ### Community 44 - "program_dao.dart"
 Cohesion: 0.07
@@ -430,15 +437,15 @@ Nodes (23): countCompletedSessionsForProgram, deleteProgram, deleteProgramExerci
 
 ### Community 45 - "program_detail_screen.dart"
 Cohesion: 0.08
-Nodes (22): _addSession, build, createState, _deleteProgram, _deleteSession, exercise, _ExerciseRow, _labels (+14 more)
+Nodes (24): _addSession, build, createState, _deleteProgram, _deleteSession, exercise, _ExerciseRow, _labels (+16 more)
 
 ### Community 46 - "Color"
-Cohesion: 0.12
+Cohesion: 0.13
 Nodes (3): AgendaRemoteViewsFactory, Item, AgendaRemoteViewsService
 
 ### Community 47 - "exercise_picker_screen.dart"
-Cohesion: 0.08
-Nodes (24): build, createState, dispose, _equipment, _equipments, exercise, _ExerciseTile, _formKey (+16 more)
+Cohesion: 0.07
+Nodes (26): _AddCustomExerciseSheet, _AddCustomExerciseSheetState, build, createState, dispose, _equipment, _equipments, exercise (+18 more)
 
 ### Community 48 - "workout_dao.dart"
 Cohesion: 0.07
@@ -446,11 +453,11 @@ Nodes (23): deleteSession, deleteSet, _doneOrder, getAllExercises, getAllSession
 
 ### Community 49 - "notebook_detail_screen.dart"
 Cohesion: 0.08
-Nodes (20): _reschedule, archiveServiceProvider, _confirmDelete, _archive, build, HabitTile, item, _toggle (+12 more)
+Nodes (29): _reschedule, archiveServiceProvider, _confirmDelete, notebooksProvider, notesForNotebookProvider, notesRepositoryProvider, templatesProvider, _archiveNote (+21 more)
 
 ### Community 50 - "DateTime"
-Cohesion: 0.29
-Nodes (3): LastBackupNotifier, main, now
+Cohesion: 0.10
+Nodes (13): LastBackupNotifier, blanks, day, monthLeadingBlanks, startOfWeek, subtract, weekdayHeaderLetters, main (+5 more)
 
 ### Community 51 - "app_settings.dart"
 Cohesion: 0.08
@@ -461,8 +468,8 @@ Cohesion: 0.09
 Nodes (19): build, _busy, child, CoachController, CoachMarks, _CoachMarksState, createState, hasSeenAnything (+11 more)
 
 ### Community 53 - "week_attendance_strip.dart"
-Cohesion: 0.06
-Nodes (27): activeProgram, allPrograms, activeProgramProvider, allProgramsProvider, myWorkoutsProvider, programByIdProvider, programRepositoryProvider, programTemplatesProvider (+19 more)
+Cohesion: 0.09
+Nodes (17): activeProgram, allPrograms, activeProgramProvider, allProgramsProvider, myWorkoutsProvider, programByIdProvider, programRepositoryProvider, programTemplatesProvider (+9 more)
 
 ### Community 54 - "archive_providers.dart"
 Cohesion: 0.08
@@ -478,7 +485,7 @@ Nodes (22): build, _confirmDelete, _confirmDeleteTracker, date, _DateGroup, _Emp
 
 ### Community 57 - "@Riverpod"
 Cohesion: 0.08
-Nodes (26): addRotation, assign, build, clear, rotationsProvider, shiftEditorProvider, deleteRotation, rotations (+18 more)
+Nodes (29): addRotation, assign, build, clear, cycle, rotationsProvider, shiftEditorProvider, deleteRotation (+21 more)
 
 ### Community 58 - "trackers_repository.dart"
 Cohesion: 0.09
@@ -489,8 +496,8 @@ Cohesion: 0.12
 Nodes (10): build, isCover, onUseAsCover, path, PhotoViewScreen, _archive, build, _EmptyTrackersPlaceholder (+2 more)
 
 ### Community 60 - "add_habit_screen.dart"
-Cohesion: 0.09
-Nodes (20): AddHabitScreen, _AddHabitScreenState, build, createState, _DayTargetSelector, dispose, _formKey, habit (+12 more)
+Cohesion: 0.10
+Nodes (18): build, createState, _DayTargetSelector, dispose, _formKey, habit, initState, _isEditing (+10 more)
 
 ### Community 61 - "coach_tip.dart"
 Cohesion: 0.09
@@ -525,24 +532,24 @@ Cohesion: 0.09
 Nodes (21): _, cancelRest, canPromote, _channel, _dateKey, _decodeMap, _enabledKey, _habitsDoneKey (+13 more)
 
 ### Community 69 - "muscle_targets_editor_screen.dart"
-Cohesion: 0.07
-Nodes (25): _btn, build, frequency, _Header, label, _maxFreq, _maxSets, muscle (+17 more)
+Cohesion: 0.09
+Nodes (18): onChanged, selected, _btn, build, frequency, _Header, label, _maxFreq (+10 more)
 
 ### Community 70 - "log_entry_screen.dart"
 Cohesion: 0.10
 Nodes (21): build, _buildChecklistItems, _buildSessionFields, _checked, _controllers, createState, dispose, initState (+13 more)
 
 ### Community 71 - "CombinedTasksRemoteViewsFactory"
-Cohesion: 0.12
+Cohesion: 0.13
 Nodes (4): CombinedTasksRemoteViewsFactory, Item, Task, CombinedTasksRemoteViewsService
 
 ### Community 72 - "create_program_screen.dart"
-Cohesion: 0.09
-Nodes (20): build, _createCustom, CreateProgramScreen, _CreateProgramScreenState, createState, _deleteMyTemplate, dispose, icon (+12 more)
+Cohesion: 0.10
+Nodes (18): build, _createCustom, createState, _deleteMyTemplate, dispose, icon, _loading, _nameCtrl (+10 more)
 
 ### Community 73 - "@freezed"
-Cohesion: 0.16
-Nodes (7): HabitCompletionModel, HabitModel, HabitWithStatus, TrackerLogModel, TrackerLogValueModel, TrackerWithProgress, WorkoutSetModel
+Cohesion: 0.14
+Nodes (9): HabitCompletionModel, HabitModel, HabitWithStatus, _, TaskModel, TrackerLogModel, TrackerLogValueModel, TrackerWithProgress (+1 more)
 
 ### Community 74 - "shell_scaffold.dart"
 Cohesion: 0.13
@@ -560,25 +567,25 @@ Nodes (17): addLabel, addList, addSection, _dao, deleteLabel, deleteList, delete
 Cohesion: 0.10
 Nodes (23): build, settingsProvider, tasksForDateProvider, build, _HabitItem, initState, _onMenu, build (+15 more)
 
-### Community 78 - "task_list_screen.dart"
-Cohesion: 0.20
-Nodes (5): _CompletedHeader, count, _sectionHeader, _SectionHeaderSentinel, TaskListScreen
+### Community 78 - "note_grid_card.dart"
+Cohesion: 0.11
+Nodes (13): notes, showNotePicker, accentColorValue, build, _cover, _header, images, note (+5 more)
 
 ### Community 79 - "exercise_accordion_card.dart"
-Cohesion: 0.08
-Nodes (19): onChanged, selected, _addSet, build, _completedCount, completedSetIds, exerciseName, expanded (+11 more)
+Cohesion: 0.10
+Nodes (17): _addSet, build, _completedCount, completedSetIds, exerciseName, expanded, _fmt, muscle (+9 more)
 
 ### Community 80 - "day_time_grid.dart"
-Cohesion: 0.11
-Nodes (15): build, dateStr, DayTimeGrid, _gutter, _hourHeight, item, shift, _shiftBands (+7 more)
+Cohesion: 0.12
+Nodes (11): build, dateStr, DayTimeGrid, _gutter, _hourHeight, item, shift, _shiftBands (+3 more)
 
 ### Community 81 - "program_exercises_table.dart"
 Cohesion: 0.10
 Nodes (17): exerciseId, exerciseName, id, orderIndex, ProgramExercises, programSessionId, restSeconds, targetReps (+9 more)
 
-### Community 82 - "package:life_tracker/features/tasks/data/models/task_priority.dart"
-Cohesion: 0.16
-Nodes (6): main, task, main, task, main, _task
+### Community 84 - "MonthRemoteViewsFactory"
+Cohesion: 0.12
+Nodes (3): Cell, MonthRemoteViewsFactory, MonthRemoteViewsService
 
 ### Community 85 - "text_block_view.dart"
 Cohesion: 0.11
@@ -593,8 +600,8 @@ Cohesion: 0.11
 Nodes (15): _, autoCheck, _autoCheckEvery, check, download, downloadUrl, _isNewer, _lastCheckKey (+7 more)
 
 ### Community 88 - "home_block_config.dart"
-Cohesion: 0.11
-Nodes (17): _boolOf, collapsedFromConfig, daysFromConfig, _decode, hideWhenEmptyFromConfig, _intOf, jsonEncode, labelConfig (+9 more)
+Cohesion: 0.06
+Nodes (27): _boolOf, collapsedFromConfig, daysFromConfig, _decode, hideWhenEmptyFromConfig, _intOf, jsonEncode, labelConfig (+19 more)
 
 ### Community 89 - "tasks_table.dart"
 Cohesion: 0.11
@@ -605,8 +612,8 @@ Cohesion: 0.11
 Nodes (13): id, itemId, logId, TrackerLogValues, valueText, compensationStep, frequency, groupKey (+5 more)
 
 ### Community 91 - "task_tile.dart"
-Cohesion: 0.14
-Nodes (12): done, dueDate, _DueDateChip, dueTime, durationMinutes, _formatDate, _isOverdue, listId (+4 more)
+Cohesion: 0.06
+Nodes (29): labelIdsForTaskProvider, _CompletedHeader, count, _sectionHeader, _SectionHeaderSentinel, TaskListScreen, block, build (+21 more)
 
 ### Community 92 - "programs_table.dart"
 Cohesion: 0.11
@@ -621,8 +628,8 @@ Cohesion: 0.11
 Nodes (12): fromString, sessionLog, TrackerModel, TrackerType, value, color, description, icon (+4 more)
 
 ### Community 95 - "photo_block_view.dart"
-Cohesion: 0.11
-Nodes (17): _photo, imageStorageServiceProvider, _arrangePhoto, _NoteRow, block, build, _circleButton, isCover (+9 more)
+Cohesion: 0.14
+Nodes (13): _photo, imageStorageServiceProvider, _arrangePhoto, _NoteRow, block, build, _circleButton, isCover (+5 more)
 
 ### Community 96 - "IntColumn get"
 Cohesion: 0.12
@@ -632,37 +639,37 @@ Nodes (12): date, habitId, id, configJson, id, orderIndex, type, colorValue (+4 
 Cohesion: 0.14
 Nodes (12): column, columns, DayGridItem, durationMin, i, layoutDayItems, result, splitTimed (+4 more)
 
-### Community 100 - "shiftsByDateProvider"
-Cohesion: 0.20
-Nodes (9): build, ShiftBlock, dayDotSummaryProvider, build, DayColumn, _buildGrid, cycle, initState (+1 more)
+### Community 100 - "taskListsProvider"
+Cohesion: 0.17
+Nodes (12): _pickListFilter, build, listTaskCountsProvider, taskListsProvider, _buildListPicker, build, ListsOverviewScreen, build (+4 more)
 
 ### Community 101 - "list_form_dialog.dart"
-Cohesion: 0.13
-Nodes (12): build, _color, createState, dispose, hintText, initialColor, initialName, initState (+4 more)
+Cohesion: 0.12
+Nodes (14): build, _color, createState, dispose, hintText, initialColor, initialName, initState (+6 more)
 
 ### Community 102 - "notebook_form_dialog.dart"
 Cohesion: 0.12
 Nodes (15): build, _color, createState, dispose, _icon, initialColor, initialIcon, initialName (+7 more)
 
-### Community 103 - "workout_list_screen.dart"
-Cohesion: 0.12
-Nodes (16): _ActiveBanner, _buildExerciseChips, color, _EmptyState, icon, label, onResume, session (+8 more)
+### Community 103 - "planner_providers.dart"
+Cohesion: 0.14
+Nodes (8): build, HabitsBlock, DotSummary, habitsDone, habitsTotal, hasAnyData, tasksCompleted, tasksDue
 
 ### Community 107 - "../../../coach/data/coach_tip.dart"
-Cohesion: 0.07
-Nodes (14): CoachTip, coachTipForTopic, fallback, build, HabitListScreen, build, createState, _dateStr (+6 more)
+Cohesion: 0.10
+Nodes (10): CoachTip, coachTipForTopic, fallback, build, createState, _dateStr, initState, _monthView (+2 more)
 
 ### Community 108 - "tracker_logs_table.dart"
 Cohesion: 0.12
 Nodes (12): fieldType, id, name, sortOrder, trackerId, TrackerItems, createdAt, id (+4 more)
 
 ### Community 109 - "notes_repository.dart"
-Cohesion: 0.05
-Nodes (32): cropExisting, delete, _dir, duplicate, exists, ImageStorageService, pickAndStore, _picker (+24 more)
+Cohesion: 0.12
+Nodes (11): addPhotoBlock, _copyCompanions, cropPhotoBlock, _dao, deleteNoteWithPhotos, duplicateNote, _images, insertTemplateInto (+3 more)
 
 ### Community 110 - "exercise_history_sheet.dart"
-Cohesion: 0.13
-Nodes (14): ExerciseHistoryEntry, build, createState, entry, ExerciseHistorySheet, _ExerciseHistorySheetState, exerciseName, _HistoryTile (+6 more)
+Cohesion: 0.14
+Nodes (12): ExerciseHistoryEntry, build, createState, entry, exerciseName, _HistoryTile, initState, _loading (+4 more)
 
 ### Community 111 - "week_strip.dart"
 Cohesion: 0.13
@@ -681,12 +688,12 @@ Cohesion: 0.11
 Nodes (18): colorValue, description, exerciseName, exercises, ExerciseTemplateData, kBuiltInProgramTemplates, kTemplatePPL, kTemplateUpperLower (+10 more)
 
 ### Community 115 - "../../../../core/database/app_database.dart"
-Cohesion: 0.10
+Cohesion: 0.11
 Nodes (14): blockLabel, blockDepths, depths, indentForInsertAfter, isHeading, kNoteIndentStep, lineStartsRtl, stack (+6 more)
 
 ### Community 116 - "archive_search_test.dart"
-Cohesion: 0.22
-Nodes (5): all, gymHabit, main, shoppingList, weekendNote
+Cohesion: 0.13
+Nodes (8): matchingLine, searchArchive, ArchivedItem, all, gymHabit, main, shoppingList, weekendNote
 
 ### Community 117 - "live_notification_settings_screen.dart"
 Cohesion: 0.14
@@ -697,12 +704,12 @@ Cohesion: 0.17
 Nodes (10): build, _fmtDuration, _fmtNum, icon, label, _StatCard, summary, value (+2 more)
 
 ### Community 119 - "ConsumerState"
-Cohesion: 0.20
-Nodes (12): AddTaskScreen, _AddTaskScreenState, _TrackerInlineCard, _TrackerInlineCardState, ActiveWorkoutScreen, _ActiveWorkoutScreenState, _AddCustomExerciseSheet, _AddCustomExerciseSheetState (+4 more)
+Cohesion: 0.16
+Nodes (16): AddHabitScreen, _AddHabitScreenState, AddTaskScreen, _AddTaskScreenState, QuickAddTaskScreen, _QuickAddTaskScreenState, _TrackerInlineCard, _TrackerInlineCardState (+8 more)
 
 ### Community 120 - "app_drawer.dart"
-Cohesion: 0.15
-Nodes (10): createState, _DrawerTile, enabled, icon, label, _lastTap, subtitle, _taps (+2 more)
+Cohesion: 0.09
+Nodes (11): WorkoutBlock, createState, _DrawerTile, enabled, icon, label, _lastTap, subtitle (+3 more)
 
 ### Community 121 - "group_score.dart"
 Cohesion: 0.13
@@ -717,20 +724,20 @@ Cohesion: 0.12
 Nodes (13): completedAt, durationSeconds, exerciseId, exerciseName, id, isPr, isWarmup, reps (+5 more)
 
 ### Community 124 - "workoutRepositoryProvider"
-Cohesion: 0.11
-Nodes (18): allWorkoutSessionsProvider, exerciseFilterProvider, filteredExercisesProvider, lastSessionHintsProvider, ActiveWorkout, allWorkoutSessions, activeWorkoutProvider, deleteSet (+10 more)
+Cohesion: 0.14
+Nodes (14): ActiveWorkout, allWorkoutSessions, activeWorkoutProvider, allWorkoutSessionsProvider, lastSessionHintsProvider, deleteSet, discard, lastSessionHints (+6 more)
 
 ### Community 126 - "package:flutter_riverpod/flutter_riverpod.dart"
-Cohesion: 0.05
-Nodes (22): HomeBlockType, _BlockHeader, _coachWrap, collapsed, color, _dayRow, days, _headerColor (+14 more)
+Cohesion: 0.06
+Nodes (19): _BlockHeader, _coachWrap, collapsed, color, _dayRow, days, _headerColor, onToggleCollapse (+11 more)
 
 ### Community 127 - "task_priority.dart"
 Cohesion: 0.14
 Nodes (10): color, fromInt, high, label, toInt, _, color, _dayLabels (+2 more)
 
-### Community 128 - "app_colors.dart"
-Cohesion: 0.20
-Nodes (8): AppColors, darkBackground, darkElevated, darkSurface, lightBackground, lightSurface, seed, streakAmber
+### Community 128 - "image_storage_service.dart"
+Cohesion: 0.13
+Nodes (10): cropExisting, delete, _dir, duplicate, exists, ImageStorageService, pickAndStore, _picker (+2 more)
 
 ### Community 129 - "codex_topic_screen.dart"
 Cohesion: 0.25
@@ -741,8 +748,8 @@ Cohesion: 0.14
 Nodes (10): action, _dateKey, db, _decodeMap, id, mode, _snooze, snoozes (+2 more)
 
 ### Community 131 - "widget_settings_screen.dart"
-Cohesion: 0.13
-Nodes (14): _apply, _bgColor, _bgPresets, build, createState, _defaultBg, _Header, initState (+6 more)
+Cohesion: 0.15
+Nodes (12): _apply, _bgColor, _bgPresets, build, createState, _defaultBg, _Header, initState (+4 more)
 
 ### Community 132 - "task_lists_table.dart"
 Cohesion: 0.14
@@ -757,7 +764,7 @@ Cohesion: 0.14
 Nodes (13): archivedAt, colorValue, createdAt, CustomTrackers, deletedAt, description, icon, id (+5 more)
 
 ### Community 135 - ".build"
-Cohesion: 0.27
+Cohesion: 0.36
 Nodes (3): Card, Item, LiveCards
 
 ### Community 136 - "coach_due.dart"
@@ -765,8 +772,8 @@ Cohesion: 0.25
 Nodes (6): 0, compareVersions, dueTips, isNewSince, x, y
 
 ### Community 137 - "shifts_repository.dart"
-Cohesion: 0.10
-Nodes (14): addRotation, clearShift, _dao, deleteRotation, _fromRow, _rotationFromRow, setShift, ShiftsRepository (+6 more)
+Cohesion: 0.15
+Nodes (10): addRotation, clearShift, _dao, deleteRotation, _fromRow, _rotationFromRow, setShift, updateRotation (+2 more)
 
 ### Community 139 - "tracker_progress_card.dart"
 Cohesion: 0.15
@@ -788,9 +795,9 @@ Nodes (12): _, _append, clear, CrashLog, _file, _fileName, _maxBytes, note (+4 m
 Cohesion: 0.15
 Nodes (12): durationBetween, e, end, endTimeOf, formatRange, h, _hhmm, m (+4 more)
 
-### Community 144 - "build"
-Cohesion: 0.09
-Nodes (10): githubFeedbackServiceProvider, watch, GithubFeedbackService, build, maybeShowPatchNotes, build, NotesBlock, recentNotebooksProvider (+2 more)
+### Community 144 - "github_feedback_providers.dart"
+Cohesion: 0.29
+Nodes (4): githubFeedbackServiceProvider, watch, GithubFeedbackService, _pushToGithub
 
 ### Community 145 - "notes_table.dart"
 Cohesion: 0.15
@@ -802,7 +809,7 @@ Nodes (10): deleteRotation, deleteShiftForDate, getAllShifts, getRotations, getS
 
 ### Community 147 - "AppDatabase"
 Cohesion: 0.07
-Nodes (21): NoteTaskLinker, ListsRepository, db, linker, listsDao, main, notesDao, now (+13 more)
+Nodes (19): ListsRepository, app, dir, main, sheet, soon, subs, addList (+11 more)
 
 ### Community 148 - "work_shift_model.dart"
 Cohesion: 0.17
@@ -813,40 +820,44 @@ Cohesion: 0.20
 Nodes (7): hiddenGems, inBody, inTitle, q, searchCodex, browsableTopics, whatsNewTopics
 
 ### Community 150 - "Route /workout/active"
-Cohesion: 0.10
-Nodes (10): build, _targetsCard, WorkoutBlock, _buildWorkoutSection, _startWorkout, _startSession, _startWorkout, build (+2 more)
+Cohesion: 0.18
+Nodes (9): build, _targetsCard, _buildWorkoutSection, _startWorkout, _startSession, _startWorkout, build, build (+1 more)
 
 ### Community 151 - "_"
-Cohesion: 0.17
-Nodes (12): _, dayFill, dayForeground, dayIconColor, fill, foreground, icon, iconColor (+4 more)
+Cohesion: 0.09
+Nodes (20): AppColors, darkBackground, darkElevated, darkSurface, lightBackground, lightSurface, seed, streakAmber (+12 more)
 
-### Community 152 - "habit_list_screen_test.dart"
-Cohesion: 0.17
-Nodes (5): _habit, _item, main, router, _wrap
+### Community 152 - "package:flutter_riverpod/flutter_riverpod.dart"
+Cohesion: 0.06
+Nodes (14): build, HabitListScreen, _archive, build, HabitTile, item, _toggle, main (+6 more)
 
 ### Community 153 - "custom_lead_dialog.dart"
-Cohesion: 0.14
-Nodes (12): _amount, build, createState, CustomLeadDialog, _CustomLeadDialogState, dispose, factor, label (+4 more)
+Cohesion: 0.15
+Nodes (10): _amount, build, createState, dispose, factor, label, _LeadUnit, showCustomLeadDialog (+2 more)
 
 ### Community 154 - "workout_actions.dart"
 Cohesion: 0.10
 Nodes (14): build, cs, _fmt, label, onTap, _PillBtn, RestTimerBar, active (+6 more)
 
 ### Community 155 - "State"
-Cohesion: 0.22
-Nodes (8): CoachTarget, _CoachTargetState, _ListFormDialog, _ListFormDialogState, _ItemRow, _ItemRowState, SetRow, _SetRowState
+Cohesion: 0.17
+Nodes (12): NoteArrangeView, _NoteArrangeViewState, PlannerScreen, _PlannerScreenState, WidgetSettingsScreen, _WidgetSettingsScreenState, CustomLeadDialog, _CustomLeadDialogState (+4 more)
 
 ### Community 156 - "return"
 Cohesion: 0.20
 Nodes (7): inBody, inTitle, matchingContentLine, null, q, n, out
 
-### Community 157 - "int?"
-Cohesion: 0.08
-Nodes (20): matchingLine, searchArchive, archivedAt, ArchivedItem, ArchivedKind, body, colorValue, deletedAt (+12 more)
+### Community 157 - "archived_item.dart"
+Cohesion: 0.18
+Nodes (10): archivedAt, ArchivedKind, body, colorValue, deletedAt, id, key, kind (+2 more)
 
 ### Community 158 - "notebooks_table.dart"
 Cohesion: 0.18
 Nodes (10): archivedAt, colorValue, createdAt, deletedAt, icon, id, isFavorite, name (+2 more)
+
+### Community 159 - "note_task_linker.dart"
+Cohesion: 0.14
+Nodes (8): _dateFmt, _ensureNoteList, _listsDao, mirrorTaskCompletionToBlock, _notesDao, onBlockCheckedChanged, reconcileBlock, _tasksDao
 
 ### Community 160 - "heading_line_view.dart"
 Cohesion: 0.18
@@ -854,31 +865,31 @@ Nodes (8): autofocus, block, build, HeadingLineView, hiddenCount, onBlur, onDele
 
 ### Community 161 - "shift_picker_sheet.dart"
 Cohesion: 0.12
-Nodes (12): build, _editDialog, _palette, RotationsEditorScreen, _assign, build, createState, date (+4 more)
+Nodes (13): build, _editDialog, _palette, RotationsEditorScreen, _assign, build, createState, date (+5 more)
 
 ### Community 162 - "recent_exercise_orders_test.dart"
-Cohesion: 0.18
-Nodes (10): at, dao, day, db, fullBody, main, newWorkout, otherDay (+2 more)
+Cohesion: 0.09
+Nodes (15): ProgramRepository, buildProgram, db, main, repo, at, dao, day (+7 more)
 
 ### Community 163 - "diagnostics_screen.dart"
-Cohesion: 0.09
-Nodes (19): DiagnosticCheck, DiagnosticsReport, build, check, _CheckTile, createState, DiagnosticsScreen, _DiagnosticsScreenState (+11 more)
+Cohesion: 0.10
+Nodes (17): DiagnosticCheck, DiagnosticsReport, build, check, _CheckTile, createState, didChangeAppLifecycleState, dispose (+9 more)
 
 ### Community 165 - "Map"
-Cohesion: 0.14
-Nodes (9): computeSectionFold, counts, hidden, hiddenCountByHeadingId, hiddenIds, SectionFold, main, order (+1 more)
+Cohesion: 0.25
+Nodes (6): computeSectionFold, counts, hidden, hiddenCountByHeadingId, hiddenIds, SectionFold
 
 ### Community 166 - "startup_trace.dart"
 Cohesion: 0.29
 Nodes (4): _clock, enabled, mark, StartupTrace
 
 ### Community 167 - "empty_workouts_test.dart"
-Cohesion: 0.04
-Nodes (32): ProgramRepository, WorkoutRepository, main, main, container, dao, db, idsOf (+24 more)
+Cohesion: 0.06
+Nodes (26): WorkoutRepository, main, container, dao, db, idsOf, main, repo (+18 more)
 
-### Community 168 - "week_utils_test.dart"
-Cohesion: 0.33
-Nodes (4): main, mon, sat, sun
+### Community 168 - "week_attendance_strip.dart"
+Cohesion: 0.15
+Nodes (10): _AttendanceChip, build, ids, logged, loggedIds, loggedThisWeek, program, session (+2 more)
 
 ### Community 169 - "Set"
 Cohesion: 0.25
@@ -901,8 +912,8 @@ Cohesion: 0.22
 Nodes (3): main, main, _t
 
 ### Community 174 - "home_block_type.dart"
-Cohesion: 0.20
-Nodes (6): defaults, done, icon, multiInstance, parse, title
+Cohesion: 0.18
+Nodes (7): defaults, done, HomeBlockType, icon, multiInstance, parse, title
 
 ### Community 175 - "priority_badge.dart"
 Cohesion: 0.33
@@ -912,9 +923,9 @@ Nodes (4): TaskPriority, build, priority, PriorityBadge
 Cohesion: 0.20
 Nodes (7): addBlock, deleteBlock, ensureSeeded, getBlocks, reorderBlocks, updateConfig, watchBlocks
 
-### Community 177 - "week_utils.dart"
-Cohesion: 0.29
-Nodes (6): blanks, day, monthLeadingBlanks, startOfWeek, subtract, weekdayHeaderLetters
+### Community 177 - "weekly_scoreboard_card.dart"
+Cohesion: 0.15
+Nodes (9): color, done, _FrequencyDots, _GroupHeader, label, _MuscleRow, score, target (+1 more)
 
 ### Community 178 - "weight_steps.dart"
 Cohesion: 0.22
@@ -941,12 +952,16 @@ Cohesion: 0.25
 Nodes (5): FieldType, fromString, text, TrackerItemModel, value
 
 ### Community 185 - "codex_screen.dart"
-Cohesion: 0.14
-Nodes (9): build, _byCategory, CodexScreen, _CodexScreenState, createState, dispose, _gemsOnly, _search (+1 more)
+Cohesion: 0.11
+Nodes (12): build, _byCategory, CodexScreen, _CodexScreenState, createState, dispose, _gemsOnly, _search (+4 more)
 
-### Community 188 - "shift_date_picker_sheet.dart"
-Cohesion: 0.29
-Nodes (5): build, _dateStr, initialDate, _ShiftDatePickerSheet, showShiftDatePicker
+### Community 186 - "home_blocks_dao_test.dart"
+Cohesion: 0.17
+Nodes (5): main, dao, db, main, main
+
+### Community 187 - "own_window_check.sh"
+Cohesion: 0.38
+Nodes (11): close_sheet(), differs(), front(), MSYS_NO_PATHCONV, open_app_then_home(), run(), own_window_check.sh script, shot() (+3 more)
 
 ### Community 189 - "reminder_leads.dart"
 Cohesion: 0.17
@@ -961,56 +976,72 @@ Cohesion: 0.18
 Nodes (10): activity, byActivity, byEdited, fromKey, key, label, NoteSort, out (+2 more)
 
 ### Community 192 - "package:riverpod_annotation/riverpod_annotation.dart"
-Cohesion: 0.33
-Nodes (3): appDatabase, appDatabaseProvider, db
+Cohesion: 0.22
+Nodes (5): ChangedElsewhere, markTasksChangedElsewhere, appDatabase, appDatabaseProvider, db
 
 ### Community 193 - "package:life_tracker/core/database/app_database.dart"
-Cohesion: 0.08
-Nodes (15): main, main, columnsOf, db, main, _b, main, _note (+7 more)
+Cohesion: 0.07
+Nodes (17): main, main, columnsOf, db, main, _b, main, _note (+9 more)
 
-### Community 194 - "task_detail_sheet.dart"
-Cohesion: 0.15
-Nodes (10): _, TaskModel, block, dao, _dueText, _fact, getNote, _linkRow (+2 more)
+### Community 194 - "screen_diff.py"
+Cohesion: 0.33
+Nodes (3): main(), grey(), main()
+
+### Community 195 - "shifts_repository_test.dart"
+Cohesion: 0.25
+Nodes (4): ShiftsRepository, db, main, repo
 
 ### Community 196 - "_"
 Cohesion: 0.33
 Nodes (4): _, ExerciseModel, muscleGroup, secondaryMuscleList
 
-### Community 197 - "note_sort_and_preview_test.dart"
-Cohesion: 0.29
-Nodes (4): block, main, note, t0
+### Community 197 - "phone_plus.sh"
+Cohesion: 0.48
+Nodes (6): close_sheet(), MSYS_NO_PATHCONV, open_app(), plus(), phone_plus.sh script, shown()
 
 ### Community 199 - "widget_payload.dart"
 Cohesion: 0.40
 Nodes (4): argbToHex, hash, payloadChecksum, toRadixString
 
-### Community 206 - "note_arrange_view_test.dart"
-Cohesion: 0.22
-Nodes (7): _b, dragRow, indents, main, _note, order, pumpView
+### Community 200 - "_LifeTrackerAppState"
+Cohesion: 0.33
+Nodes (6): LifeTrackerApp, _LifeTrackerAppState, _maybeOfferUpdate, _maybeShowPatchNotes, build, sharedPreferencesProvider
 
-### Community 251 - "note_search_test.dart"
-Cohesion: 0.25
-Nodes (6): NoteSearchItem, all, empty, main, shopping, untitled
+### Community 206 - "_ArchivedScreenState"
+Cohesion: 0.40
+Nodes (5): archivedItemsProvider, deletedItemsProvider, ArchivedScreen, _ArchivedScreenState, build
+
+### Community 251 - "int?"
+Cohesion: 0.12
+Nodes (13): id, notebookId, notebookName, noteMatchLine, NoteSearchItem, searchNotes, text, title (+5 more)
+
+### Community 253 - "fresh_plus.sh"
+Cohesion: 0.47
+Nodes (4): close_for_real(), MSYS_NO_PATHCONV, fresh_plus.sh script, shown()
+
+### Community 254 - "notebook_picker_sheet.dart"
+Cohesion: 0.40
+Nodes (3): NotebookChoice, showNotebookPickerSheet, title
 
 ## Knowledge Gaps
-- **2586 isolated node(s):** `schemaVersion`, `_oldRotationColor`, `_newRotationColor`, `migration`, `_seedRotations` (+2581 more)
-  These have ≤1 connection - possible missing edges. (Counts symbols only; 3094 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **64 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **2599 isolated node(s):** `_widgetChannel`, `_liveChannel`, `createState`, `initState`, `dispose` (+2594 more)
+  These have ≤1 connection - possible missing edges. (Counts symbols only; 3117 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **66 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `_` connect `_` to `package:life_tracker/core/database/app_database.dart`, `static const String`, `backup_service.dart`?**
-  _High betweenness centrality (0.022) - this node is a cross-community bridge._
-- **What connects `schemaVersion`, `_oldRotationColor`, `_newRotationColor` to the rest of the system?**
-  _2586 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Why does `AppDatabase` connect `AppDatabase` to `package:riverpod_annotation/riverpod_annotation.dart`, `package:life_tracker/core/database/app_database.dart`, `_`, `live_background_callback.dart`, `recently_deleted_test.dart`, `shifts_repository_test.dart`, `recent_exercise_orders_test.dart`, `empty_workouts_test.dart`, `app_database.dart`, `note_editor_leave_test.dart`, `note_task_linker_test.dart`, `AppDatabase`, `backup_service.dart`, `home_blocks_dao_test.dart`?**
+  _High betweenness centrality (0.026) - this node is a cross-community bridge._
+- **What connects `_widgetChannel`, `_liveChannel`, `createState` to the rest of the system?**
+  _2599 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `workout_providers.dart` be split into smaller, more focused modules?**
   _Cohesion score 0.02631578947368421 - nodes in this community are weakly interconnected._
-- **Why does `build` connect `build` to `app_drawer.dart`, `shiftsByDateProvider`, `ConsumerWidget`, `Route /workout/active`?**
-  _High betweenness centrality (0.018) - this node is a cross-community bridge._
+- **Why does `_` connect `_` to `diagnostics_screen.dart`, `_`, `String get`, `task_detail_sheet_test.dart`, `_`, `List`?**
+  _High betweenness centrality (0.019) - this node is a cross-community bridge._
 - **Should `note_editor_screen.dart` be split into smaller, more focused modules?**
   _Cohesion score 0.04234724742891712 - nodes in this community are weakly interconnected._
-- **Why does `AppDatabase` connect `AppDatabase` to `package:riverpod_annotation/riverpod_annotation.dart`, `recently_deleted_test.dart`, `_`, `live_background_callback.dart`, `package:life_tracker/core/database/app_database.dart`, `recent_exercise_orders_test.dart`, `empty_workouts_test.dart`, `shifts_repository.dart`, `package:flutter_test/flutter_test.dart`, `app_database.dart`, `note_editor_leave_test.dart`, `AppDatabase`, `backup_service.dart`?**
-  _High betweenness centrality (0.017) - this node is a cross-community bridge._
+- **Why does `_` connect `_` to `shift_picker_sheet.dart`, `live_background_callback.dart`, `empty_workouts_test.dart`, `core/settings/settings_provider.dart`, `static const String`, `backup_service.dart`?**
+  _High betweenness centrality (0.015) - this node is a cross-community bridge._
 - **Should `notification_service.dart` be split into smaller, more focused modules?**
   _Cohesion score 0.03389830508474576 - nodes in this community are weakly interconnected._

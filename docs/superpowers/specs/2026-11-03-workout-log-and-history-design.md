@@ -97,8 +97,10 @@ tokens; no helpers. Past twice that, stop and ask.
   - 383 tests pass, 16 of them new: 12 failed first and then passed; 4 guard behaviour that already held (3 passed
     at once; the old-backup one was written after the change, as it needs the new columns). The commit and history
     line say "3 guards"; this line corrects that. Analyze clean.
-  - The fast (profile) build from `212f4e3` is ready: `build\app\outputs\flutter-apk\app-profile.apk`, v1.18.0 (27),
-    Uplan's key (SHA-256 `5b269323…c7ac5`), `application-debuggable`.
+  - A fast (profile) build from `212f4e3` was made and checked (Uplan's key, debuggable), then replaced: the Tester
+    merged its quick-add window into `master` (`b7c92c8`), and the phone gets one fast build from that commit, which
+    carries both. Whichever chat Ahmed tells "Phone plugged in" does that one install, his data copied off first;
+    afterwards his copied-off database should say schema 26 with the same 77 workouts and 308 sets as today's backup.
   - **Tried for real on a copy of his database** (today's backup, `D:\backups\uplan\2026-11-03-reminders\check`,
     copied to the scratchpad; the original untouched): `tool/migrate_copy_test.dart` upgraded it 25 → 26; every one
     of its 24 tables kept its row count, the workout rows' old columns hash the same, the new columns are empty,
