@@ -4,9 +4,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:life_tracker/core/database/app_database.dart';
 import 'package:life_tracker/features/workout/data/dao/workout_dao.dart';
 
-/// The smart order learns from the order exercises were really done in. The
-/// app makes an exercise's set rows when it's opened, so the first filled set
-/// of each exercise gives its place.
+/// The smart order learns from the order exercises were really done in: an
+/// exercise's first ticked set gives its place. Exercises never ticked (and
+/// every workout from before ticks were saved) keep the order they were
+/// opened in — the app makes an exercise's set rows when it's opened.
 void main() {
   late AppDatabase db;
   late WorkoutDao dao;
@@ -27,16 +28,20 @@ void main() {
   });
   tearDown(() async => db.close());
 
-  /// Logs one workout of [programSessionId], a day after the last one. Each
-  /// entry is an exercise and whether its set was filled in; the rows go in
-  /// the order given.
-  Future<void> workout(int programSessionId, List<(String, bool)> sets) async {
+  /// Starts a workout of [programSessionId], a day after the last one.
+  Future<int> newWorkout(int programSessionId) {
     day++;
-    final int session = await dao.insertSession(WorkoutSessionsCompanion.insert(
+    return dao.insertSession(WorkoutSessionsCompanion.insert(
       date: '2026-10-${day.toString().padLeft(2, '0')}',
       createdAt: DateTime(2026, 10, day),
       programSessionId: Value(programSessionId),
     ));
+  }
+
+  /// Logs one workout of [programSessionId]. Each entry is an exercise and
+  /// whether its set was filled in; the rows go in the order given.
+  Future<void> workout(int programSessionId, List<(String, bool)> sets) async {
+    final int session = await newWorkout(programSessionId);
     int setNumber = 0;
     for (final (String name, bool filled) in sets) {
       await dao.insertSet(WorkoutSetsCompanion.insert(
@@ -48,6 +53,62 @@ void main() {
       ));
     }
   }
+
+  /// Logs one filled-in workout of Full body. Each entry is an exercise and
+  /// when its set was ticked (null: never); the rows go in the order given,
+  /// which is the order the exercises were opened in.
+  Future<void> tickedWorkout(List<(String, DateTime?)> sets) async {
+    final int session = await newWorkout(fullBody);
+    int setNumber = 0;
+    for (final (String name, DateTime? tick) in sets) {
+      await dao.insertSet(WorkoutSetsCompanion.insert(
+        sessionId: session,
+        exerciseName: name,
+        setNumber: ++setNumber,
+        reps: const Value(8),
+        weightKg: const Value(40.0),
+        completedAt: Value(tick),
+      ));
+    }
+  }
+
+  DateTime at(int hour, int minute) => DateTime(2026, 11, 3, hour, minute);
+
+  test("an exercise's place is its first tick, not when it was opened",
+      () async {
+    await tickedWorkout([
+      ('Row', at(10, 20)),
+      ('Pulldown', at(10, 0)),
+      ('Curl', at(10, 10)),
+    ]);
+    expect(await dao.recentExerciseOrders(fullBody), [
+      ['Pulldown', 'Curl', 'Row'],
+    ]);
+  });
+
+  test("an exercise's earliest tick counts", () async {
+    await tickedWorkout([
+      ('Row', at(10, 10)),
+      ('Pulldown', at(10, 30)),
+      ('Pulldown', at(10, 0)),
+    ]);
+    expect(await dao.recentExerciseOrders(fullBody), [
+      ['Pulldown', 'Row'],
+    ]);
+  });
+
+  test('exercises never ticked follow the ticked ones, in the opened order',
+      () async {
+    await tickedWorkout([
+      ('Row', null),
+      ('Pulldown', at(10, 10)),
+      ('Curl', null),
+      ('Squat', at(10, 0)),
+    ]);
+    expect(await dao.recentExerciseOrders(fullBody), [
+      ['Squat', 'Pulldown', 'Row', 'Curl'],
+    ]);
+  });
 
   test('reads the order exercises were done in, newest workout first',
       () async {

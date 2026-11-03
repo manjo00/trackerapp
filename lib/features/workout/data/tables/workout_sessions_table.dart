@@ -27,4 +27,8 @@ class WorkoutSessions extends Table {
   IntColumn get programSessionId => integer()
       .references(ProgramSessions, #id, onDelete: KeyAction.setNull)
       .nullable()();
+
+  /// When the user tapped "Finish" (v26). NULL while the workout runs, for a
+  /// discarded workout and for every workout before v26.
+  DateTimeColumn get finishedAt => dateTime().nullable()();
 }

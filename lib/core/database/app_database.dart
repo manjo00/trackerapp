@@ -139,8 +139,10 @@ class AppDatabase extends _$AppDatabase {
   ///        preview falls back to the first photo if that block is gone)
   /// v25 → notebooks.isFavorite — the same star + sort system on the Notes
   ///        overview, one level up
+  /// v26 → the workout log: workout_sets.completedAt (when a set's ✓ was
+  ///        tapped) and workout_sessions.finishedAt (when Finish was tapped)
   @override
-  int get schemaVersion => 25;
+  int get schemaVersion => 26;
 
   /// The old vs. new default rotation-label colour (see v8 migration).
   static const int _oldRotationColor = 0xFFFFB347;
@@ -347,6 +349,12 @@ class AppDatabase extends _$AppDatabase {
           if (from < 25) {
             // Starred notebooks. Default false; nothing to backfill.
             await m.addColumn(notebooks, notebooks.isFavorite);
+          }
+          if (from < 26) {
+            // The workout log. NULL = never ticked / not finished, which is
+            // all we know of every existing row — nothing to backfill.
+            await m.addColumn(workoutSets, workoutSets.completedAt);
+            await m.addColumn(workoutSessions, workoutSessions.finishedAt);
           }
         },
         beforeOpen: (details) async {

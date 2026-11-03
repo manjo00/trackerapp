@@ -1,7 +1,8 @@
 # Workout log: what was really done first, no empty workouts, and a history you can open
 
-**Date:** 2026-11-03 · **Status:** waiting for Ahmed's yes · **Chat:** the Uplan chat · **Path:** a short written
-design first, because it adds one small database change (his data is copied off before any install, as always).
+**Date:** 2026-11-03 · **Status:** approved by Ahmed ("Looks right", 2026-11-03); demo 1 (steps 1–4) built the same
+evening, see "Status" at the end · **Chat:** the Uplan chat · **Path:** a short written design first, because it adds
+one small database change (his data is copied off before any install, as always).
 
 ## What Ahmed asked (2026-11-03, his words)
 - "does the app log when exercises are done and checked? ... the gym was a little busy i had to do them a little out
@@ -28,8 +29,9 @@ design first, because it adds one small database change (his data is copied off 
 
 ## The change
 1. **Ticks are saved with their time.** A set gets a `completedAt` time when its ✓ is tapped (cleared when tapped
-   again), and a workout gets a `finishedAt` time when it's finished. Ticks then also survive leaving and reopening
-   the workout screen.
+   again), and a workout gets a `finishedAt` time when it's finished. (Correction, 2026-11-03: the ✓ already survived
+   leaving the workout screen, because the running workout stays in the app's memory; what is new is that it's
+   saved.)
 2. **The smart order learns from what was finished first.** An exercise's place is the time of its first ticked set.
    Exercises with no ticked set, and every workout from before this change, keep the opened order, after the ticked
    ones.
@@ -69,3 +71,39 @@ tokens; no helpers. Past twice that, stop and ask.
 ## Not in this change
 - The gym clean-up (`docs/superpowers/specs/2026-11-01-gym-cleanup-design.md`, on hold).
 - The Snapchat sticker (it will reuse the workout page's numbers).
+
+## Noticed (not fixing now)
+- **A running workout lives only in the app's memory** (read in the code 2026-11-03, not tried on a device):
+  `ActiveWorkout.build()` starts empty and nothing reloads an unfinished workout, so if Android closes Uplan in the
+  middle of a workout, the workout screen can't continue it. Its logged sets stay, as an unnamed workout in history;
+  its opened-but-empty rows stay too (history now hides a workout that has only those). Since v26 a workout without
+  `finishedAt` is recognisable, which a later "continue your workout" feature could use.
+
+## Status
+- **Demo 1 (steps 1–4), built 2026-11-03 evening, test first:**
+  - Schema 26: `workout_sets.completedAt` and `workout_sessions.finishedAt`, both nullable, added in `onUpgrade`
+    (`lib/core/database/app_database.dart`). `test/core/database/workout_log_migration_test.dart` opens a real
+    version-25 database (the schema from `test/core/database/fixtures/schema_v25.sql`, written by
+    `tool/dump_schema_test.dart` before the bump) and checks that it lands on 26 with every row unchanged and the
+    new columns empty; a fourth test checks that an older backup's rows still restore.
+  - Ticks: `ActiveWorkout.toggleSetComplete` saves the time (or clears it) through
+    `WorkoutRepository.setCompletedAt`, and `finishSession` stamps `finishedAt` (`set_ticks_test.dart`).
+  - The smart order: `WorkoutDao.recentExerciseOrders` orders each workout by first tick, then the never-ticked
+    exercises in the opened order (`recent_exercise_orders_test.dart`, three new tests).
+  - Empty workouts: Discard removes a workout with nothing logged (`WorkoutRepository.deleteSessionIfEmpty`); the
+    repository's `watchAllSessions` and `getAllSessions` leave out workouts with no logged set, which covers the
+    history, Recent Sessions, the Home block and the week's count (`empty_workouts_test.dart`).
+  - Step 2's "the ✓ read back" isn't needed: nothing reloads a running workout (see Noticed).
+  - 383 tests pass, 16 of them new: 12 failed first and then passed; 4 guard behaviour that already held (3 passed
+    at once; the old-backup one was written after the change, as it needs the new columns). The commit and history
+    line say "3 guards"; this line corrects that. Analyze clean.
+  - The fast (profile) build from `212f4e3` is ready: `build\app\outputs\flutter-apk\app-profile.apk`, v1.18.0 (27),
+    Uplan's key (SHA-256 `5b269323…c7ac5`), `application-debuggable`.
+  - **Tried for real on a copy of his database** (today's backup, `D:\backups\uplan\2026-11-03-reminders\check`,
+    copied to the scratchpad; the original untouched): `tool/migrate_copy_test.dart` upgraded it 25 → 26; every one
+    of its 24 tables kept its row count, the workout rows' old columns hash the same, the new columns are empty,
+    integrity ok, no foreign-key problems. On that copy the history shows 41 of his 77 workouts (34 have no sets, 2
+    only empty rows). Not tried on the emulator (the Tester's was in use) or the phone yet.
+- **Next:** demo 1 on his phone before his next workout (his data copied first), so his next ticks are recorded;
+  then demo 2 (step 5), with 2–3 looks of the history row and workout page first. Demo 2 counts logged sets only:
+  20 empty set rows remain in his workouts that were never finished or discarded.

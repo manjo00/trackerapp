@@ -178,9 +178,12 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase>
   /// run from [programSessionId], newest first — what the smart order learns
   /// from.
   ///
-  /// An exercise's place is its first filled set: set rows are made when an
-  /// exercise is opened, and rows never filled in (weight and reps empty) don't
-  /// count, so a workout with nothing filled in is skipped.
+  /// An exercise's place is its first ticked set (v26), so exercises done out
+  /// of the shown order land where they were really done. Exercises with no
+  /// ticked set — and every workout from before v26 — keep the order they
+  /// were opened in (set rows are made when an exercise is opened), after the
+  /// ticked ones. Rows never filled in (weight and reps empty) don't count, so
+  /// a workout with nothing filled in is skipped.
   Future<List<List<String>>> recentExerciseOrders(int programSessionId,
       {int limit = 3}) async {
     final rows = await (select(workoutSets).join([
@@ -197,18 +200,46 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase>
         .get();
 
     // Rows come grouped by workout, newest first, each in set order.
-    final Map<int, List<String>> orders = {};
+    final Map<int, List<WorkoutSet>> workouts = {};
     for (final row in rows) {
       final WorkoutSet set = row.readTable(workoutSets);
-      final List<String>? names = orders[set.sessionId];
-      if (names == null) {
-        if (orders.length == limit) break;
-        orders[set.sessionId] = [set.exerciseName];
-      } else if (!names.contains(set.exerciseName)) {
-        names.add(set.exerciseName);
+      final List<WorkoutSet>? sets = workouts[set.sessionId];
+      if (sets == null) {
+        if (workouts.length == limit) break;
+        workouts[set.sessionId] = [set];
+      } else {
+        sets.add(set);
       }
     }
-    return orders.values.toList();
+    return [for (final List<WorkoutSet> sets in workouts.values) _doneOrder(sets)];
+  }
+
+  /// One workout's exercises by their first tick, then the never-ticked ones
+  /// in the order opened. [sets] come in set (= opened) order.
+  static List<String> _doneOrder(List<WorkoutSet> sets) {
+    final List<String> opened = [];
+    final Map<String, DateTime> firstTick = {};
+    for (final WorkoutSet set in sets) {
+      if (!opened.contains(set.exerciseName)) opened.add(set.exerciseName);
+      final DateTime? tick = set.completedAt;
+      final DateTime? earliest = firstTick[set.exerciseName];
+      if (tick != null && (earliest == null || tick.isBefore(earliest))) {
+        firstTick[set.exerciseName] = tick;
+      }
+    }
+    // Ticks are saved to the second, so a tie keeps the opened order.
+    final List<(DateTime, int, String)> ticked = [
+      for (int i = 0; i < opened.length; i++)
+        if (firstTick[opened[i]] case final DateTime tick) (tick, i, opened[i]),
+    ]..sort((a, b) {
+        final int byTime = a.$1.compareTo(b.$1);
+        return byTime != 0 ? byTime : a.$2.compareTo(b.$2);
+      });
+    return [
+      for (final (_, _, String name) in ticked) name,
+      for (final String name in opened)
+        if (!firstTick.containsKey(name)) name,
+    ];
   }
 
   // ── Exercise library ──────────────────────────────────────────────────────
