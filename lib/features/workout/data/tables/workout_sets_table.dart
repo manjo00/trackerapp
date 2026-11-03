@@ -52,4 +52,9 @@ class WorkoutSets extends Table {
   /// Automatically detected by the repository on save.
   BoolColumn get isPr =>
       boolean().withDefault(const Constant(false))();
+
+  /// When the set's ✓ was tapped (v26); cleared when it is tapped again.
+  /// NULL for sets never ticked, and for every set logged before v26. The
+  /// smart order reads an exercise's first tick as the moment it was done.
+  DateTimeColumn get completedAt => dateTime().nullable()();
 }

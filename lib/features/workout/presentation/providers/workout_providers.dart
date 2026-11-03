@@ -258,8 +258,9 @@ class ActiveWorkoutState {
 
   final List<WorkoutSetModel> sets;
 
-  /// Set ids the user has checked off this session. Runtime-only (the green
-  /// ✓ state) — lives here so it survives collapsing/expanding exercise cards.
+  /// Set ids the user has checked off this session (the green ✓ state) —
+  /// lives here so it survives collapsing/expanding exercise cards. Each tick
+  /// is also saved as the set's completedAt (v26).
   final Set<int> completedSetIds;
 
   ActiveWorkoutState copyWith({
@@ -481,9 +482,11 @@ class ActiveWorkout extends _$ActiveWorkout {
     ));
   }
 
-  /// Toggles the checked-off state of [setId]. Returns the new state
-  /// (true = now completed) so the UI can decide whether to start rest.
-  bool toggleSetComplete(int setId) {
+  /// Toggles the checked-off state of [setId] and saves when it was ticked
+  /// (cleared when unticked). Returns the new state (true = now completed) so
+  /// the UI can decide whether to start rest. The ✓ shows at once; the save
+  /// follows.
+  Future<bool> toggleSetComplete(int setId) async {
     final current = state.valueOrNull;
     if (current == null) return false;
     final next = {...current.completedSetIds};
@@ -494,6 +497,9 @@ class ActiveWorkout extends _$ActiveWorkout {
       next.remove(setId);
     }
     state = AsyncData(current.copyWith(completedSetIds: next));
+    await ref
+        .read(workoutRepositoryProvider)
+        .setCompletedAt(setId, nowDone ? DateTime.now() : null);
     return nowDone;
   }
 
@@ -526,12 +532,15 @@ class ActiveWorkout extends _$ActiveWorkout {
     LiveDashboardService.cancelRest();
   }
 
-  /// Discards the active state. Prunes empty sets but keeps the session in
-  /// history as an unnamed entry.
+  /// Discards the active state. Prunes empty sets; a workout with nothing
+  /// logged is removed, one with logged sets stays in history as an unnamed
+  /// entry (those sets are real training).
   Future<void> discard() async {
     final current = state.valueOrNull;
     if (current != null) {
-      await _pruneEmptySets(current, ref.read(workoutRepositoryProvider));
+      final repo = ref.read(workoutRepositoryProvider);
+      await _pruneEmptySets(current, repo);
+      await repo.deleteSessionIfEmpty(current.sessionId);
     }
     state = const AsyncData(null);
     ref.invalidate(allWorkoutSessionsProvider);

@@ -25,12 +25,15 @@ class WorkoutRepository {
 
   // ── Sessions ──────────────────────────────────────────────────────────────
 
-  /// Stream of all sessions with their sets, newest first.
+  /// Stream of all sessions with their sets, newest first. Sessions with no
+  /// logged set (started and left empty) are left out — they aren't workouts;
+  /// their rows stay in the database.
   Stream<List<WorkoutSessionModel>> watchAllSessions() {
     return _dao.watchAllSessions().asyncMap((rows) async {
       final List<WorkoutSessionModel> result = [];
       for (final row in rows) {
         final sets = await _dao.getSetsForSession(row.id);
+        if (!sets.any(_isLogged)) continue;
         result.add(_sessionFromRow(row, sets));
       }
       return result;
@@ -75,7 +78,7 @@ class WorkoutRepository {
         programSessionId: Value(programSessionId),
       ));
 
-  /// Finalises a session by setting its name and/or notes.
+  /// Finalises a session by setting its name and/or notes, and stamps when.
   Future<void> finishSession(
     int sessionId, {
     String? name,
@@ -85,22 +88,38 @@ class WorkoutRepository {
         id: Value(sessionId),
         name: Value(name),
         notes: Value(notes),
+        finishedAt: Value(DateTime.now()),
       ));
 
   /// Deletes a session and all its sets (CASCADE).
   Future<void> deleteSession(int sessionId) =>
       _dao.deleteSession(sessionId);
 
-  /// One-shot fetch of all sessions with sets (for stats).
+  /// Deletes [sessionId] when it has no sets left — a discarded workout with
+  /// nothing logged (its empty sets are pruned first).
+  Future<void> deleteSessionIfEmpty(int sessionId) async {
+    if ((await _dao.getSetsForSession(sessionId)).isEmpty) {
+      await _dao.deleteSession(sessionId);
+    }
+  }
+
+  /// One-shot fetch of all sessions with sets (for stats), leaving out
+  /// sessions with no logged set like [watchAllSessions].
   Future<List<WorkoutSessionModel>> getAllSessions() async {
     final rows = await _dao.getAllSessions();
     final List<WorkoutSessionModel> result = [];
     for (final row in rows) {
       final sets = await _dao.getSetsForSession(row.id);
+      if (!sets.any(_isLogged)) continue;
       result.add(_sessionFromRow(row, sets));
     }
     return result;
   }
+
+  /// A set counts as logged once its weight or reps are filled in (the
+  /// rows made when an exercise is opened start empty).
+  static bool _isLogged(WorkoutSet set) =>
+      set.weightKg != null || set.reps != null;
 
   // ── Sets ──────────────────────────────────────────────────────────────────
 
@@ -153,6 +172,11 @@ class WorkoutRepository {
           isPr: Value(set.isPr),
         ),
       );
+
+  /// Saves when [setId]'s ✓ was tapped, or clears it ([at] null) when the
+  /// tick is taken back.
+  Future<void> setCompletedAt(int setId, DateTime? at) => _dao.updateSet(
+      WorkoutSetsCompanion(id: Value(setId), completedAt: Value(at)));
 
   /// Deletes a single set.
   Future<void> deleteSet(int setId) => _dao.deleteSet(setId);

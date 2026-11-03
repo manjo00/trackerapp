@@ -42,7 +42,10 @@ Rebuilt on 2026-10-27 from the git log, the public releases, `docs/superpowers/S
      - ⬜ **Now (Ahmed, 2026-11-03): the workout log and history.** Ticks saved with their time so the smart order
        learns what he finished first; empty (discarded) workouts out of history and the week's count; each past
        workout shows its sets, kg lifted and records and opens to every set. One database change (schema 26). Design
-       `docs/superpowers/specs/2026-11-03-workout-log-and-history-design.md`, waiting for his yes.
+       `docs/superpowers/specs/2026-11-03-workout-log-and-history-design.md`, approved ("Looks right").
+       ✅ Demo 1 built 2026-11-03 (ticks saved, the smart order by tick, empty workouts hidden; the upgrade tried on a
+       copy of his database). ⬜ Demo 1 on his phone before his next workout. ⬜ Demo 2: the history row and the
+       workout page, 2–3 looks first.
      - ⬜ **Clean-up, on hold (Ahmed, 2026-11-01; "we are still working on it", 2026-11-03):** the smart order only in developer mode; the Targets system and
        Programs removed; quick starts show his recent saved workouts; My Workouts and their editor stay. No database
        change. Design `docs/superpowers/specs/2026-11-01-gym-cleanup-design.md`, waiting for his yes.

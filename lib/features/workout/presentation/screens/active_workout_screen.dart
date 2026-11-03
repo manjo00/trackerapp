@@ -297,10 +297,12 @@ class _ActiveWorkoutScreenState
 
   // ── Set complete → rest timer ─────────────────────────────────────────────
 
-  void _onSetComplete(
-      WorkoutSetModel set, ProgramExerciseModel? programEx) {
-    final nowDone =
-        ref.read(activeWorkoutProvider.notifier).toggleSetComplete(set.id);
+  Future<void> _onSetComplete(
+      WorkoutSetModel set, ProgramExerciseModel? programEx) async {
+    final nowDone = await ref
+        .read(activeWorkoutProvider.notifier)
+        .toggleSetComplete(set.id);
+    if (!mounted) return;
     if (nowDone) {
       // Starting the universal rest timer; the top RestTimerBar reacts.
       final restSec = programEx?.restSeconds ?? 120;
