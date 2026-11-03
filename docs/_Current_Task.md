@@ -172,10 +172,22 @@ is a bit laggy."
      scripted runs pressed Home while his home screen was already showing, which jumps to his first page; taps then
      hit his date and weather widget and opened Weather and Google Calendar (nothing changed in them; his phone was
      left on his first home page). The scripts now check the window in front before every tap.
-   - ⬜ **← next: the fixes.** (a) Keyboard: ask when Android reports the window's real focus
-     (`onWindowFocusChanged(true)` → a channel message → the sheet asks, repeating briefly, not trusting view insets
-     left over from before). (b) Flash and lost place: give the sheet its own window and task (a `QuickAddActivity`,
-     out of recents), so the "+" never touches the open app; a design for his OK first. Then the hand-back.
+   - 🟡 **The keyboard fix, written, not yet tried on a device** (`f348af0` on `tester/speed`, not on `master`):
+     `MainActivity.onWindowFocusChanged(true)` → `uplan/quick_add` `windowFocused` while it shows the quick-add; the
+     sheet then asks every 150 ms for 1.2 s while a field has focus, until a keyboard comes up, without trusting view
+     insets left from before (`quick_add_task_screen.dart` `_askForKeyboardAgain`). 3 new tests (window-focus
+     message, stale insets, a late focus), each failed first; 370 pass; analyze clean. Its emulator run (16:27) was
+     spoiled twice: the build had failed on a damaged Kotlin cache and my command still installed the old APK (the pipe
+     into `grep` hid the failure), then the emulator starved: **the PC had 0.2 GB free** because Ahmed was playing
+     Phantom Blade Zero (`PBZ.exe`, about 13 GB reserved) while my Gradle and two Kotlin daemons held about 5 GB (I
+     stopped them; they restart with the next build). Two damaged build caches went to the Recycle Bin
+     (`D:\dev\pub-cache\hosted\pub.dev\jni-1.0.0\android\.cxx`, the side checkout's
+     `build\app\kotlin\compileProfileKotlin`); the next build recreated them and worked. **Heavy work (emulator,
+     builds) is paused while he plays.**
+   - ⬜ **← next:** (1) when the PC is free: emulator check of `f348af0` (`kb_check.sh`, `fresh_plus.sh`), then
+     `master`, a phone build, his data copied off, install, and `fresh_plus.sh` on the phone (expect the keyboard
+     3 of 3 where it was 0 of 3). (2) His OK on the design `docs/superpowers/specs/2026-11-03-quick-add-own-window-design.md`
+     (the sheet in its own window: no flash, his place kept). Then the hand-back.
    - ✅ (yesterday's state, kept for the record) the fast build was picked (Ahmed, 2026-11-01 about 14:50: "Fast build", after asking how it
      differs: both builds carry the same fixes; only the speed differs). Built 14:51–14:54 in `D:\projects\trackerapp`
      from `ed1ad20` (code = `44f8d2d`): `build\app\outputs\flutter-apk\app-profile.apk`, 93.0 MB, v1.18.0+27,
