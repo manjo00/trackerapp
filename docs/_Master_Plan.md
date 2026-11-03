@@ -39,7 +39,11 @@ Rebuilt on 2026-10-27 from the git log, the public releases, `docs/superpowers/S
        switch per workout. Demo first; design `docs/superpowers/specs/2026-11-01-gym-smart-order-design.md` (he
        approved it). **Built, tested and on the phone 2026-11-01; the order itself waits for his next workout** (the
        design file's Status says what's next).
-     - ⬜ **Clean-up next (Ahmed, 2026-11-01):** the smart order only in developer mode; the Targets system and
+     - ⬜ **Now (Ahmed, 2026-11-03): the workout log and history.** Ticks saved with their time so the smart order
+       learns what he finished first; empty (discarded) workouts out of history and the week's count; each past
+       workout shows its sets, kg lifted and records and opens to every set. One database change (schema 26). Design
+       `docs/superpowers/specs/2026-11-03-workout-log-and-history-design.md`, waiting for his yes.
+     - ⬜ **Clean-up, on hold (Ahmed, 2026-11-01; "we are still working on it", 2026-11-03):** the smart order only in developer mode; the Targets system and
        Programs removed; quick starts show his recent saved workouts; My Workouts and their editor stay. No database
        change. Design `docs/superpowers/specs/2026-11-01-gym-cleanup-design.md`, waiting for his yes.
      - ⬜ A weekly cardio day, as a switch (Ahmed), after the smart order; Claude's sketch is in the same design file.
