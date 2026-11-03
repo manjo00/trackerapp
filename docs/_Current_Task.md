@@ -118,12 +118,20 @@ is a bit laggy."
      look B; all three plus Custom 30 min for 5 Nov booked 10474–10476 and 40158 with the right words, and Android's
      alarm list holds them (4 Nov 09:00; 5 Nov 06:00, 08:30, 08:55). Not waited for one to fire. Not on the phone
      yet. The full screen's Custom tick was checked by its 2 widget tests only, not on the emulator.
-   - ⬜ **← next: onto his phone** (the phone wasn't on the cable at 16:31). The fast build from `cf5ce41` is built in
-     `D:\projects\trackerapp\build\app\outputs\flutter-apk\app-profile.apk`. When he plugs in: copy his data off
-     first into a new `D:\backups\uplan\2026-11-02-reminders\` (the plan's Task 4 steps 2–4, `copy_check.py`), check
-     the fingerprint, `install -r`, start Uplan, compare the booked reminders; then ask him to tap the widget's "+"
-     once while `adb logcat` records ImeTracker, InputMethodManager and WindowManager lines (the keyboard question
-     above).
+   - ✅ **The reminders build on his phone** (2026-11-03 15:15–15:17, Ahmed: "Phone plugged in"). Before: origin
+     still `fef5fc6`, the phone still on the 2026-11-02 15:38 build. His folder copied to
+     `D:\backups\uplan\2026-11-03-reminders\` (327 files = the phone's, 569 MB, integrity `ok`, 309 photos and 0
+     missing, database SHA-256 `fa9bb89d…`, 35 tasks, 126 notes). `install -r` at 15:16 of the fast build from
+     `cf5ce41` (fingerprint checked): still `DEBUGGABLE`, 327 files, the same 3 booked reminders
+     (`flutter.alarm_notif_10105`–`10107`). Android's alarm list then held Uplan's widget refresh (4 Nov 00:01) and
+     that task's three reminders (11 Jan 2027 12:00; 12 Jan 09:00 and 11:55); the crude `dumpsys alarm` line count
+     (65 → 60) moves with Android's removal history, not with pending alarms. The new bell row on his phone: not
+     seen by me (his eyes).
+   - ⬜ **← next: one real tap of the "+" with the log recording.** First recording 15:17–15:27 (`timeout 600 adb
+     logcat -v threadtime -T 1`, 24,421 lines): no tap in it (no `add_task` start, no Uplan keyboard request). A
+     second recording started about 15:30 for 15 minutes; if he taps later, dump the phone's buffers (`adb logcat -d
+     -b all`) right after his answer. Look for: `START u0 … add_task` (its flags), Uplan's `ImeTracker`
+     onRequestShow/onFailed lines, `HIDE_*` reasons, `InsetsController` show/hide, and when the window gains focus.
    - ✅ (yesterday's state, kept for the record) the fast build was picked (Ahmed, 2026-11-01 about 14:50: "Fast build", after asking how it
      differs: both builds carry the same fixes; only the speed differs). Built 14:51–14:54 in `D:\projects\trackerapp`
      from `ed1ad20` (code = `44f8d2d`): `build\app\outputs\flutter-apk\app-profile.apk`, 93.0 MB, v1.18.0+27,
