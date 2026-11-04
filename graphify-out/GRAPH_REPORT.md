@@ -1,7 +1,7 @@
 # Graph Report - trackerapp  (2026-11-04)
 
 ## Corpus Check
-- 326 files · ~161,672 words
+- 326 files · ~161,734 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 6 file(s) not represented in the graph (top: (none) 5, .pro 1)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `7c49151e`
+- Built from commit: `241a1872`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -245,8 +245,8 @@
 3. `_` - 32 edges
 4. `_` - 31 edges
 5. `notesDaoProvider` - 30 edges
-6. `_` - 30 edges
-7. `settingsProvider` - 30 edges
+6. `settingsProvider` - 30 edges
+7. `_` - 30 edges
 8. `archiveServiceProvider` - 26 edges
 9. `_` - 24 edges
 10. `taskListsProvider` - 19 edges
@@ -1065,24 +1065,24 @@ Cohesion: 0.40
 Nodes (4): exercises, kQuickStartTemplates, name, QuickStartTemplate
 
 ## Knowledge Gaps
-- **2650 isolated node(s):** `appInitialLocation`, `appRouter`, `SetMuscleRow`, `watchAllSessions`, `getAllSessions` (+2645 more)
+- **2650 isolated node(s):** `total`, `opened`, `firstTick`, `at`, `plan` (+2645 more)
   These have ≤1 connection - possible missing edges. (Counts symbols only; 3170 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
 - **67 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `_` connect `_` to `diagnostics_screen.dart`, `_`, `String get`, `task_detail_sheet_test.dart`, `app_drawer.dart`, `List`?**
-  _High betweenness centrality (0.026) - this node is a cross-community bridge._
-- **What connects `appInitialLocation`, `appRouter`, `SetMuscleRow` to the rest of the system?**
+- **Why does `AppDatabase` connect `note_task_linker_test.dart` to `shifts_providers.dart`, `recently_deleted_test.dart`, `live_background_callback.dart`, `package:life_tracker/core/database/app_database.dart`, `shifts_repository_test.dart`, `recent_exercise_orders_test.dart`, `empty_workouts_test.dart`, `app_database.dart`, `archive_schema_test.dart`, `home_blocks_dao.dart`, `note_editor_leave_test.dart`, `AppDatabase`, `backup_service.dart`, `@Riverpod`, `home_blocks_dao_test.dart`?**
+  _High betweenness centrality (0.029) - this node is a cross-community bridge._
+- **What connects `total`, `opened`, `firstTick` to the rest of the system?**
   _2650 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `workout_providers.dart` be split into smaller, more focused modules?**
   _Cohesion score 0.02631578947368421 - nodes in this community are weakly interconnected._
-- **Why does `_` connect `_` to `live_background_callback.dart`, `widget_settings_screen.dart`, `static const int`, `static const List`, `static const String`, `backup_service.dart`, `package:shared_preferences/shared_preferences.dart`?**
-  _High betweenness centrality (0.024) - this node is a cross-community bridge._
+- **Why does `_` connect `_` to `String?`, `smart_order.dart`, `Map`, `note_arrange_view.dart`, `AppDatabase`, `package:flutter_riverpod/flutter_riverpod.dart`, `workout_actions.dart`, `Set`, `package:flutter/material.dart`, `VoidCallback`, `weekly_scoreboard_card.dart`, `week_strip.dart`, `workout_summary.dart`, `list_detail_screen.dart`, `_`, `StatelessWidget`, `workout_session_screen.dart`, `live_notification_settings_screen.dart`, `ConsumerState`, `exercise_history_sheet.dart`, `package:shared_preferences/shared_preferences.dart`?**
+  _High betweenness centrality (0.020) - this node is a cross-community bridge._
 - **Should `note_editor_screen.dart` be split into smaller, more focused modules?**
   _Cohesion score 0.04234724742891712 - nodes in this community are weakly interconnected._
-- **Why does `_` connect `_` to `String?`, `smart_order.dart`, `Map`, `note_arrange_view.dart`, `AppDatabase`, `package:flutter_riverpod/flutter_riverpod.dart`, `workout_actions.dart`, `Set`, `package:flutter/material.dart`, `VoidCallback`, `weekly_scoreboard_card.dart`, `week_strip.dart`, `workout_summary.dart`, `list_detail_screen.dart`, `_`, `StatelessWidget`, `workout_session_screen.dart`, `live_notification_settings_screen.dart`, `ConsumerState`, `exercise_history_sheet.dart`, `package:shared_preferences/shared_preferences.dart`?**
-  _High betweenness centrality (0.022) - this node is a cross-community bridge._
+- **Why does `_` connect `_` to `package:life_tracker/core/database/app_database.dart`, `static const String`, `static const int`?**
+  _High betweenness centrality (0.012) - this node is a cross-community bridge._
 - **Should `notification_service.dart` be split into smaller, more focused modules?**
   _Cohesion score 0.03389830508474576 - nodes in this community are weakly interconnected._
