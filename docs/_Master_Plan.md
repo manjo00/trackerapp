@@ -66,7 +66,11 @@ Rebuilt on 2026-10-27 from the git log, the public releases, `docs/superpowers/S
        against the research ranges, his own "tired penalty". Full design path after the smart order. It replaces the
        Targets system.
      - ⬜ Later: a scheduling tool that puts saved workouts on the schedule; it replaces programs (Ahmed, 2026-11-01).
-     - ⬜ **Started (Ahmed, 2026-11-04): a Snapchat snap after a workout**, "so after a workout i can send streak with
+     - ⏸ **Waiting (Ahmed, 2026-11-04: "Wait for now"): a Snapchat snap after a workout.** Snap's developer portal
+       asked him for a Snapchat Business account, whose form wants a business's legal name and his promise that he
+       acts for it (an ads account), so the Creative Kit sticker waits. The other ways, as offered: copy a summary
+       line and open Snapchat's camera to paste it as a caption (no account, keeps streaks, plain look; 20–40 min),
+       or a picture made in Uplan (pretty, no streak). Ahmed's words when it started: "so after a workout i can send streak with
        summary good lookin with current time and all". Checked 2026-11-04 (web, not tried yet): snaps sent from the
        camera roll or shared in from another app don't count toward streaks (several guides, and Snapchat's own
        warning as reported by Newsweek), so a picture made in Uplan wouldn't keep a streak. Snap's Creative Kit can
