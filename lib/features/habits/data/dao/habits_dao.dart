@@ -199,6 +199,23 @@ class HabitsDao extends DatabaseAccessor<AppDatabase> with _$HabitsDaoMixin {
         }
       });
 
+  /// Adds [amount] to [day]'s value in one statement (a new day starts at
+  /// [amount]), so two quick taps on + both count.
+  Future<void> addToValue(int habitId, String day, int amount) =>
+      into(habitCompletions).insert(
+        HabitCompletionsCompanion.insert(
+            habitId: habitId,
+            date: day,
+            value: Value(amount),
+            createdAt: Value(DateTime.now())),
+        onConflict: DoUpdate(
+          (old) => HabitCompletionsCompanion.custom(
+              value: old.value + Constant(amount),
+              status: const Constant('done')),
+          target: [habitCompletions.habitId, habitCompletions.date],
+        ),
+      );
+
   /// Saves [value] for [day] (one row per day); 0 or less removes the day.
   Future<void> setValue(int habitId, String day, int value) async {
     if (value <= 0) {

@@ -132,6 +132,10 @@ class HabitsRepository {
   Future<void> setValue(int habitId, String day, int value) =>
       _dao.setValue(habitId, day, value);
 
+  /// Adds [amount] to a count habit's [day] in one statement.
+  Future<void> addToValue(int habitId, String day, int amount) =>
+      _dao.addToValue(habitId, day, amount);
+
   /// Inserts [habit] when its id is 0 (returns the new id), else updates
   /// every field. The old target column mirrors "N a week" (7 otherwise).
   Future<int> saveHabit(HabitModel habit) async {
