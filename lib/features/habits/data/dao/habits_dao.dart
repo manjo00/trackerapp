@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import '../tables/habit_completions_table.dart';
+import '../tables/habit_pauses_table.dart';
 import '../tables/habits_table.dart';
 import '../../../../core/database/app_database.dart';
 
@@ -14,7 +15,7 @@ part 'habits_dao.g.dart';
 ///   - Easy to swap the underlying database later without touching UI code.
 ///
 /// [DriftAccessor] lists every table this DAO is allowed to query.
-@DriftAccessor(tables: [Habits, HabitCompletions])
+@DriftAccessor(tables: [Habits, HabitCompletions, HabitPauses])
 class HabitsDao extends DatabaseAccessor<AppDatabase> with _$HabitsDaoMixin {
   HabitsDao(super.db);
 
@@ -121,57 +122,122 @@ class HabitsDao extends DatabaseAccessor<AppDatabase> with _$HabitsDaoMixin {
         .get();
   }
 
-  /// Updates the name and/or targetPerWeek of an existing habit.
+  /// Writes the given fields of an existing habit (by its id).
   Future<void> updateHabit(HabitsCompanion companion) =>
       (update(habits)..where((h) => h.id.equals(companion.id.value)))
           .write(companion);
 
-  /// Stream of every completion row across all habits.
-  /// The planner watches this so its date views update whenever any
-  /// completion changes (insert or delete).
-  Stream<List<HabitCompletion>> watchAllCompletions() {
-    return select(habitCompletions).watch();
+  // ── The habits rebuild (schema 27) ────────────────────────────────────────
+
+  /// The habits in use (not archived, not deleted), in their list order.
+  Stream<List<Habit>> watchActiveHabits() => (select(habits)
+        ..where((h) => h.archivedAt.isNull() & h.deletedAt.isNull())
+        ..orderBy([
+          (h) => OrderingTerm.asc(h.sortOrder),
+          (h) => OrderingTerm.asc(h.id),
+        ]))
+      .watch();
+
+  /// Every saved day from [fromDay] on and every Away range, from ONE query,
+  /// so it re-emits when either table changes. A pause row has a null
+  /// habitId; its start is in `date`.
+  Stream<
+      List<
+          ({
+            int? habitId,
+            String date,
+            int? value,
+            String? status,
+            String? endDate
+          })>> watchHistoryRowsSince(String fromDay) {
+    return customSelect(
+      'SELECT habit_id, date, value, status, NULL AS end_date '
+      'FROM habit_completions WHERE date >= ?1 '
+      'UNION ALL '
+      'SELECT NULL, start_date, NULL, NULL, end_date FROM habit_pauses',
+      variables: [Variable.withString(fromDay)],
+      readsFrom: {habitCompletions, habitPauses},
+    ).watch().map((rows) => [
+          for (final QueryRow r in rows)
+            (
+              habitId: r.readNullable<int>('habit_id'),
+              date: r.read<String>('date'),
+              value: r.readNullable<int>('value'),
+              status: r.readNullable<String>('status'),
+              endDate: r.readNullable<String>('end_date'),
+            ),
+        ]);
   }
 
-  /// Streams every habit together with all its completions, grouped per habit.
-  ///
-  /// Because this is a JOIN across both tables, Drift re-emits whenever EITHER
-  /// `habits` or `habit_completions` changes — so toggling a completion updates
-  /// the stream automatically (no manual provider invalidation needed), and it
-  /// avoids the previous N+1 (one completion query per habit).
-  Stream<List<({Habit habit, List<HabitCompletion> completions})>>
-      watchHabitsWithCompletions() {
-    final query = select(habits).join([
-      leftOuterJoin(
-        habitCompletions,
-        habitCompletions.habitId.equalsExp(habits.id),
-      ),
-    ])
-      ..where(habits.archivedAt.isNull())
-      ..orderBy([OrderingTerm.asc(habits.createdAt)]);
+  /// The habits in use with whether [day] is done (a done row at its goal),
+  /// for the Planner. One query, re-emitting on habit or tick changes.
+  Stream<List<({Habit habit, bool done})>> watchHabitsDoneOn(String day) {
+    return customSelect(
+      'SELECT h.*, (c.id IS NOT NULL AND c.status = \'done\' '
+      'AND c.value >= h.goal) AS done_on_day '
+      'FROM habits h LEFT JOIN habit_completions c '
+      'ON c.habit_id = h.id AND c.date = ?1 '
+      'WHERE h.archived_at IS NULL AND h.deleted_at IS NULL '
+      'ORDER BY h.sort_order, h.id',
+      variables: [Variable.withString(day)],
+      readsFrom: {habits, habitCompletions},
+    ).watch().map((rows) => [
+          for (final QueryRow r in rows)
+            (habit: habits.map(r.data), done: r.read<bool>('done_on_day')),
+        ]);
+  }
 
-    return query.watch().map((rows) {
-      final Map<int, Habit> habitById = {};
-      final Map<int, List<HabitCompletion>> completionsByHabit = {};
-      final List<int> order = [];
-
-      for (final row in rows) {
-        final Habit h = row.readTable(habits);
-        if (!habitById.containsKey(h.id)) {
-          habitById[h.id] = h;
-          completionsByHabit[h.id] = [];
-          order.add(h.id);
+  /// Ticks [day] if it isn't, unticks it if it is — in one transaction, so
+  /// two quick taps can't leave two rows.
+  Future<void> toggleTick(int habitId, String day) => transaction(() async {
+        final int removed = await (delete(habitCompletions)
+              ..where((c) => c.habitId.equals(habitId) & c.date.equals(day)))
+            .go();
+        if (removed == 0) {
+          await into(habitCompletions).insert(HabitCompletionsCompanion.insert(
+              habitId: habitId, date: day, createdAt: Value(DateTime.now())));
         }
-        final HabitCompletion? c = row.readTableOrNull(habitCompletions);
-        if (c != null) completionsByHabit[h.id]!.add(c);
-      }
+      });
 
-      return order
-          .map((id) =>
-              (habit: habitById[id]!, completions: completionsByHabit[id]!))
-          .toList();
-    });
+  /// Adds [amount] to [day]'s value in one statement (a new day starts at
+  /// [amount]), so two quick taps on + both count.
+  Future<void> addToValue(int habitId, String day, int amount) =>
+      into(habitCompletions).insert(
+        HabitCompletionsCompanion.insert(
+            habitId: habitId,
+            date: day,
+            value: Value(amount),
+            createdAt: Value(DateTime.now())),
+        onConflict: DoUpdate(
+          (old) => HabitCompletionsCompanion.custom(
+              value: old.value + Constant(amount),
+              status: const Constant('done')),
+          target: [habitCompletions.habitId, habitCompletions.date],
+        ),
+      );
+
+  /// Saves [value] for [day] (one row per day); 0 or less removes the day.
+  Future<void> setValue(int habitId, String day, int value) async {
+    if (value <= 0) {
+      await (delete(habitCompletions)
+            ..where((c) => c.habitId.equals(habitId) & c.date.equals(day)))
+          .go();
+      return;
+    }
+    await into(habitCompletions).insert(
+      HabitCompletionsCompanion.insert(
+          habitId: habitId,
+          date: day,
+          value: Value(value),
+          createdAt: Value(DateTime.now())),
+      onConflict: DoUpdate(
+        (old) => HabitCompletionsCompanion(
+            value: Value(value), status: const Value('done')),
+        target: [habitCompletions.habitId, habitCompletions.date],
+      ),
+    );
   }
+
 
   /// Returns true if [habitId] has a completion row for [date].
   Future<bool> isCompletedOn(int habitId, String date) async {

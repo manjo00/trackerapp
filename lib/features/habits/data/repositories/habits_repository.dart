@@ -1,26 +1,18 @@
 import 'package:drift/drift.dart' show Value;
-import 'package:intl/intl.dart';
 import '../../../../core/database/app_database.dart';
+import '../../domain/habit_types.dart';
 import '../dao/habits_dao.dart';
-import '../models/habit_completion_model.dart';
 import '../models/habit_model.dart';
 import '../models/habit_with_status.dart';
-
-/// Formats a [DateTime] as a date-only string, e.g. `"2026-05-26"`.
-final DateFormat _dateFmt = DateFormat('yyyy-MM-dd');
-
-String _dateStr(DateTime dt) => _dateFmt.format(dt);
 
 /// Provides all habit-related operations to the presentation layer.
 ///
 /// Responsibilities:
-///   1. Convert raw Drift rows into immutable [HabitModel] / [HabitCompletionModel].
-///   2. Combine those into [HabitWithStatus] objects the UI can render directly.
-///   3. Expose insert / toggle / delete operations as simple async methods.
-///   4. Contain the pure [calculateStreak] function (independently testable).
+///   1. Convert raw Drift rows into immutable [HabitModel]s and histories.
+///   2. Expose insert / tick / count / delete operations as async methods.
 ///
-/// The UI layer never imports Drift types — it only depends on this repository
-/// and the model classes in `data/models/`.
+/// The rules (what a day is, the streak, the strength) live as pure Dart in
+/// `domain/`; the UI layer never imports Drift types.
 class HabitsRepository {
   HabitsRepository(this._dao);
 
@@ -28,120 +20,90 @@ class HabitsRepository {
 
   // ── Streams ───────────────────────────────────────────────────────────────
 
-  /// Emits a fresh list of [HabitWithStatus] whenever any habit or completion
-  /// row changes.
-  ///
-  /// How it works:
-  ///   1. Watch every habit row as a stream.
-  ///   2. For each emission, fetch the latest completions for every habit.
-  ///   3. Map into [HabitWithStatus] (isDoneToday + streak).
-  ///
-  /// Using [asyncMap] lets us do async work (DB fetch) inside the stream
-  /// pipeline without blocking.
-  Stream<List<HabitWithStatus>> watchHabitsWithStatus() {
-    // A single JOIN-backed stream: re-emits on habit OR completion changes,
-    // and "today"/"now" are computed per-emission so a long-open app doesn't
-    // get stuck on yesterday's done-state.
-    return _dao.watchHabitsWithCompletions().map((rows) {
-      final String today = _dateStr(DateTime.now());
-      final DateTime now = DateTime.now();
-
-      return rows.map((row) {
-        final List<HabitCompletionModel> completions =
-            row.completions.map(_completionFromRow).toList();
-
-        final bool isDone = completions.any((c) => c.date == today);
-        final int streak =
-            HabitsRepository.calculateStreak(completions, now);
-
-        return HabitWithStatus(
-          habit: _habitFromRow(row.habit),
-          isDoneToday: isDone,
-          streak: streak,
-        );
-      }).toList();
-    });
-  }
-
   /// Watches habits with their done/undone status for a specific [date].
   ///
-  /// Unlike [watchHabitsWithStatus] (which uses today), this works for any
-  /// past, present, or future date — useful for the planner tab.
-  ///
-  /// Driven by [watchAllCompletions] so it re-emits whenever any completion
-  /// row changes, regardless of which habit or date was toggled.
+  /// It works for any
+  /// past, present, or future date — useful for the planner tab. One query
+  /// (habits LEFT JOIN that day's ticks), re-emitting when either changes.
   Stream<List<HabitWithStatus>> watchHabitsForDate(String date) {
-    return _dao.watchAllCompletions().asyncMap((_) async {
-      final List<Habit> rawHabits = await _dao.getAllHabits();
-      final List<HabitWithStatus> result = [];
+    return _dao.watchHabitsDoneOn(date).map((rows) => [
+          for (final row in rows)
+            HabitWithStatus(
+              habit: _habitFromRow(row.habit),
+              isDoneToday: row.done, // means "isDoneOnDate" in the planner
+              streak: 0, // streak not shown in planner view
+            ),
+        ]);
+  }
 
-      for (final Habit raw in rawHabits) {
-        final bool isDone = await _dao.isCompletedOn(raw.id, date);
-        result.add(
-          HabitWithStatus(
-            habit: _habitFromRow(raw),
-            isDoneToday: isDone, // means "isDoneOnDate" in planner context
-            streak: 0,           // streak not shown in planner view
-          ),
-        );
+  /// The habits in use (not archived or deleted), in their list order.
+  Stream<List<HabitModel>> watchActiveHabits() => _dao
+      .watchActiveHabits()
+      .map((rows) => rows.map(_habitFromRow).toList());
+
+  /// Every habit's saved days from [fromDay] on, plus the Away ranges.
+  Stream<HabitHistories> watchHistorySince(String fromDay) {
+    return _dao.watchHistoryRowsSince(fromDay).map((rows) {
+      final Map<int, Map<String, HabitEntry>> byHabit = {};
+      final List<PauseRange> pauses = [];
+      for (final row in rows) {
+        final int? habitId = row.habitId;
+        if (habitId == null) {
+          pauses.add(PauseRange(row.date, row.endDate ?? row.date));
+        } else {
+          (byHabit[habitId] ??= {})[row.date] =
+              HabitEntry(row.value ?? 1, EntryStatus.fromDb(row.status));
+        }
       }
-
-      return result;
+      return HabitHistories(entriesByHabit: byHabit, pauses: pauses);
     });
   }
 
   // ── Write operations ──────────────────────────────────────────────────────
 
-  /// Adds a new habit.  [targetPerWeek] defaults to 7 (every day).
-  Future<void> addHabit(
-    String name, {
-    int targetPerWeek = 7,
-    bool reminderEnabled = false,
-    String? reminderTime,
-  }) async {
-    await _dao.insertHabit(
-      HabitsCompanion(
-        name: Value(name.trim()),
-        createdAt: Value(DateTime.now()),
-        targetPerWeek: Value(targetPerWeek),
-        reminderEnabled: Value(reminderEnabled),
-        reminderTime: Value(reminderTime),
-      ),
+  /// Ticks [day] (a habit day, 'yyyy-MM-dd') or unticks it, in one
+  /// transaction.
+  Future<void> toggleTick(int habitId, String day) =>
+      _dao.toggleTick(habitId, day);
+
+  /// Saves a count habit's amount for [day]; 0 or less removes the day.
+  Future<void> setValue(int habitId, String day, int value) =>
+      _dao.setValue(habitId, day, value);
+
+  /// Adds [amount] to a count habit's [day] in one statement.
+  Future<void> addToValue(int habitId, String day, int amount) =>
+      _dao.addToValue(habitId, day, amount);
+
+  /// Inserts [habit] when its id is 0 (returns the new id), else updates
+  /// every field. The old target column mirrors "N a week" (7 otherwise).
+  Future<int> saveHabit(HabitModel habit) async {
+    final HabitsCompanion fields = HabitsCompanion(
+      name: Value(habit.name.trim()),
+      targetPerWeek: Value(habit.perWeek ?? 7),
+      reminderEnabled: Value(habit.reminderEnabled),
+      reminderTime: Value(habit.reminderTime),
+      kind: Value(habit.kind.db),
+      goal: Value(habit.goal),
+      unit: Value(habit.unit),
+      step: Value(habit.step),
+      icon: Value(habit.icon),
+      color: Value(habit.color),
+      schedule: Value(habit.schedule.db),
+      weekdayMask: Value(habit.weekdayMask),
+      perWeek: Value(habit.perWeek),
+      shiftMask: Value(habit.shiftMask),
+      sparesPerWeek: Value(habit.sparesPerWeek),
+      section: Value(habit.section.db),
+      cue: Value(habit.cue),
+      sortOrder: Value(habit.sortOrder),
+      autoSource: Value(habit.autoSource),
     );
-  }
-
-  /// Toggles a habit's completion for [date] (defaults to today).
-  ///   - If not completed → inserts a completion row.
-  ///   - If already completed → deletes the completion row.
-  ///
-  /// Passing an explicit [date] lets the planner toggle past or future dates.
-  Future<void> toggleCompletion(int habitId, {String? date}) async {
-    final String targetDate = date ?? _dateStr(DateTime.now());
-    final bool alreadyDone = await _dao.isCompletedOn(habitId, targetDate);
-
-    if (alreadyDone) {
-      await _dao.deleteCompletion(habitId, targetDate);
-    } else {
-      await _dao.insertCompletion(
-        HabitCompletionsCompanion(
-          habitId: Value(habitId),
-          date: Value(targetDate),
-        ),
-      );
+    if (habit.id == 0) {
+      return _dao.insertHabit(
+          fields.copyWith(createdAt: Value(habit.createdAt)));
     }
-  }
-
-  /// Updates a habit's name, target-per-week, and reminder settings.
-  Future<void> updateHabit(HabitModel habit) async {
-    await _dao.updateHabit(
-      HabitsCompanion(
-        id: Value(habit.id),
-        name: Value(habit.name.trim()),
-        targetPerWeek: Value(habit.targetPerWeek),
-        reminderEnabled: Value(habit.reminderEnabled),
-        reminderTime: Value(habit.reminderTime),
-      ),
-    );
+    await _dao.updateHabit(fields.copyWith(id: Value(habit.id)));
+    return habit.id;
   }
 
   /// Returns all habits as a one-shot list (used by rescheduleAll in app.dart).
@@ -153,62 +115,28 @@ class HabitsRepository {
   /// Permanently deletes a habit and all its completions.
   Future<void> deleteHabit(int habitId) => _dao.deleteHabit(habitId);
 
-  // ── Streak logic (pure static — no DB calls, easy to unit-test) ─────────
-
-  /// Calculates the current streak for a habit given its [completions].
-  ///
-  /// Rules:
-  ///   - Walk backwards from [today], one day at a time.
-  ///   - Count each day that has at least one completion row.
-  ///   - Stop as soon as a day has no completion (gap breaks the streak).
-  ///   - If [today] itself has no completion, streak is 0.
-  ///
-  /// [completions] can be in any order — the function handles sorting.
-  ///
-  /// Declared `static` because it is a pure function: it only depends on its
-  /// arguments, never on instance state.  Tests can call it directly as
-  /// `HabitsRepository.calculateStreak(...)` without constructing a repo.
-  static int calculateStreak(
-    List<HabitCompletionModel> completions,
-    DateTime today,
-  ) {
-    if (completions.isEmpty) return 0;
-
-    // Build a set of date strings for O(1) lookup.
-    final Set<String> completedDates =
-        completions.map((c) => c.date).toSet();
-
-    int streak = 0;
-    DateTime cursor = today;
-
-    while (true) {
-      final String dateKey = _dateStr(cursor);
-      if (completedDates.contains(dateKey)) {
-        streak++;
-        cursor = cursor.subtract(const Duration(days: 1));
-      } else {
-        break;
-      }
-    }
-
-    return streak;
-  }
-
   // ── Private converters ────────────────────────────────────────────────────
 
   HabitModel _habitFromRow(Habit row) => HabitModel(
         id: row.id,
         name: row.name,
         createdAt: row.createdAt,
-        targetPerWeek: row.targetPerWeek,
         reminderEnabled: row.reminderEnabled,
         reminderTime: row.reminderTime,
-      );
-
-  HabitCompletionModel _completionFromRow(HabitCompletion row) =>
-      HabitCompletionModel(
-        id: row.id,
-        habitId: row.habitId,
-        date: row.date,
+        kind: HabitKind.fromDb(row.kind),
+        goal: row.goal,
+        unit: row.unit,
+        step: row.step,
+        icon: row.icon,
+        color: row.color,
+        schedule: HabitSchedule.fromDb(row.schedule),
+        weekdayMask: row.weekdayMask,
+        perWeek: row.perWeek,
+        shiftMask: row.shiftMask,
+        sparesPerWeek: row.sparesPerWeek,
+        section: HabitSection.fromDb(row.section),
+        cue: row.cue,
+        sortOrder: row.sortOrder,
+        autoSource: row.autoSource,
       );
 }

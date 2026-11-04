@@ -5,6 +5,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import '../../features/habits/data/dao/habits_dao.dart';
 import '../../features/habits/data/tables/habit_completions_table.dart';
+import '../../features/habits/data/tables/habit_pauses_table.dart';
 import '../../features/habits/data/tables/habits_table.dart';
 import '../../features/home/data/tables/home_blocks_table.dart';
 import '../../features/notes/data/tables/note_blocks_table.dart';
@@ -48,6 +49,7 @@ part 'app_database.g.dart';
     // ── Habits ──────────────────────────────────────────────────────────────
     Habits,
     HabitCompletions,
+    HabitPauses,
     // ── Tasks ────────────────────────────────────────────────────────────────
     Tasks,
     // ── Task organization (v11): lists, sections, labels ────────────────────
@@ -141,8 +143,13 @@ class AppDatabase extends _$AppDatabase {
   ///        overview, one level up
   /// v26 → the workout log: workout_sets.completedAt (when a set's ✓ was
   ///        tapped) and workout_sessions.finishedAt (when Finish was tapped)
+  /// v27 → the habits rebuild: habits gain kind, goal, unit, step, icon,
+  ///        color, schedule, weekdayMask, perWeek, shiftMask, sparesPerWeek,
+  ///        section, cue, sortOrder and autoSource; habit_completions gain
+  ///        value, status, note and createdAt plus a unique (habit_id, date)
+  ///        key; new table habit_pauses ("Away" ranges)
   @override
-  int get schemaVersion => 26;
+  int get schemaVersion => 27;
 
   /// The old vs. new default rotation-label colour (see v8 migration).
   static const int _oldRotationColor = 0xFFFFB347;
@@ -355,6 +362,35 @@ class AppDatabase extends _$AppDatabase {
             // all we know of every existing row — nothing to backfill.
             await m.addColumn(workoutSets, workoutSets.completedAt);
             await m.addColumn(workoutSessions, workoutSessions.finishedAt);
+          }
+          if (from < 27) {
+            // The habits rebuild. Every new column's default is right for a
+            // habit made before it (a daily tick, no spare days, "Any time").
+            for (final GeneratedColumn<Object> column in [
+              habits.kind, habits.goal, habits.unit, habits.step,
+              habits.icon, habits.color, habits.schedule,
+              habits.weekdayMask, habits.perWeek, habits.shiftMask,
+              habits.sparesPerWeek, habits.section, habits.cue,
+              habits.sortOrder, habits.autoSource,
+            ]) {
+              await m.addColumn(habits, column);
+            }
+            for (final GeneratedColumn<Object> column in [
+              habitCompletions.value, habitCompletions.status,
+              habitCompletions.note, habitCompletions.createdAt,
+            ]) {
+              await m.addColumn(habitCompletions, column);
+            }
+            await m.createTable(habitPauses);
+            // The old "days a week" target becomes "N a week" when below 7.
+            await customStatement("UPDATE habits SET schedule = 'per_week', "
+                'per_week = target_per_week WHERE target_per_week < 7');
+            // One row per habit and day before the unique key arrives: keep
+            // the oldest row of any duplicate pair.
+            await customStatement('DELETE FROM habit_completions WHERE id NOT '
+                'IN (SELECT MIN(id) FROM habit_completions '
+                'GROUP BY habit_id, date)');
+            await m.createIndex(habitCompletionsHabitDate);
           }
         },
         beforeOpen: (details) async {

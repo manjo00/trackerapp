@@ -215,8 +215,8 @@ const List<CoachTip> kCoachTips = [
     screen: kCoachHabits,
     route: '/habits',
     text:
-        'Tap to tick a habit off, hold to edit it, swipe to archive it — '
-        'your streak is kept either way.',
+        'Tap the circle to tick a habit off, tap the habit to edit it, swipe '
+        'to archive it. A missed day never wipes out your streak.',
     sinceVersion: '1.17.0',
     codexTopicId: 'habits',
   ),

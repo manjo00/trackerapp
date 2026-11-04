@@ -5,8 +5,8 @@ part 'habit_with_status.freezed.dart';
 
 /// A [HabitModel] enriched with today's completion state and streak count.
 ///
-/// This is the object that [HabitListScreen] receives from the provider.
-/// It carries everything a [HabitTile] needs to render itself without
+/// This is the object the Planner receives for each habit on a day.
+/// It carries everything the Planner needs to render a habit without
 /// making any additional database calls.
 @freezed
 abstract class HabitWithStatus with _$HabitWithStatus {

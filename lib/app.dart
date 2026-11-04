@@ -121,7 +121,7 @@ class _LifeTrackerAppState extends ConsumerState<LifeTrackerApp>
   /// can change behind our back (live-notification background writes), so
   /// they re-subscribe with fresh queries.
   void _refreshDateSensitiveProviders() {
-    ref.invalidate(habitsWithStatusProvider);
+    ref.invalidate(habitTodayProvider);
     ref.invalidate(allTasksProvider);
     ref.invalidate(tasksDueTodayProvider);
     ref.invalidate(overdueTasksProvider);

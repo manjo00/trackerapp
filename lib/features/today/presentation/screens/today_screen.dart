@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../features/habits/data/models/habit_with_status.dart';
+import '../../../../features/habits/presentation/models/habit_day_view.dart';
 import '../../../../features/habits/presentation/providers/habits_providers.dart';
-import '../../../../features/habits/presentation/widgets/habit_tile.dart';
+import '../../../../features/habits/presentation/widgets/habit_sections.dart';
 import '../../../../features/tasks/data/models/task_model.dart';
 import '../../../../features/tasks/presentation/providers/tasks_providers.dart';
 import '../../../../features/tasks/presentation/widgets/task_tile.dart';
@@ -19,7 +19,7 @@ import '../../../coach/presentation/coach_controller.dart';
 /// The "Today" tab — shows today's habits, overdue tasks, and tasks due today.
 ///
 /// Watches three independent providers in parallel:
-///   • [habitsWithStatusProvider]  — all habits with today's completion state
+///   • [habitDayViewsProvider]     — every habit with today's state (Look A)
 ///   • [overdueTasksProvider]      — incomplete tasks past their due date
 ///   • [tasksDueTodayProvider]     — incomplete tasks whose due date is today
 ///
@@ -30,8 +30,8 @@ class TodayScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<List<HabitWithStatus>> habitsAsync =
-        ref.watch(habitsWithStatusProvider);
+    final AsyncValue<List<HabitDayView>> habitsAsync =
+        ref.watch(habitDayViewsProvider);
     final AsyncValue<List<TaskModel>> overdueAsync =
         ref.watch(overdueTasksProvider);
     final AsyncValue<List<TaskModel>> todayAsync =
@@ -159,7 +159,7 @@ class TodayScreen extends ConsumerWidget {
   }
 
   List<Widget> _buildHabitsSection(
-      AsyncValue<List<HabitWithStatus>> habitsAsync) {
+      AsyncValue<List<HabitDayView>> habitsAsync) {
     return habitsAsync.when(
       loading: () => [
         const Padding(
@@ -170,11 +170,11 @@ class TodayScreen extends ConsumerWidget {
       error: (Object err, StackTrace _) => [
         const _ErrorTile(message: 'Could not load habits'),
       ],
-      data: (List<HabitWithStatus> habits) {
+      data: (List<HabitDayView> habits) {
         if (habits.isEmpty) {
           return [const _EmptyNote(text: 'No habits set up yet')];
         }
-        return habits.map((h) => HabitTile(item: h)).toList();
+        return [HabitSections(views: habits)];
       },
     );
   }
