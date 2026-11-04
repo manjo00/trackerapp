@@ -28,35 +28,6 @@ HabitsRepository habitsRepository(HabitsRepositoryRef ref) {
 
 // ── Write providers (AsyncNotifier) ──────────────────────────────────────
 
-/// Handles adding a new habit.
-///
-/// Usage in a widget:
-/// ```dart
-/// await ref.read(addHabitProvider.notifier).add('Run 5k', targetPerWeek: 5);
-/// ```
-@riverpod
-class AddHabit extends _$AddHabit {
-  @override
-  Future<void> build() async {}
-
-  Future<void> add(
-    String name, {
-    int targetPerWeek = 7,
-    bool reminderEnabled = false,
-    String? reminderTime,
-  }) async {
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(
-      () => ref.read(habitsRepositoryProvider).addHabit(
-            name,
-            targetPerWeek: targetPerWeek,
-            reminderEnabled: reminderEnabled,
-            reminderTime: reminderTime,
-          ),
-    );
-  }
-}
-
 /// Handles deleting a habit and all its completions.
 @riverpod
 class DeleteHabit extends _$DeleteHabit {
@@ -72,20 +43,6 @@ class DeleteHabit extends _$DeleteHabit {
   }
 }
 
-/// Handles editing an existing habit's name and target.
-@riverpod
-class UpdateHabit extends _$UpdateHabit {
-  @override
-  Future<void> build() async {}
-
-  Future<void> save(HabitModel habit) async {
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(
-      () => ref.read(habitsRepositoryProvider).updateHabit(habit),
-    );
-    // The habit streams re-emit by themselves (Drift watches the tables).
-  }
-}
 
 /// Handles toggling a habit's completion for today.
 ///

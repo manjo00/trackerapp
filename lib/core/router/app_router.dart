@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../features/habits/data/models/habit_model.dart';
 import '../../features/habits/presentation/screens/habit_list_screen.dart';
-import '../../features/habits/presentation/screens/add_habit_screen.dart';
+import '../../features/habits/presentation/screens/habit_editor_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
 import '../../features/archive/presentation/screens/archived_screen.dart';
 import '../../features/notes/presentation/screens/note_editor_screen.dart';
@@ -47,7 +47,7 @@ import 'shell_scaffold.dart';
 ///    /trackers          ← TrackersScreen     (branch 5)
 ///    /workout           ← WorkoutHomeScreen  (branch 6)
 ///
-///  /habits/add                          ← AddHabitScreen              (outside shell)
+///  /habits/add                          ← HabitEditorScreen           (outside shell)
 ///  /tasks/add                           ← AddTaskScreen               (outside shell)
 ///  /trackers/add                        ← AddTrackerScreen            (outside shell)
 ///  /trackers/:id                        ← TrackerDetailScreen         (outside shell)
@@ -182,7 +182,7 @@ final GoRouter appRouter = GoRouter(
 
     GoRoute(
       path: '/habits/add',
-      builder: (context, state) => const AddHabitScreen(),
+      builder: (context, state) => const HabitEditorScreen(),
     ),
 
     GoRoute(
@@ -264,8 +264,8 @@ final GoRouter appRouter = GoRouter(
 
     GoRoute(
       path: '/habits/edit',
-      // state.extra is a HabitModel passed from HabitTile's long-press.
-      builder: (context, state) => AddHabitScreen(
+      // state.extra is the HabitModel of the habit row that was tapped.
+      builder: (context, state) => HabitEditorScreen(
         habit: state.extra as HabitModel?,
       ),
     ),

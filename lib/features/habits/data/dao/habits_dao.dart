@@ -122,7 +122,7 @@ class HabitsDao extends DatabaseAccessor<AppDatabase> with _$HabitsDaoMixin {
         .get();
   }
 
-  /// Updates the name and/or targetPerWeek of an existing habit.
+  /// Writes the given fields of an existing habit (by its id).
   Future<void> updateHabit(HabitsCompanion companion) =>
       (update(habits)..where((h) => h.id.equals(companion.id.value)))
           .write(companion);

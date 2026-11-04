@@ -21,10 +21,6 @@ abstract class HabitModel with _$HabitModel {
     required String name,
     required DateTime createdAt,
 
-    /// The old "days a week" target; leaves with the old editor (demo 1,
-    /// Task 7). New code reads [schedule] and [perWeek].
-    @Default(7) int targetPerWeek,
-
     /// Whether a daily reminder notification is scheduled for this habit.
     @Default(false) bool reminderEnabled,
 

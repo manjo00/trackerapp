@@ -61,24 +61,6 @@ class HabitsRepository {
 
   // ── Write operations ──────────────────────────────────────────────────────
 
-  /// Adds a new habit.  [targetPerWeek] defaults to 7 (every day).
-  Future<void> addHabit(
-    String name, {
-    int targetPerWeek = 7,
-    bool reminderEnabled = false,
-    String? reminderTime,
-  }) async {
-    await _dao.insertHabit(
-      HabitsCompanion(
-        name: Value(name.trim()),
-        createdAt: Value(DateTime.now()),
-        targetPerWeek: Value(targetPerWeek),
-        reminderEnabled: Value(reminderEnabled),
-        reminderTime: Value(reminderTime),
-      ),
-    );
-  }
-
   /// Ticks [day] (a habit day, 'yyyy-MM-dd') or unticks it, in one
   /// transaction.
   Future<void> toggleTick(int habitId, String day) =>
@@ -124,19 +106,6 @@ class HabitsRepository {
     return habit.id;
   }
 
-  /// Updates a habit's name, target-per-week, and reminder settings.
-  Future<void> updateHabit(HabitModel habit) async {
-    await _dao.updateHabit(
-      HabitsCompanion(
-        id: Value(habit.id),
-        name: Value(habit.name.trim()),
-        targetPerWeek: Value(habit.targetPerWeek),
-        reminderEnabled: Value(habit.reminderEnabled),
-        reminderTime: Value(habit.reminderTime),
-      ),
-    );
-  }
-
   /// Returns all habits as a one-shot list (used by rescheduleAll in app.dart).
   Future<List<HabitModel>> getAllHabits() async {
     final rows = await _dao.getAllHabits();
@@ -152,7 +121,6 @@ class HabitsRepository {
         id: row.id,
         name: row.name,
         createdAt: row.createdAt,
-        targetPerWeek: row.targetPerWeek,
         reminderEnabled: row.reminderEnabled,
         reminderTime: row.reminderTime,
         kind: HabitKind.fromDb(row.kind),

@@ -24,9 +24,13 @@ class FakeHabitActions implements HabitActions {
     return true;
   }
 
+  /// Every habit the editor saved, as it was saved.
+  final List<HabitModel> saved = [];
+
   @override
   Future<int> save(HabitModel habit) async {
     calls.add('save ${habit.name}');
+    saved.add(habit);
     return habit.id == 0 ? 99 : habit.id;
   }
 }
