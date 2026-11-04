@@ -35,7 +35,9 @@ Rebuilt on 2026-10-27 from the git log, the public releases, `docs/superpowers/S
      place was lost), and on a new window the sheet asked for the keyboard before Android gave the window focus.
      ✅ Fixed (Ahmed: "Yes, build it"): the sheet in a window of its own, the keyboard asked again on window focus,
      and the app re-reads tasks another window added (`b7c92c8` on `master`, 2026-11-03; every check on the emulator
-     passed). ⬜ Next: one install on his phone carrying both this and the workout log's demo 1; then the Tester hands
+     passed). ✅ On his phone since 2026-11-04 17:04 (one install with the workout log's demo 1, his data copied
+     first): no app frame before the sheet on film, the keyboard up in every case (5 of 5 fresh windows, 0 of 3 the
+     day before), his place kept, Back closes the sheet. ⬜ Next: his own try; then the retro and the Tester hands
      back.
      **Alongside it, gym (Ahmed, 2026-11-01; the Uplan chat):** his new split is a whole-body warm-up, 1 set per
      exercise, every other day; goal: strength and muscle equally, kept casual.
@@ -49,8 +51,9 @@ Rebuilt on 2026-10-27 from the git log, the public releases, `docs/superpowers/S
        workout shows its sets, kg lifted and records and opens to every set. One database change (schema 26). Design
        `docs/superpowers/specs/2026-11-03-workout-log-and-history-design.md`, approved ("Looks right").
        ✅ Demo 1 built 2026-11-03 (ticks saved, the smart order by tick, empty workouts hidden; the upgrade tried on a
-       copy of his database). ⬜ Demo 1 on his phone before his next workout. ⬜ Demo 2: the history row and the
-       workout page, 2–3 looks first.
+       copy of his database). ✅ Demo 1 on his phone since 2026-11-04 17:04 (the Tester's one install; his database
+       checked: schema 26, every table's rows the same). ⬜ Demo 2: the history row and the workout page, 2–3 looks
+       first.
      - ⬜ **Clean-up, on hold (Ahmed, 2026-11-01; "we are still working on it", 2026-11-03):** the smart order only in developer mode; the Targets system and
        Programs removed; quick starts show his recent saved workouts; My Workouts and their editor stay. No database
        change. Design `docs/superpowers/specs/2026-11-01-gym-cleanup-design.md`, waiting for his yes.

@@ -206,17 +206,30 @@ is a bit laggy."
      openings: no missing-channel errors, crashes or Flutter errors. **One difference from the design:** the sheet's
      card shows in Recents right after he leaves an open sheet with Home (Android keeps the newest task even when it is
      marked hidden), until he opens another app; tapping it brings the sheet back as it was. Not on the phone yet.
-   - ⬜ **← next: one install on his phone for both** (this window and the Uplan chat's workout log demo 1, schema
-     26; agreed with the Uplan chat at 21:14, its `b8098c5`: whichever chat Ahmed tells "Phone plugged in" does it,
-     and the other doesn't reinstall). The fast build from `b7c92c8` is ready (built 21:14 from a tree with only docs
-     uncommitted): `D:\projects\trackerapp\build\app\outputs\flutter-apk\app-profile.apk`, v1.18.0 (27), Uplan's key
-     (certificate checked: `5b269323…c7ac5`), `application-debuggable`, `QuickAddActivity` in its manifest. It
-     replaced the Uplan chat's 20:45 build from `212f4e3`. When he plugs in: copy his data off (signing-key plan Task 4
-     steps 2–4) into a new `D:\backups\uplan\<date>-own-window\`, check the fingerprint again, `install -r`, start
-     Uplan from its launcher intent (redraws the widgets, re-books his reminders), compare his booked reminders. Then
-     real taps on his widget's "+", each after checking the window in front: its own task, keyboard up, the icon shows
-     his app where he left it, Back, Back closes it. A second copy of his folder afterwards should say schema 26 with
-     the same 77 workouts and 308 sets as today's backup (the Uplan chat's check). Then the hand-back.
+   - ✅ **One install on his phone for both** (2026-11-04 17:00–17:12; Ahmed told both chats "Phone plugged in" and
+     asked them to coordinate; agreed by message that the Tester installs and the Uplan chat stays off the phone).
+     Master's code hadn't moved since `b7c92c8`; the fast build from it (built 2026-11-03 21:14) was checked again:
+     Uplan's key `5b269323…c7ac5`, v1.18.0 (27), `application-debuggable`, `QuickAddActivity` inside. adb first listed
+     no device although Windows showed the phone's "ADB Interface" (WinUSB, the ADB interface GUID); a few seconds
+     later it did (`R5CX631BMJB`), nothing restarted. Before: the phone still had the 2026-11-03 15:16 build; his
+     folder copied to `D:\backups\uplan\2026-11-04-own-window\` in 38 s (327 files = the phone's, 568.5 MB, integrity
+     `ok`, 309 photos and 0 missing, database SHA-256 `fa9bb89d…` = yesterday's backup, user_version 25, 77 workouts,
+     308 sets, 35 tasks, 126 notes; booked reminders `flutter.alarm_notif_10105`–`10107`). `install -r` at 17:04:12
+     (fingerprint checked right before). First start from the launcher intent: Uplan drawn in 0.27 s, no crash, no
+     Flutter errors, no missing channels, no freeze, the same 3 booked reminders. The database afterwards (copied off
+     to `after\`, the app idle): user_version 26, integrity `ok`, 0 foreign-key problems, `completed_at` and
+     `finished_at` present, every one of the 24 tables kept its row count (the Uplan chat's check, passed). Real taps
+     on his month widget's "+" (its second home page; every tap guarded: the launcher in front and on the widget's
+     page, compared with a screenshot; scripts in the Tester's scratchpad, his data, not in the repo): the "+" started
+     `QuickAddActivity` (the widgets had redrawn) in a task of its own, drawn 85–135 ms after the tap; on film his
+     home screen, then the sheet over it: **no app frame**. The keyboard came up in every case: 5 of 5 fresh windows
+     (0 of 3 on 2026-11-03), each time after Android ignored the sheet's early asks, with no hide from Android. A tap
+     on the dimmed area closed the sheet and left the app's window alive; Uplan's icon then showed exactly the screen
+     from before the "+" (difference 0.0, twice). Back, Back closed the sheet for good. A sheet left with Home came
+     back as the same sheet with "milk" still typed; the dimmed-area tap then threw it away (35 tasks, no "milk",
+     integrity `ok`). Not tried on the phone: a task sent from the sheet into a list open in the app (checked on the
+     emulator), the live dashboard from the sheet's window (emulator), the Recents card after Home.
+   - ⬜ **← next:** his own try (the Manual Test Steps in the chat, 2026-11-04), then the retro and the hand-back.
    - ✅ (yesterday's state, kept for the record) the fast build was picked (Ahmed, 2026-11-01 about 14:50: "Fast build", after asking how it
      differs: both builds carry the same fixes; only the speed differs). Built 14:51–14:54 in `D:\projects\trackerapp`
      from `ed1ad20` (code = `44f8d2d`): `build\app\outputs\flutter-apk\app-profile.apk`, 93.0 MB, v1.18.0+27,

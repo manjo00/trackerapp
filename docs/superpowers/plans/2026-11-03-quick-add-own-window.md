@@ -183,12 +183,12 @@ adb scripts on the emulator and the Z Flip 6.
   SHA-256 and `application-debuggable`. **Only from a clean tree:** if `git status` shows another chat's
   uncommitted work (on 2026-11-03 the Uplan chat's workout-log change, a database migration), don't build. Ask
   that chat first, because a build would carry its half-done migration onto his phone.
-- [ ] **Step 3:** When he plugs in:
+- [x] **Step 3:** When he plugs in:
   - copy his data off into `D:\backups\uplan\<date>-own-window\`, with the counts and the integrity check;
   - `adb install -r`;
   - start Uplan with its launcher intent (it re-books his reminders and redraws the widgets);
   - his booked reminders must be the same before and after.
-- [ ] **Step 4:** Real taps on his widget's "+", each after checking the window in front:
+- [x] **Step 4:** Real taps on his widget's "+", each after checking the window in front:
   - `QuickAddActivity` sits in a task of its own and the keyboard comes up;
   - after closing with a tap, Uplan's icon shows his app where he left it;
   - Back, Back closes the sheet;
