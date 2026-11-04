@@ -142,7 +142,14 @@ tokens; no helpers. Past twice that, stop and ask.
     look right. The first try showed two faults, both now fixed with a test that failed first: "308% more than last
     time" on 31 Oct (against a 4-set half-done workout) and change labels floating mid-row. To install this build,
     the emulator's own Uplan (signed by the Tester's builds, with made-up data) was saved to the scratchpad
-    (`emulator_uplan_before.tar`, 29 files) and replaced. Not on his phone yet.
+    (`emulator_uplan_before.tar`, 29 files) and replaced.
+  - **On his phone since 2026-11-04 18:31** (Ahmed: "Phone plugged in"; the cable needed his "Done" after the USB
+    steps first). His folder copied to `D:\backups\uplan\2026-11-04-history\` (327 files, the same list as the
+    phone's four data folders; integrity ok, 309 photos, schema 26), then `install -r` of the fast build from
+    `7c49151`: still debuggable, 327 data files, the same 3 booked reminders (`flutter.alarm_notif_10105`–`10107`);
+    his database copied again after the first start: every one of its 24 tables the same rows, workout rows
+    unchanged, integrity ok. On his phone the Workout tab's history shows the new rows (dark mode; checked by a
+    screenshot). His own look and opinion: still to come.
 - **Noticed, not fixing now:** `workout_list_screen.dart` (another history list with the week's count) is built
   nowhere in the app, so `sessionsThisWeek` shows nowhere either; the Workout tab is `workout_home_screen.dart`.
   It could be removed in the gym clean-up.
