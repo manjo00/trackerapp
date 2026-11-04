@@ -113,9 +113,13 @@ tokens; no helpers. Past twice that, stop and ask.
   row counts (77 workouts, 308 sets, 35 tasks, 126 notes), the workout rows' old columns hash the same, the new
   columns are empty, integrity ok, no foreign-key problems. On that copy the history shows 41 of 77 workouts, and the
   week's count from Sunday 1 Nov goes 6 → 1 (from Monday it stays 1). The screens on his phone: his eyes only.
-- **Next:** his next workout (about 5 Nov) records the first ticks; the one after it is the first smart order that
-  learns from them. Then demo 2 (step 5), with 2–3 looks of the history row and workout page first. Demo 2 counts
-  logged sets only: 20 empty set rows remain in his workouts that were never finished or discarded.
+- **Next (updated 2026-11-04 19:45; demos 1 and 2 are done and on his phone, his opinion "Good"):** his next
+  workout (about 5 Nov) records the first ticks and the first finish time. After it, when the phone is on the cable
+  anyway: copy his database off the plan's way and check read-only that its sets have `completed_at` and the
+  workout has `finished_at`; the workout after that is the first smart order that learns from the ticks. Then the
+  master plan's gym list: the weekly cardio switch and the progress dashboard (each needs his go first), the
+  clean-up (on hold) and the Snapchat summary (waiting). Demo 2 counts logged sets only: 20 empty set rows remain
+  in his workouts that were never finished or discarded.
 - **Demo 2 (step 5), built 2026-11-04, look B** (three looks shown as a sketch with his real Push of 3 Nov: A clean
   list, B big number, C the order done; Ahmed: "Look B"):
   - The Workout tab's history row (`lib/features/workout/presentation/widgets/workout_history_tile.dart`, used by
