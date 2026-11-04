@@ -37,8 +37,9 @@ Rebuilt on 2026-10-27 from the git log, the public releases, `docs/superpowers/S
      and the app re-reads tasks another window added (`b7c92c8` on `master`, 2026-11-03; every check on the emulator
      passed). ✅ On his phone since 2026-11-04 17:04 (one install with the workout log's demo 1, his data copied
      first): no app frame before the sheet on film, the keyboard up in every case (5 of 5 fresh windows, 0 of 3 the
-     day before), his place kept, Back closes the sheet. ⬜ Next: his own try; then the retro and the Tester hands
-     back.
+     day before), his place kept, Back closes the sheet. ✅ His own try: "Works well" (2026-11-04); retro written.
+     ⬜ Next, his pick: an ordinary (not see-through) window for the main app, for Flutter's faster drawing and a
+     start screen at once (2–3 looks of the start screen first), or the Tester hands back.
      **Alongside it, gym (Ahmed, 2026-11-01; the Uplan chat):** his new split is a whole-body warm-up, 1 set per
      exercise, every other day; goal: strength and muscle equally, kept casual.
      - ⬜ Smart order (his pick, the tired score, plus his rules: mix the muscles; triceps after the presses, biceps

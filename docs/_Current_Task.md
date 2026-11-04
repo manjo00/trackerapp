@@ -229,7 +229,23 @@ is a bit laggy."
      back as the same sheet with "milk" still typed; the dimmed-area tap then threw it away (35 tasks, no "milk",
      integrity `ok`). Not tried on the phone: a task sent from the sheet into a list open in the app (checked on the
      emulator), the live dashboard from the sheet's window (emulator), the Recents card after Home.
-   - ⬜ **← next:** his own try (the Manual Test Steps in the chat, 2026-11-04), then the retro and the hand-back.
+   - ✅ **His own try: "Works well"** (Ahmed, 2026-11-04 about 17:15, after the Manual Test Steps in the chat). The
+     retro is in `D:\projects\claude-setup\workflow\retros.md` (2026-11-04 entry; about 1.67M tokens for the whole
+     "+" fix, counted from this chat's transcript). After it the Tester chat cleared itself for a fresh start in place
+     (a long, twice-compacted chat makes every reply expensive), so the next message starts from these files.
+   - ⬜ **← next: Ahmed's pick** (asked 2026-11-04 in the chat's box, buttons "Yes, show looks first" and "Hand back
+     now"):
+     1. **An ordinary window for the main app** (the first "Noticed" item below; recommended). MainActivity gets a
+        theme of its own that isn't see-through, and `getBackgroundMode()` stays default (opaque), so every app screen
+        moves to Flutter's faster surface drawing and Android shows a start screen at once when he taps the icon;
+        QuickAddActivity keeps the see-through theme. The start screen is something he judges by eye, so first show
+        him 2–3 looks of it on the emulator (for example the app's own background colour only; Android's start screen
+        with Uplan's icon; that icon on a dark background), build the one he picks, then measure: the time to the
+        first frame from the icon and scroll smoothness on a long list, before and after, on the emulator and his
+        phone. Size guess: small to medium, 45–90 min of work plus one install (his data copied off first).
+     2. **Hand back** (step 7): the round table's other ranked items stay parked in
+        `docs/superpowers/round-table-2026-11-01.md` for him to pick later; the Uplan chat takes the repo back, and
+        this chat offers to be archived.
    - ✅ (yesterday's state, kept for the record) the fast build was picked (Ahmed, 2026-11-01 about 14:50: "Fast build", after asking how it
      differs: both builds carry the same fixes; only the speed differs). Built 14:51–14:54 in `D:\projects\trackerapp`
      from `ed1ad20` (code = `44f8d2d`): `build\app\outputs\flutter-apk\app-profile.apk`, 93.0 MB, v1.18.0+27,
@@ -395,11 +411,14 @@ plus this chat about 0.9–1.4M; three helpers about 1.1–1.7M; this chat alone
   switch a new tool's usage reporting off before its first run, and lead every reply with the answer.
 
 ## Done means (Tester)
-- [ ] A ranked round-table report Ahmed has read (a page for his tablet, a copy in `docs/`).
-- [ ] The widget's add-task lag fixed, or explained with numbers from a profile or release build. (Explained with
+- [x] A ranked round-table report Ahmed has read (a page for his tablet, a copy in `docs/`): he picked from it on
+      2026-11-01 ("A, then B").
+- [x] The widget's add-task lag fixed, or explained with numbers from a profile or release build. (Explained with
       numbers on 2026-11-01; batch B built; the fast build on the phone 2026-11-02; the missing keyboard on a running
-      app's "+" found on the phone 2026-11-02, fixed the same morning (`64091f9`) and on the phone since 15:38.)
-- [ ] The fixes he picked built, analyze clean, all tests green, committed on `master` and pushed.
+      app's "+" found on the phone 2026-11-02, fixed the same morning (`64091f9`) and on the phone since 15:38; the
+      sheet in its own window, with the keyboard asked on window focus, on his phone since 2026-11-04 17:04: no app
+      flash on film, the keyboard up 5 of 5 times; Ahmed: "Works well".)
+- [x] The fixes he picked built, analyze clean, all tests green, committed on `master` and pushed.
 - [ ] The handover files updated; Tester hands back and offers to be archived.
 (The signing-key move's own checklist is all done: `docs/superpowers/plans/2026-11-01-signing-key.md` and the history.)
 

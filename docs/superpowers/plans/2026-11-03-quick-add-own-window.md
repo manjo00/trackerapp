@@ -193,11 +193,11 @@ adb scripts on the emulator and the Z Flip 6.
   - after closing with a tap, Uplan's icon shows his app where he left it;
   - Back, Back closes the sheet;
   - read the time from the tap to "Displayed" in logcat.
-- [ ] **Step 5:** He tries it himself, following the Manual Test Steps.
+- [x] **Step 5:** He tries it himself, following the Manual Test Steps.
 
 ### Task 6: Handover and save
 
-- [ ] **Step 1:** Update:
+- [x] **Step 1:** Update:
   - `docs/_Current_Task.md`;
   - `docs/_Task_History.md` (one line);
   - `docs/_Master_Plan.md`;
@@ -208,4 +208,4 @@ adb scripts on the emulator and the Z Flip 6.
   - the Project Tracker's row.
 
   Then commit, run the secret check and push.
-- [ ] **Step 2:** The retro, once he approves.
+- [x] **Step 2:** The retro, once he approves.
