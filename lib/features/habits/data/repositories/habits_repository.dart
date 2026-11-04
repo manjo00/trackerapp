@@ -1,27 +1,18 @@
 import 'package:drift/drift.dart' show Value;
-import 'package:intl/intl.dart';
 import '../../../../core/database/app_database.dart';
 import '../../domain/habit_types.dart';
 import '../dao/habits_dao.dart';
-import '../models/habit_completion_model.dart';
 import '../models/habit_model.dart';
 import '../models/habit_with_status.dart';
-
-/// Formats a [DateTime] as a date-only string, e.g. `"2026-05-26"`.
-final DateFormat _dateFmt = DateFormat('yyyy-MM-dd');
-
-String _dateStr(DateTime dt) => _dateFmt.format(dt);
 
 /// Provides all habit-related operations to the presentation layer.
 ///
 /// Responsibilities:
-///   1. Convert raw Drift rows into immutable [HabitModel] / [HabitCompletionModel].
-///   2. Combine those into [HabitWithStatus] objects the UI can render directly.
-///   3. Expose insert / toggle / delete operations as simple async methods.
-///   4. Contain the pure [calculateStreak] function (independently testable).
+///   1. Convert raw Drift rows into immutable [HabitModel]s and histories.
+///   2. Expose insert / tick / count / delete operations as async methods.
 ///
-/// The UI layer never imports Drift types — it only depends on this repository
-/// and the model classes in `data/models/`.
+/// The rules (what a day is, the streak, the strength) live as pure Dart in
+/// `domain/`; the UI layer never imports Drift types.
 class HabitsRepository {
   HabitsRepository(this._dao);
 
@@ -29,44 +20,9 @@ class HabitsRepository {
 
   // ── Streams ───────────────────────────────────────────────────────────────
 
-  /// Emits a fresh list of [HabitWithStatus] whenever any habit or completion
-  /// row changes.
-  ///
-  /// How it works:
-  ///   1. Watch every habit row as a stream.
-  ///   2. For each emission, fetch the latest completions for every habit.
-  ///   3. Map into [HabitWithStatus] (isDoneToday + streak).
-  ///
-  /// Using [asyncMap] lets us do async work (DB fetch) inside the stream
-  /// pipeline without blocking.
-  Stream<List<HabitWithStatus>> watchHabitsWithStatus() {
-    // A single JOIN-backed stream: re-emits on habit OR completion changes,
-    // and "today"/"now" are computed per-emission so a long-open app doesn't
-    // get stuck on yesterday's done-state.
-    return _dao.watchHabitsWithCompletions().map((rows) {
-      final String today = _dateStr(DateTime.now());
-      final DateTime now = DateTime.now();
-
-      return rows.map((row) {
-        final List<HabitCompletionModel> completions =
-            row.completions.map(_completionFromRow).toList();
-
-        final bool isDone = completions.any((c) => c.date == today);
-        final int streak =
-            HabitsRepository.calculateStreak(completions, now);
-
-        return HabitWithStatus(
-          habit: _habitFromRow(row.habit),
-          isDoneToday: isDone,
-          streak: streak,
-        );
-      }).toList();
-    });
-  }
-
   /// Watches habits with their done/undone status for a specific [date].
   ///
-  /// Unlike [watchHabitsWithStatus] (which uses today), this works for any
+  /// It works for any
   /// past, present, or future date — useful for the planner tab. One query
   /// (habits LEFT JOIN that day's ticks), re-emitting when either changes.
   Stream<List<HabitWithStatus>> watchHabitsForDate(String date) {
@@ -190,47 +146,6 @@ class HabitsRepository {
   /// Permanently deletes a habit and all its completions.
   Future<void> deleteHabit(int habitId) => _dao.deleteHabit(habitId);
 
-  // ── Streak logic (pure static — no DB calls, easy to unit-test) ─────────
-
-  /// Calculates the current streak for a habit given its [completions].
-  ///
-  /// Rules:
-  ///   - Walk backwards from [today], one day at a time.
-  ///   - Count each day that has at least one completion row.
-  ///   - Stop as soon as a day has no completion (gap breaks the streak).
-  ///   - If [today] itself has no completion, streak is 0.
-  ///
-  /// [completions] can be in any order — the function handles sorting.
-  ///
-  /// Declared `static` because it is a pure function: it only depends on its
-  /// arguments, never on instance state.  Tests can call it directly as
-  /// `HabitsRepository.calculateStreak(...)` without constructing a repo.
-  static int calculateStreak(
-    List<HabitCompletionModel> completions,
-    DateTime today,
-  ) {
-    if (completions.isEmpty) return 0;
-
-    // Build a set of date strings for O(1) lookup.
-    final Set<String> completedDates =
-        completions.map((c) => c.date).toSet();
-
-    int streak = 0;
-    DateTime cursor = today;
-
-    while (true) {
-      final String dateKey = _dateStr(cursor);
-      if (completedDates.contains(dateKey)) {
-        streak++;
-        cursor = cursor.subtract(const Duration(days: 1));
-      } else {
-        break;
-      }
-    }
-
-    return streak;
-  }
-
   // ── Private converters ────────────────────────────────────────────────────
 
   HabitModel _habitFromRow(Habit row) => HabitModel(
@@ -255,12 +170,5 @@ class HabitsRepository {
         cue: row.cue,
         sortOrder: row.sortOrder,
         autoSource: row.autoSource,
-      );
-
-  HabitCompletionModel _completionFromRow(HabitCompletion row) =>
-      HabitCompletionModel(
-        id: row.id,
-        habitId: row.habitId,
-        date: row.date,
       );
 }

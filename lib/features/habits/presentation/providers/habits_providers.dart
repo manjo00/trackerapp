@@ -10,7 +10,6 @@ import '../../domain/habit_types.dart';
 import '../models/habit_day_view.dart';
 import '../../data/dao/habits_dao.dart';
 import '../../data/models/habit_model.dart';
-import '../../data/models/habit_with_status.dart';
 import '../../data/repositories/habits_repository.dart';
 
 part 'habits_providers.g.dart';
@@ -25,24 +24,6 @@ part 'habits_providers.g.dart';
 HabitsRepository habitsRepository(HabitsRepositoryRef ref) {
   final dao = HabitsDao(ref.watch(appDatabaseProvider));
   return HabitsRepository(dao);
-}
-
-// ── Read provider (stream) ────────────────────────────────────────────────
-
-/// Emits a fresh list of [HabitWithStatus] whenever any habit or completion
-/// changes in the database.
-///
-/// In [HabitListScreen] we use:
-/// ```dart
-/// final habitsAsync = ref.watch(habitsWithStatusProvider);
-/// ```
-/// `habitsAsync` is an [AsyncValue] with three states:
-///   - `.isLoading`  → show a spinner
-///   - `.hasError`   → show an error message
-///   - `.hasValue`   → show the list
-@riverpod
-Stream<List<HabitWithStatus>> habitsWithStatus(HabitsWithStatusRef ref) {
-  return ref.watch(habitsRepositoryProvider).watchHabitsWithStatus();
 }
 
 // ── Write providers (AsyncNotifier) ──────────────────────────────────────
@@ -87,7 +68,7 @@ class DeleteHabit extends _$DeleteHabit {
     state = await AsyncValue.guard(
       () => ref.read(habitsRepositoryProvider).deleteHabit(habitId),
     );
-    ref.invalidate(habitsWithStatusProvider);
+    // The habit streams re-emit by themselves (Drift watches the tables).
   }
 }
 
@@ -102,7 +83,7 @@ class UpdateHabit extends _$UpdateHabit {
     state = await AsyncValue.guard(
       () => ref.read(habitsRepositoryProvider).updateHabit(habit),
     );
-    ref.invalidate(habitsWithStatusProvider);
+    // The habit streams re-emit by themselves (Drift watches the tables).
   }
 }
 
@@ -126,9 +107,8 @@ class ToggleCompletion extends _$ToggleCompletion {
           .read(habitsRepositoryProvider)
           .toggleTick(habitId, date ?? ref.read(habitTodayProvider)),
     );
-    // No manual invalidation needed: watchHabitsWithStatus() is now backed by
-    // a JOIN across habits + habit_completions, so Drift re-emits the stream
-    // automatically when this toggle writes to habit_completions.
+    // No manual invalidation needed: the habit streams watch the tables, so
+    // Drift re-emits them when this toggle writes to habit_completions.
   }
 }
 

@@ -81,14 +81,15 @@ HabitDayView testView({
 Widget habitTestApp(Widget child, FakeHabitActions fake) => ProviderScope(
       overrides: [
         habitActionsProvider.overrideWithValue(fake),
-        habitTodayProvider.overrideWith(_FixedToday.new),
+        habitTodayProvider.overrideWith(FixedToday.new),
       ],
       child: MaterialApp(
         home: Scaffold(body: ListView(children: [child])),
       ),
     );
 
-class _FixedToday extends HabitToday {
+/// "Today" pinned to Wednesday 4 November 2026.
+class FixedToday extends HabitToday {
   @override
   String build() => '2026-11-04';
 }

@@ -2,121 +2,95 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:life_tracker/features/habits/data/models/habit_model.dart';
-import 'package:life_tracker/features/habits/data/models/habit_with_status.dart';
+import 'package:life_tracker/core/settings/settings_provider.dart';
+import 'package:life_tracker/features/habits/domain/habit_rules.dart';
+import 'package:life_tracker/features/habits/domain/habit_types.dart';
+import 'package:life_tracker/features/habits/presentation/models/habit_day_view.dart';
 import 'package:life_tracker/features/habits/presentation/providers/habits_providers.dart';
 import 'package:life_tracker/features/habits/presentation/screens/habit_list_screen.dart';
-import 'package:life_tracker/features/habits/presentation/widgets/empty_habits_placeholder.dart';
-import 'package:life_tracker/features/habits/presentation/widgets/habit_tile.dart';
+import 'package:life_tracker/features/habits/presentation/widgets/habits_week_strip.dart';
+import 'package:life_tracker/features/shifts/data/models/work_shift_model.dart';
+import 'package:life_tracker/features/shifts/presentation/providers/shifts_providers.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-// ── Test helpers ──────────────────────────────────────────────────────────
+import 'presentation/habit_widget_helpers.dart';
 
-/// Builds a minimal [HabitModel] for use in tests.
-HabitModel _habit(int id, String name) => HabitModel(
-      id: id,
-      name: name,
-      createdAt: DateTime(2026, 5, 26),
-      targetPerWeek: 7,
-    );
+void main() {
+  late SharedPreferences prefs;
 
-/// Builds a [HabitWithStatus] with sensible defaults.
-HabitWithStatus _item(int id, String name, {bool done = false, int streak = 0}) =>
-    HabitWithStatus(
-      habit: _habit(id, name),
-      isDoneToday: done,
-      streak: streak,
-    );
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({'week_starts_sunday': true});
+    prefs = await SharedPreferences.getInstance();
+  });
 
-/// Wraps the widget under test with the providers, theme, and router
-/// that [HabitListScreen] needs to function.
-Widget _wrap(
-  Widget child, {
-  required List<HabitWithStatus> habits,
-}) {
-  // A minimal GoRouter so context.push('/habits/add') doesn't throw.
-  final router = GoRouter(
-    routes: [
-      GoRoute(
-        path: '/',
-        builder: (_, __) => child,
-      ),
+  /// The Habits screen with [views] as today's habits, inside a small router
+  /// so the + button and the empty state can open the editor.
+  Widget wrap(List<HabitDayView> views) {
+    final GoRouter router = GoRouter(routes: [
+      GoRoute(path: '/', builder: (_, __) => const HabitListScreen()),
       GoRoute(
         path: '/habits/add',
         builder: (_, __) => const Scaffold(body: Text('Add habit stub')),
       ),
-    ],
-  );
+    ]);
+    return ProviderScope(
+      overrides: [
+        habitDayViewsProvider.overrideWithValue(AsyncData(views)),
+        habitTodayProvider.overrideWith(FixedToday.new),
+        habitActionsProvider.overrideWithValue(FakeHabitActions()),
+        shiftsByDateProvider.overrideWith(
+            (ref) => Stream.value(const <String, WorkShiftModel>{})),
+        sharedPreferencesProvider.overrideWithValue(prefs),
+      ],
+      child: MaterialApp.router(routerConfig: router),
+    );
+  }
 
-  return ProviderScope(
-    overrides: [
-      // Override the real stream provider with a fixed list.
-      // AsyncValue.data(...) mimics "stream emitted data".
-      habitsWithStatusProvider.overrideWith(
-        (ref) => Stream.value(habits),
-      ),
-    ],
-    child: MaterialApp.router(routerConfig: router),
-  );
-}
+  testWidgets('shows the sections, the week strip and the done count',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(wrap([
+      testView(
+          id: 1,
+          name: 'Stretch',
+          section: HabitSection.wake,
+          today: DayState.kept),
+      testView(
+          id: 2,
+          name: 'Water',
+          kind: HabitKind.count,
+          goal: 8,
+          unit: 'glasses',
+          today: DayState.partial,
+          value: 5),
+      testView(id: 3, name: 'Read', section: HabitSection.sleep),
+    ]));
+    await tester.pump();
+    expect(find.text('Wed 4 Nov'), findsOneWidget);
+    expect(find.text('Day off'), findsOneWidget);
+    expect(find.text('1 of 3 done'), findsOneWidget);
+    expect(find.byType(HabitsWeekStrip), findsOneWidget);
+    expect(find.text('ANY TIME'), findsOneWidget);
+    expect(find.text('BEFORE SLEEP'), findsOneWidget);
+    expect(find.text('Done today · 1'), findsOneWidget);
+    // Let the coach tip's 350 ms timer run before the test ends.
+    await tester.pump(const Duration(seconds: 1));
+  });
 
-// ── Tests ─────────────────────────────────────────────────────────────────
+  testWidgets('the empty state offers Add your first habit',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(wrap(const []));
+    await tester.pump();
+    expect(find.text('No habits yet'), findsOneWidget);
+    await tester.tap(find.text('Add your first habit'));
+    await tester.pumpAndSettle();
+    expect(find.text('Add habit stub'), findsOneWidget);
+  });
 
-void main() {
-  group('HabitListScreen', () {
-    testWidgets('shows empty placeholder when there are no habits',
-        (WidgetTester tester) async {
-      await tester.pumpWidget(_wrap(const HabitListScreen(), habits: []));
-
-      // pumpAndSettle waits for all animations and async work to finish.
-      await tester.pumpAndSettle();
-
-      expect(find.byType(EmptyHabitsPlaceholder), findsOneWidget);
-      expect(find.byType(HabitTile), findsNothing);
-    });
-
-    testWidgets('renders one HabitTile per habit', (WidgetTester tester) async {
-      final List<HabitWithStatus> habits = [
-        _item(1, 'Read'),
-        _item(2, 'Exercise'),
-      ];
-
-      await tester.pumpWidget(_wrap(const HabitListScreen(), habits: habits));
-      await tester.pumpAndSettle();
-
-      // Should find exactly two tiles.
-      expect(find.byType(HabitTile), findsNWidgets(2));
-
-      // Habit names should be visible.
-      expect(find.text('Read'), findsOneWidget);
-      expect(find.text('Exercise'), findsOneWidget);
-    });
-
-    testWidgets('FAB is present with correct tooltip', (WidgetTester tester) async {
-      await tester.pumpWidget(_wrap(const HabitListScreen(), habits: []));
-      await tester.pumpAndSettle();
-
-      expect(find.byType(FloatingActionButton), findsOneWidget);
-      expect(find.byTooltip('Add habit'), findsOneWidget);
-    });
-
-    testWidgets('completed habit shows strikethrough text',
-        (WidgetTester tester) async {
-      final List<HabitWithStatus> habits = [
-        _item(1, 'Morning run', done: true, streak: 3),
-      ];
-
-      await tester.pumpWidget(_wrap(const HabitListScreen(), habits: habits));
-      await tester.pumpAndSettle();
-
-      // Find the Text widget that holds the habit name and check decoration.
-      final Finder textFinder = find.text('Morning run');
-      expect(textFinder, findsOneWidget);
-
-      final Text textWidget = tester.widget(textFinder);
-      expect(
-        textWidget.style?.decoration,
-        TextDecoration.lineThrough,
-      );
-    });
+  testWidgets('the + button opens the editor', (WidgetTester tester) async {
+    await tester.pumpWidget(wrap([testView()]));
+    await tester.pump();
+    await tester.tap(find.byTooltip('Add habit'));
+    await tester.pumpAndSettle();
+    expect(find.text('Add habit stub'), findsOneWidget);
   });
 }
