@@ -4,6 +4,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:home_widget/home_widget.dart';
 
 import '../../features/habits/data/dao/habits_dao.dart';
+import '../../features/habits/domain/habit_day.dart';
 import '../../features/tasks/data/dao/tasks_dao.dart';
 import '../database/app_database.dart';
 import 'live_dashboard_service.dart';
@@ -17,6 +18,20 @@ import 'live_dashboard_service.dart';
 ///
 /// Uri shape: `uplan://live?action=complete|snooze&type=task|habit|inbox&id=N`
 ///
+/// Ticks habit [habitId] for the habit day [now] belongs to (the day starts
+/// at 04:00, as in the app), unless it is ticked already (the live
+/// notification's ✓ never unticks).
+Future<void> completeHabitFromNotification(
+    HabitsDao dao, int habitId, DateTime now) async {
+  final String day = habitDayOf(now);
+  if (!await dao.isCompletedOn(habitId, day)) {
+    await dao.insertCompletion(HabitCompletionsCompanion(
+      habitId: Value(habitId),
+      date: Value(day),
+    ));
+  }
+}
+
 /// Registered from main.dart via [HomeWidget.registerInteractivityCallback].
 @pragma('vm:entry-point')
 Future<void> liveBackgroundCallback(Uri? uri) async {
@@ -33,18 +48,11 @@ Future<void> liveBackgroundCallback(Uri? uri) async {
   final AppDatabase db = AppDatabase();
   try {
     final DateTime now = DateTime.now();
-    final String today = _dateKey(now);
 
     switch (action) {
       case 'complete':
         if (type == 'habit') {
-          final HabitsDao dao = HabitsDao(db);
-          if (!await dao.isCompletedOn(id, today)) {
-            await dao.insertCompletion(HabitCompletionsCompanion(
-              habitId: Value(id),
-              date: Value(today),
-            ));
-          }
+          await completeHabitFromNotification(HabitsDao(db), id, now);
         } else {
           // 'task' and 'inbox' are both rows in the tasks table.
           await TasksDao(db).updateTask(TasksCompanion(
