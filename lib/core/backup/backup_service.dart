@@ -77,9 +77,11 @@ class BackupService {
             rowsFor('workout_sessions').map(WorkoutSession.fromJson));
         b.insertAll(
             _db.workoutSets, rowsFor('workout_sets').map(WorkoutSet.fromJson));
-        b.insertAll(_db.habits, rowsFor('habits').map(Habit.fromJson));
+        b.insertAll(_db.habits, rowsFor('habits').map(_habitFromJson));
         b.insertAll(_db.habitCompletions,
-            rowsFor('habit_completions').map(HabitCompletion.fromJson));
+            _onePerHabitDay(rowsFor('habit_completions')));
+        b.insertAll(_db.habitPauses,
+            rowsFor('habit_pauses').map(HabitPause.fromJson));
         b.insertAll(_db.customTrackers,
             rowsFor('custom_trackers').map(CustomTracker.fromJson));
         b.insertAll(_db.trackerItems,
@@ -123,6 +125,59 @@ class BackupService {
     });
   }
 
+  // ── Habits from before schema 27 ─────────────────────────────────────────
+
+  /// The habit columns schema 27 added, with the values a habit made before
+  /// it gets (a daily tick, no spare days, "Any time").
+  static const Map<String, dynamic> _habitDefaults = {
+    'kind': 'tick',
+    'goal': 1,
+    'unit': null,
+    'step': 1,
+    'icon': 'check_circle',
+    'color': 0,
+    'schedule': 'daily',
+    'weekdayMask': 127,
+    'perWeek': null,
+    'shiftMask': 7,
+    'sparesPerWeek': 0,
+    'section': 'any',
+    'cue': null,
+    'sortOrder': 0,
+    'autoSource': null,
+  };
+
+  static const Map<String, dynamic> _tickDefaults = {
+    'value': 1,
+    'status': 'done',
+    'note': null,
+    'createdAt': null,
+  };
+
+  /// A habit row from any version: missing keys get the defaults, and an old
+  /// "days a week" target below 7 becomes "N a week" (as the v27 upgrade does).
+  static Habit _habitFromJson(Map<String, dynamic> row) {
+    final Map<String, dynamic> filled = {..._habitDefaults, ...row};
+    final int target = (row['targetPerWeek'] as num?)?.toInt() ?? 7;
+    if (!row.containsKey('schedule') && target < 7) {
+      filled['schedule'] = 'per_week';
+      filled['perWeek'] = target;
+    }
+    return Habit.fromJson(filled);
+  }
+
+  /// Ticks from any version, at most one per habit and day (the first one):
+  /// older versions could save a day twice, which the unique key now refuses.
+  static List<HabitCompletion> _onePerHabitDay(
+      List<Map<String, dynamic>> rows) {
+    final Set<String> seen = {};
+    return [
+      for (final Map<String, dynamic> row in rows)
+        if (seen.add('${row['habitId']}|${row['date']}'))
+          HabitCompletion.fromJson({..._tickDefaults, ...row}),
+    ];
+  }
+
   /// Tables in delete order: children first, then their parents, so foreign
   /// keys are never violated while wiping.
   List<TableInfo<Table, dynamic>> get _deleteOrder => [
@@ -147,6 +202,7 @@ class BackupService {
         _db.programs,
         _db.exerciseLibrary,
         _db.habitCompletions,
+        _db.habitPauses,
         _db.habits,
         _db.workShifts,
         _db.shiftRotations,
