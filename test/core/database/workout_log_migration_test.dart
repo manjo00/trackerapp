@@ -38,10 +38,10 @@ void main() {
           row.read<String>('name'),
       ];
 
-  test('the upgrade lands on version 26', () async {
+  test('the upgrade lands on the current version', () async {
     final QueryRow row =
         await db.customSelect('PRAGMA user_version').getSingle();
-    expect(row.read<int>('user_version'), 26);
+    expect(row.read<int>('user_version'), db.schemaVersion);
   });
 
   test('workouts and sets survive the upgrade unchanged', () async {
