@@ -19,7 +19,8 @@ demo 1"). Read it with this plan.
 ## Global Constraints
 - Work in `D:\projects\trackerapp-tester` on `tester/speed`; merge into master only after telling the Uplan chat; the
   phone gets a build only from master under the install rule (`docs/_Decisions_Log.md`, 2026-11-04).
-- Schema 26 → 27, habit tables only. Nothing under `lib/features/workout/` changes.
+- Schema 26 → 27, habit tables only (OK from the Uplan chat, 2026-11-04 19:30; it takes 28 after this merge if it
+  needs one). Nothing under `lib/features/workout/` changes.
 - Shared files, each announced to the Uplan chat right before its edit: `lib/core/database/app_database.dart`,
   `lib/core/router/app_router.dart`, `lib/core/backup/backup_service.dart`, `lib/app.dart`,
   `lib/features/today/presentation/screens/today_screen.dart`,
@@ -89,6 +90,11 @@ Create `lib/features/habits/data/tables/habit_pauses_table.dart`; Test
 - [ ] **Step 3:** Tell the Uplan chat "editing app_database.dart and your migration test's version line now"; implement
   the columns, table, index and migration step; update the workout test's version check; rerun build_runner.
 - [ ] **Step 4:** The test file and `test/core/database/` pass.
+- [ ] **Step 4b: His real database, as a copy.** Copy `D:\backups\uplan\2026-11-04-kilos\after\life_tracker.db` (his
+  newest, 18:45) into the scratchpad, never the backup itself, and run `$F test tool/migrate_copy_test.dart
+  --dart-define=UPLAN_DB=<the copy>`. Expected: user_version 27, `PRAGMA integrity_check` ok, every table's row count
+  the same as before, "H" still archived. (The Uplan chat read that copy: 1 habit, 0 ticks, 0 duplicate pairs, so
+  the de-duplication removes nothing of his; Step 1's test still covers it.)
 - [ ] **Step 5:** Commit `feat(habits): schema 27 for the habits rebuild`.
 
 ### Task 2: Habit model, DAO and repository
