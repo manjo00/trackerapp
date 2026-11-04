@@ -19,6 +19,10 @@ class WorkoutSessionModel with _$WorkoutSessionModel {
     int? programSessionId,
 
     @Default([]) List<WorkoutSetModel> sets,
+
+    /// When Finish was tapped (v26); null while it runs, when discarded and
+    /// for every workout before v26.
+    DateTime? finishedAt,
   }) = _WorkoutSessionModel;
 
   /// Display title: user-given name or a generated label.

@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import '../../../../core/database/app_database.dart';
+import '../../domain/workout_summary.dart';
 import '../tables/exercise_library_table.dart';
 import '../tables/muscle_targets_table.dart';
 import '../tables/workout_sessions_table.dart';
@@ -211,34 +212,13 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase>
         sets.add(set);
       }
     }
-    return [for (final List<WorkoutSet> sets in workouts.values) _doneOrder(sets)];
-  }
-
-  /// One workout's exercises by their first tick, then the never-ticked ones
-  /// in the order opened. [sets] come in set (= opened) order.
-  static List<String> _doneOrder(List<WorkoutSet> sets) {
-    final List<String> opened = [];
-    final Map<String, DateTime> firstTick = {};
-    for (final WorkoutSet set in sets) {
-      if (!opened.contains(set.exerciseName)) opened.add(set.exerciseName);
-      final DateTime? tick = set.completedAt;
-      final DateTime? earliest = firstTick[set.exerciseName];
-      if (tick != null && (earliest == null || tick.isBefore(earliest))) {
-        firstTick[set.exerciseName] = tick;
-      }
-    }
-    // Ticks are saved to the second, so a tie keeps the opened order.
-    final List<(DateTime, int, String)> ticked = [
-      for (int i = 0; i < opened.length; i++)
-        if (firstTick[opened[i]] case final DateTime tick) (tick, i, opened[i]),
-    ]..sort((a, b) {
-        final int byTime = a.$1.compareTo(b.$1);
-        return byTime != 0 ? byTime : a.$2.compareTo(b.$2);
-      });
+    // Each workout's sets are in set (= opened) order.
     return [
-      for (final (_, _, String name) in ticked) name,
-      for (final String name in opened)
-        if (!firstTick.containsKey(name)) name,
+      for (final List<WorkoutSet> sets in workouts.values)
+        exercisesInDoneOrder([
+          for (final WorkoutSet set in sets)
+            (name: set.exerciseName, tick: set.completedAt),
+        ]),
     ];
   }
 

@@ -18,5 +18,8 @@ class WorkoutSetModel with _$WorkoutSetModel {
     int? rpe,
     @Default(false) bool isWarmup,
     @Default(false) bool isPr,
+
+    /// When the set's ✓ was tapped (v26); null if it never was.
+    DateTime? completedAt,
   }) = _WorkoutSetModel;
 }

@@ -11,7 +11,9 @@ Every AI working here reads this block first, then the current task (pulled in b
   workout on 2026-11-03. Now the workout log (design `docs/superpowers/specs/2026-11-03-workout-log-and-history-design.md`,
   approved): demo 1 is on `master` since 2026-11-03 (schema 26: ticks saved with their time, the smart order learns
   from them, empty workouts hidden; 383 tests pass), on the phone since 2026-11-04 17:04 (one install with the
-  quick-add window, done by the Tester); the design's Status says what's next. Then
+  quick-add window, done by the Tester). Demo 2, the history in look B (Ahmed's pick: the kilos lifted big, a page
+  per workout with each exercise's change since last time), is on `master` since 2026-11-04 (416 tests pass; tried
+  on the emulator with a copy of his data), not on the phone yet; the design's Status says what's next. Then
   the weekly cardio switch and the progress dashboard.
 - **Traps:**
   - **Uplan's own signing key (since 2026-11-01):** `D:\keys\uplan\uplan-release.jks` (RSA 4096, valid until 2054), its password only in the git-ignored `android/key.properties` and Ahmed's own safe place, a copy in `OneDrive\Uplan key backup`. Certificate SHA-256 `5B:26:93:23:CC:1B:3D:FB:3B:16:0A:D5:58:8B:EB:FA:86:28:57:B0:B5:A3:5A:1F:5B:E9:EA:20:10:0C:7A:C5`. Every build on this PC (debug, profile, release) carries it, so `adb install -r` updates the phone in place. A cloud chat or fresh clone has no `key.properties` and falls back to the debug key, which can't update the phone. Never lose or replace this key; the laptop's old key is gone for good.

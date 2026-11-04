@@ -295,6 +295,7 @@ class WorkoutRepository {
         createdAt: row.createdAt,
         programSessionId: row.programSessionId,
         sets: sets.map(_setFromRow).toList(),
+        finishedAt: row.finishedAt,
       );
 
   WorkoutSetModel _setFromRow(WorkoutSet row) => WorkoutSetModel(
@@ -310,6 +311,7 @@ class WorkoutRepository {
         rpe: row.rpe,
         isWarmup: row.isWarmup,
         isPr: row.isPr,
+        completedAt: row.completedAt,
       );
 
   ExerciseModel _exerciseFromRow(ExerciseLibraryData row) => ExerciseModel(

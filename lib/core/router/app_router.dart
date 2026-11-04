@@ -31,6 +31,7 @@ import '../../features/workout/presentation/screens/exercise_picker_screen.dart'
 import '../../features/workout/presentation/screens/program_detail_screen.dart';
 import '../../features/workout/presentation/screens/program_session_editor_screen.dart';
 import '../../features/workout/presentation/screens/workout_home_screen.dart';
+import '../../features/workout/presentation/screens/workout_session_screen.dart';
 import 'shell_scaffold.dart';
 
 /// The single [GoRouter] instance for the whole app.
@@ -331,6 +332,14 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/workout/active',
       builder: (context, state) => const ActiveWorkoutScreen(),
+    ),
+
+    // One past workout, opened from a row of the history.
+    GoRoute(
+      path: '/workout/history/:id',
+      builder: (context, state) => WorkoutSessionScreen(
+        sessionId: int.parse(state.pathParameters['id']!),
+      ),
     ),
 
     GoRoute(

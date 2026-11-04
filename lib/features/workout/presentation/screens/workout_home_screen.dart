@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import '../../data/models/program_model.dart';
 import '../../data/models/program_session_model.dart';
 import '../../data/models/quick_start_templates.dart';
-import '../../data/models/workout_session_model.dart';
 import '../../../../core/settings/settings_provider.dart';
+import '../../domain/workout_summary.dart';
 import '../providers/program_providers.dart';
 import '../providers/workout_providers.dart';
 import '../widgets/week_attendance_strip.dart';
 import '../widgets/weekly_scoreboard_card.dart';
+import '../widgets/workout_history_tile.dart';
 import '../workout_actions.dart';
 import '../../../coach/data/coach_tip.dart';
 import '../../../coach/presentation/coach_controller.dart';
@@ -163,8 +163,12 @@ class WorkoutHomeScreen extends ConsumerWidget {
                       itemCount: sessions.length,
                       separatorBuilder: (_, __) =>
                           const Divider(height: 1, indent: 16, endIndent: 16),
-                      itemBuilder: (ctx, i) =>
-                          _SessionTile(session: sessions[i]),
+                      itemBuilder: (ctx, i) => WorkoutHistoryTile(
+                        session: sessions[i],
+                        previous: previousOfSamePlan(sessions, sessions[i]),
+                        onTap: () =>
+                            ctx.push('/workout/history/${sessions[i].id}'),
+                      ),
                     ),
                   );
                 },
@@ -745,103 +749,6 @@ class _SessionChip extends StatelessWidget {
           fontWeight: isHighlighted ? FontWeight.bold : FontWeight.normal,
           fontSize: 12,
         ),
-      ),
-    );
-  }
-}
-
-// ── Recent session tile ───────────────────────────────────────────────────────
-
-class _SessionTile extends StatelessWidget {
-  const _SessionTile({required this.session});
-  final WorkoutSessionModel session;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final date = DateTime.tryParse(session.date) ?? DateTime.now();
-    final dateLabel = DateFormat('EEE, d MMM').format(date);
-
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      title: Row(
-        children: [
-          Text(
-            session.displayName,
-            style: const TextStyle(fontWeight: FontWeight.w600),
-          ),
-          if (session.hasPr) ...[
-            const SizedBox(width: 6),
-            const Text('🏆', style: TextStyle(fontSize: 13)),
-          ],
-        ],
-      ),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 2),
-          Text(
-            dateLabel,
-            style: TextStyle(color: cs.onSurface.withAlpha(140), fontSize: 12),
-          ),
-          const SizedBox(height: 4),
-          Wrap(
-            spacing: 6,
-            runSpacing: 2,
-            children: _buildChips(context, session),
-          ),
-        ],
-      ),
-      trailing: Text(
-        '${session.totalSets} sets',
-        style: TextStyle(
-          color: cs.primary,
-          fontWeight: FontWeight.w600,
-          fontSize: 13,
-        ),
-      ),
-    );
-  }
-
-  List<Widget> _buildChips(BuildContext context, WorkoutSessionModel session) {
-    final cs = Theme.of(context).colorScheme;
-    final names = session.exerciseNames;
-    const max = 3;
-    final chips = <Widget>[];
-    for (int i = 0; i < names.length && i < max; i++) {
-      chips.add(_MiniChip(label: names[i]));
-    }
-    if (names.length > max) {
-      chips.add(
-        _MiniChip(
-          label: '+${names.length - max} more',
-          color: cs.surfaceContainerHighest,
-        ),
-      );
-    }
-    return chips;
-  }
-}
-
-class _MiniChip extends StatelessWidget {
-  const _MiniChip({required this.label, this.color});
-  final String label;
-  final Color? color;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: color ?? cs.primaryContainer.withAlpha(100),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(fontSize: 11),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
       ),
     );
   }

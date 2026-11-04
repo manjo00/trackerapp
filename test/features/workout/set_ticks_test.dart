@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:life_tracker/core/database/app_database.dart';
 import 'package:life_tracker/features/workout/data/dao/workout_dao.dart';
+import 'package:life_tracker/features/workout/data/models/workout_session_model.dart';
 import 'package:life_tracker/features/workout/data/models/workout_set_model.dart';
 import 'package:life_tracker/features/workout/data/repositories/workout_repository.dart';
 import 'package:life_tracker/features/workout/presentation/providers/workout_providers.dart';
@@ -75,5 +76,18 @@ void main() {
         .getSingle();
     expect(row.finishedAt?.difference(tapped).inSeconds.abs(),
         lessThanOrEqualTo(1));
+  });
+
+  test('the history carries each tick and the finish time', () async {
+    final int session = sessionId();
+    final int id = await loggedSet('Leg Press');
+    await workout().toggleSetComplete(id);
+    await workout().finish(name: 'Push');
+    final List<WorkoutSessionModel> history =
+        await container.read(workoutRepositoryProvider).watchAllSessions().first;
+    final WorkoutSessionModel push =
+        history.singleWhere((WorkoutSessionModel s) => s.id == session);
+    expect(push.finishedAt, isNotNull);
+    expect(push.sets.single.completedAt, isNotNull);
   });
 }

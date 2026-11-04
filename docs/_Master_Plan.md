@@ -53,8 +53,10 @@ Rebuilt on 2026-10-27 from the git log, the public releases, `docs/superpowers/S
        `docs/superpowers/specs/2026-11-03-workout-log-and-history-design.md`, approved ("Looks right").
        ✅ Demo 1 built 2026-11-03 (ticks saved, the smart order by tick, empty workouts hidden; the upgrade tried on a
        copy of his database). ✅ Demo 1 on his phone since 2026-11-04 17:04 (the Tester's one install; his database
-       checked: schema 26, every table's rows the same). ⬜ Demo 2: the history row and the workout page, 2–3 looks
-       first.
+       checked: schema 26, every table's rows the same). ✅ Demo 2 built 2026-11-04 in look B (his pick from three
+       sketches): each history row has the kilos lifted big and the change since last time, and opens a workout page
+       with every exercise in the order done and its change. Tried on the emulator with a copy of his data. ⬜ Demo 2
+       on his phone.
      - ⬜ **Clean-up, on hold (Ahmed, 2026-11-01; "we are still working on it", 2026-11-03):** the smart order only in developer mode; the Targets system and
        Programs removed; quick starts show his recent saved workouts; My Workouts and their editor stay. No database
        change. Design `docs/superpowers/specs/2026-11-01-gym-cleanup-design.md`, waiting for his yes.

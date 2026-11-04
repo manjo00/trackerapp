@@ -116,3 +116,33 @@ tokens; no helpers. Past twice that, stop and ask.
 - **Next:** his next workout (about 5 Nov) records the first ticks; the one after it is the first smart order that
   learns from them. Then demo 2 (step 5), with 2–3 looks of the history row and workout page first. Demo 2 counts
   logged sets only: 20 empty set rows remain in his workouts that were never finished or discarded.
+- **Demo 2 (step 5), built 2026-11-04, look B** (three looks shown as a sketch with his real Push of 3 Nov: A clean
+  list, B big number, C the order done; Ahmed: "Look B"):
+  - The Workout tab's history row (`lib/features/workout/presentation/widgets/workout_history_tile.dart`, used by
+    `workout_home_screen.dart`, whose old row and chips are gone): the kilos lifted big ("5.7 t", "850 kg" under a
+    tonne), "Push · Tue, 3 Nov", "19 sets · 4 records", and "11% more than last time" (green) or "8% less than last
+    time" (grey). A tap opens `/workout/history/:id`.
+  - The workout page (`lib/features/workout/presentation/screens/workout_session_screen.dart`): "5,713 kg" as the
+    headline, "lifted · Tue, 3 Nov · started 12:49" plus the length once Finish saved it, a "+578 kg vs last Push"
+    chip, the sets and records, then every exercise in the order done (first tick, else opened order), its first
+    tick time, each set as a chip (records with a trophy, warm-ups marked W) and its best set's change since last
+    time ("+2.5 kg", "+2 reps", "+5 kg, 3 fewer reps" in grey, "new").
+  - The rules, pure and tested, in `lib/features/workout/domain/workout_summary.dart`: kilos lifted leave out
+    warm-ups and half-filled sets; records count exercises, not sets; an exercise's best set is the heaviest, then
+    the most reps; the order-done rule moved here from the DAO (the smart order uses the same function). **"Last
+    time" is the most recent workout of the same plan that shares at least 3 in 4 of its exercises** (Claude's call,
+    after the emulator showed "308% more than last time" for 31 Oct against a 4-set half-done workout of 27 Sep).
+  - The models carry `completedAt` and `finishedAt` now.
+  - Not in it: a set's own tick time (the page shows each exercise's first tick, enough for the order).
+  - Checked: 28 new tests (each failed first on an empty stub or the old code, except 3 guards: no comparison
+    for a plan's first workout in the row and on the page, and no length for a workout left open), 416 pass,
+    analyze clean. **Tried on the Flip emulator** (2026-11-04 18:00–18:10) with a fast build of this code and a copy
+    of his 4 Nov database: the Workout tab's rows (5.7 t, 11% more than last time; Pull 1 Oct 6% less, grey) and the
+    pages of 3 Nov (every exercise in the order opened, its changes at the right edge) and 31 Oct (no comparison)
+    look right. The first try showed two faults, both now fixed with a test that failed first: "308% more than last
+    time" on 31 Oct (against a 4-set half-done workout) and change labels floating mid-row. To install this build,
+    the emulator's own Uplan (signed by the Tester's builds, with made-up data) was saved to the scratchpad
+    (`emulator_uplan_before.tar`, 29 files) and replaced. Not on his phone yet.
+- **Noticed, not fixing now:** `workout_list_screen.dart` (another history list with the week's count) is built
+  nowhere in the app, so `sessionsThisWeek` shows nowhere either; the Workout tab is `workout_home_screen.dart`.
+  It could be removed in the gym clean-up.
