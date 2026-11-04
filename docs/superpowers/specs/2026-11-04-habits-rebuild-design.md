@@ -246,7 +246,7 @@ Reminder time (optional) · "Tick when I log a workout" (switch) · Delete in th
   set). About 19:20: his OK ("Yes, plan demo 1"). 19:30: the plan for demo 1,
   `docs/superpowers/plans/2026-11-04-habits-demo-1.md`. 19:30: the Uplan chat OKed schema 27; his OK ("Yes, start
   demo 1").
-- 2026-11-04 19:35–20:40: **demo 1 built and merged** (test-first on `tester/speed`, `51fb715..5ed813e`, merged as
+- 2026-11-04 19:35–20:33: **demo 1 built and merged** (test-first on `tester/speed`, `51fb715..5ed813e`, merged as
   `98eb3d7`, pushed): schema 27 and its migration, the rules, the providers, Look A (row, week strip, sections and
   folds) on the Habits screen, Today and Home, the editor, older backups importing, and two fixes from the final
   self-review (the live notification's ✓ now saves the habit day; the Habits tip says the circle ticks). 479 tests pass,
