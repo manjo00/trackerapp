@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart' show Value;
 import 'package:intl/intl.dart';
 import '../../../../core/database/app_database.dart';
+import '../../domain/habit_types.dart';
 import '../dao/habits_dao.dart';
 import '../models/habit_completion_model.dart';
 import '../models/habit_model.dart';
@@ -66,27 +67,39 @@ class HabitsRepository {
   /// Watches habits with their done/undone status for a specific [date].
   ///
   /// Unlike [watchHabitsWithStatus] (which uses today), this works for any
-  /// past, present, or future date — useful for the planner tab.
-  ///
-  /// Driven by [watchAllCompletions] so it re-emits whenever any completion
-  /// row changes, regardless of which habit or date was toggled.
+  /// past, present, or future date — useful for the planner tab. One query
+  /// (habits LEFT JOIN that day's ticks), re-emitting when either changes.
   Stream<List<HabitWithStatus>> watchHabitsForDate(String date) {
-    return _dao.watchAllCompletions().asyncMap((_) async {
-      final List<Habit> rawHabits = await _dao.getAllHabits();
-      final List<HabitWithStatus> result = [];
+    return _dao.watchHabitsDoneOn(date).map((rows) => [
+          for (final row in rows)
+            HabitWithStatus(
+              habit: _habitFromRow(row.habit),
+              isDoneToday: row.done, // means "isDoneOnDate" in the planner
+              streak: 0, // streak not shown in planner view
+            ),
+        ]);
+  }
 
-      for (final Habit raw in rawHabits) {
-        final bool isDone = await _dao.isCompletedOn(raw.id, date);
-        result.add(
-          HabitWithStatus(
-            habit: _habitFromRow(raw),
-            isDoneToday: isDone, // means "isDoneOnDate" in planner context
-            streak: 0,           // streak not shown in planner view
-          ),
-        );
+  /// The habits in use (not archived or deleted), in their list order.
+  Stream<List<HabitModel>> watchActiveHabits() => _dao
+      .watchActiveHabits()
+      .map((rows) => rows.map(_habitFromRow).toList());
+
+  /// Every habit's saved days from [fromDay] on, plus the Away ranges.
+  Stream<HabitHistories> watchHistorySince(String fromDay) {
+    return _dao.watchHistoryRowsSince(fromDay).map((rows) {
+      final Map<int, Map<String, HabitEntry>> byHabit = {};
+      final List<PauseRange> pauses = [];
+      for (final row in rows) {
+        final int? habitId = row.habitId;
+        if (habitId == null) {
+          pauses.add(PauseRange(row.date, row.endDate ?? row.date));
+        } else {
+          (byHabit[habitId] ??= {})[row.date] =
+              HabitEntry(row.value ?? 1, EntryStatus.fromDb(row.status));
+        }
       }
-
-      return result;
+      return HabitHistories(entriesByHabit: byHabit, pauses: pauses);
     });
   }
 
@@ -110,25 +123,45 @@ class HabitsRepository {
     );
   }
 
-  /// Toggles a habit's completion for [date] (defaults to today).
-  ///   - If not completed → inserts a completion row.
-  ///   - If already completed → deletes the completion row.
-  ///
-  /// Passing an explicit [date] lets the planner toggle past or future dates.
-  Future<void> toggleCompletion(int habitId, {String? date}) async {
-    final String targetDate = date ?? _dateStr(DateTime.now());
-    final bool alreadyDone = await _dao.isCompletedOn(habitId, targetDate);
+  /// Ticks [day] (a habit day, 'yyyy-MM-dd') or unticks it, in one
+  /// transaction.
+  Future<void> toggleTick(int habitId, String day) =>
+      _dao.toggleTick(habitId, day);
 
-    if (alreadyDone) {
-      await _dao.deleteCompletion(habitId, targetDate);
-    } else {
-      await _dao.insertCompletion(
-        HabitCompletionsCompanion(
-          habitId: Value(habitId),
-          date: Value(targetDate),
-        ),
-      );
+  /// Saves a count habit's amount for [day]; 0 or less removes the day.
+  Future<void> setValue(int habitId, String day, int value) =>
+      _dao.setValue(habitId, day, value);
+
+  /// Inserts [habit] when its id is 0 (returns the new id), else updates
+  /// every field. The old target column mirrors "N a week" (7 otherwise).
+  Future<int> saveHabit(HabitModel habit) async {
+    final HabitsCompanion fields = HabitsCompanion(
+      name: Value(habit.name.trim()),
+      targetPerWeek: Value(habit.perWeek ?? 7),
+      reminderEnabled: Value(habit.reminderEnabled),
+      reminderTime: Value(habit.reminderTime),
+      kind: Value(habit.kind.db),
+      goal: Value(habit.goal),
+      unit: Value(habit.unit),
+      step: Value(habit.step),
+      icon: Value(habit.icon),
+      color: Value(habit.color),
+      schedule: Value(habit.schedule.db),
+      weekdayMask: Value(habit.weekdayMask),
+      perWeek: Value(habit.perWeek),
+      shiftMask: Value(habit.shiftMask),
+      sparesPerWeek: Value(habit.sparesPerWeek),
+      section: Value(habit.section.db),
+      cue: Value(habit.cue),
+      sortOrder: Value(habit.sortOrder),
+      autoSource: Value(habit.autoSource),
+    );
+    if (habit.id == 0) {
+      return _dao.insertHabit(
+          fields.copyWith(createdAt: Value(habit.createdAt)));
     }
+    await _dao.updateHabit(fields.copyWith(id: Value(habit.id)));
+    return habit.id;
   }
 
   /// Updates a habit's name, target-per-week, and reminder settings.
@@ -203,6 +236,21 @@ class HabitsRepository {
         targetPerWeek: row.targetPerWeek,
         reminderEnabled: row.reminderEnabled,
         reminderTime: row.reminderTime,
+        kind: HabitKind.fromDb(row.kind),
+        goal: row.goal,
+        unit: row.unit,
+        step: row.step,
+        icon: row.icon,
+        color: row.color,
+        schedule: HabitSchedule.fromDb(row.schedule),
+        weekdayMask: row.weekdayMask,
+        perWeek: row.perWeek,
+        shiftMask: row.shiftMask,
+        sparesPerWeek: row.sparesPerWeek,
+        section: HabitSection.fromDb(row.section),
+        cue: row.cue,
+        sortOrder: row.sortOrder,
+        autoSource: row.autoSource,
       );
 
   HabitCompletionModel _completionFromRow(HabitCompletion row) =>

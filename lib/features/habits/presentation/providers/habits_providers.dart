@@ -1,3 +1,4 @@
+import 'package:intl/intl.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../../core/database/database_provider.dart';
 import '../../data/dao/habits_dao.dart';
@@ -114,9 +115,8 @@ class ToggleCompletion extends _$ToggleCompletion {
   Future<void> toggle(int habitId, {String? date}) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(
-      () => ref
-          .read(habitsRepositoryProvider)
-          .toggleCompletion(habitId, date: date),
+      () => ref.read(habitsRepositoryProvider).toggleTick(
+          habitId, date ?? DateFormat('yyyy-MM-dd').format(DateTime.now())),
     );
     // No manual invalidation needed: watchHabitsWithStatus() is now backed by
     // a JOIN across habits + habit_completions, so Drift re-emits the stream
