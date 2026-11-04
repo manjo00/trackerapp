@@ -106,9 +106,10 @@ Rebuilt on 2026-10-27 from the git log, the public releases, `docs/superpowers/S
 - ✅ G2 de-clinicalised text, G4 Play-safe alarms, G5 live cards stay current (2026-08-28 → 09-30)
 
 ## Open now ⬜
-- ⬜ **Habits rebuild** (Ahmed, 2026-11-04: "rebuild the habit tracker"): research and three looks done, draft design
-  `docs/superpowers/specs/2026-11-04-habits-rebuild-design.md`, looks page
-  https://claude.ai/artifact/GAkkbPjK3PCQmd6S8hLNid. Waiting for his pick of look (A, the day list, recommended).
+- ⬜ **Habits rebuild** (Ahmed, 2026-11-04: "rebuild the habit tracker"): research and three looks done
+  (https://claude.ai/artifact/GAkkbPjK3PCQmd6S8hLNid); he picked **Look A, the day list**. The design
+  `docs/superpowers/specs/2026-11-04-habits-rebuild-design.md` is written and waits for his OK; then a plan and four
+  demos (demo 1: the engine, the Look A screen and the editor).
 - ⬜ Release v1.16 to v1.18 (see "We are here")
 - ⬜ G4 owed: the inexact-alarm timing on the Z Flip 6
 - ⬜ G6: remove or reword the stale "Coming in Phase 2" drawer tiles (NOTES-ROADMAP, G6)

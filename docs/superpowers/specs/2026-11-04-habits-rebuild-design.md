@@ -1,62 +1,224 @@
-# Habits rebuild: research, the engine and three looks (DRAFT)
+# Habits rebuild: design (Look A)
 
-**Date:** 2026-11-04 · **Status:** draft, **not approved**. Ahmed's request (2026-11-04, through the Uplan chat): "i
-want to rebuild the habit tracker research and come back to me with good design". Research done, three looks shown on
-a private page: https://claude.ai/artifact/GAkkbPjK3PCQmd6S8hLNid. **Waiting for his pick of look (A recommended).** No
-code written. · **Chat:** a side session started by the Uplan chat · **Path:** the full one (it changes the database):
-his pick → this design rewritten as the approved spec → a plan → demos.
+**Date:** 2026-11-04 · **Status:** written for Ahmed's OK. He asked "i want to rebuild the habit tracker research and
+come back to me with good design" and picked **Look A, the day list** ("Look A", 2026-11-04) from the looks page
+https://claude.ai/artifact/GAkkbPjK3PCQmd6S8hLNid. No code yet. · **Chat:** Tester · **Path:** the full one, because
+it changes the database (schema 26 → 27): this design → his OK → a plan in `docs/superpowers/plans/` → demos.
+**Shared with the Uplan chat** (install rule, 2026-11-04, `docs/_Decisions_Log.md`): the schema bump and every shared
+file below are announced to it first; the code is built on `tester/speed` in `D:\projects\trackerapp-tester` and
+merged into master only after telling it.
 
-## 1. What I found
+## 1. Goal
+A habit tracker Ahmed actually uses: he adds his own habits, ticks them in one tap from Home or the Habits screen, a
+missed day never wipes out his progress, night shifts count properly, and it stays instant as months pass.
+**Not in this rebuild (parked):** habits to avoid ("no sugar"), a home-screen widget with tick buttons, folding
+Trackers into habits, Health Connect auto-ticks (steps, sleep), sharing.
 
-### His real use (read only, from a scratchpad copy of `D:\backups\uplan\2026-11-04-history\after\life_tracker.db`, schema 26)
-- **Habits were never really used.** `sqlite_sequence` says one habit ever: "H", created and archived 2026-08-25
-  20:34, never ticked. `habit_completions` and `custom_trackers` have never held a row. So this rebuild is about
-  making habits worth opening, not fixing a routine he has. The migration still has to handle real rows correctly.
-- **Gym:** 30 workout days with at least one logged set since 2026-06-29 (35 with any workout), about 1.6 a week.
-- **Shifts:** 72 between 2026-06-02 and 2026-10-24: 41 day (07:00–19:00), 31 night (19:00–07:00), in months of day
-  shifts (July, August) then nights (September, October). Nothing entered after 24 Oct.
-- **Gym against shifts:** of the 28 workout days inside the schedule's range, 18 fell on days off, 6 on day shifts,
+## 2. What we know
+### His real use (read only, from a scratchpad copy of `D:\backups\uplan\2026-11-04-history\after\life_tracker.db`)
+- **Habits were never really used:** one habit ever ("H", created and archived 2026-08-25 20:34, never ticked);
+  `habit_completions` and `custom_trackers` have never held a row. Nothing of his to migrate except that one row.
+- **Gym:** 29 workout days since 2026-06-29, counted the way the workout log counts them (a session with at least one
+  set whose weight or reps is filled in; `workout_repository.dart`). Weeks start on Sunday in these numbers.
+- **Shifts:** 72 between 2026-06-02 and 2026-10-24, 41 day (07:00–19:00) and 31 night (19:00–07:00), in day months
+  (July, August) and night months (September, October). Nothing entered after 24 Oct, so the app reads every later
+  day as a day off.
+- **Gym against shifts:** of the 27 workout days inside the schedule's range, 18 fell on days off, 5 on day shifts,
   4 on night-shift days. During the night block (4–24 Oct) three weeks had no workout.
+- **His Home** has no Habits block (pinned note, due today, urgent, this week, workout, notes, shift, a list, a label).
 
-### The current code (`lib/features/habits`, about 1,300 lines)
-1. `HabitsRepository.calculateStreak` walks back from today and stops at the first gap, so **a streak is 0 until
-   today is ticked**: every morning all streaks disappear (`StreakBadge` hides a 0).
-2. `Habits.targetPerWeek` (1–7) is saved and edited but **used by nothing** (not the streak, not the screens).
-3. One miss resets the streak to 0.
-4. The date is `yyyy-MM-dd` of `DateTime.now()`, so **the day flips at midnight**, wrong for night shifts.
-5. Every habit shows every day; no history page or stats; edit only by long-press (`habit_tile.dart`); done names
-   are struck through and dimmed (`habit_tile.dart:83-87`, round table looks finding 9).
-6. `watchHabitsWithCompletions` joins every completion ever; `watchHabitsForDate` watches the whole completions
-   table then asks once per habit; no unique key on `(habit_id, date)` and the toggle is read-then-write (round
-   table code findings 6 and 9).
-- **Places that show habits** (all need the new rules): Today (`today_screen.dart`), the Home block
-  (`habits_block.dart`), Planner (`planner_providers.dart`, `day_column.dart`, `day_detail_view.dart`), the widget's
-  count (`home_widget_service.dart`), the live dashboard (`live_dashboard_service.dart`, `LiveCards.kt`), reminders
-  (`notification_service.dart`), archive (`archive_service.dart`), backup (`backup_service.dart`), coach and Codex
-  texts.
+### The current code (`lib/features/habits`, about 1,300 lines) and its flaws
+1. `HabitsRepository.calculateStreak` stops at the first day without a tick, starting from today, so a streak is 0
+   until today is ticked.
+2. `Habits.targetPerWeek` is saved and edited but used by nothing.
+3. One miss resets the streak.
+4. The day is `DateTime.now()`'s calendar date, so it flips at midnight.
+5. Every habit shows every day; no history page, no stats; edit only by long-press; done names struck through.
+6. Every tick re-reads every completion ever (`watchHabitsWithCompletions`, `watchHabitsForDate` with one query per
+   habit); no unique key on `(habit_id, date)` and the toggle is read-then-write.
 
-## 2. Research (checked 2026-11-04)
-1. **Lally et al. 2010** (96 people, 82 finished, one daily behaviour for 84 days): automaticity took 18 to 254 days,
-   about 66 typical; **one missed day had little effect, many misses lowered the plateau**. → Show the trend; never
-   punish one miss.
-2. **The "what-the-hell" effect:** after a slip people drop the goal, and apps that point at a broken streak lose
-   more people (Sharif via BBC/Penn CHIBE; Olson Zaltman's summary).
-3. **Emergency reserves** (Sharif and Shu, OBHDP 2021; JMR 2017): a goal with a couple of costed skips (gym 7 days
-   with 2 emergency skips) kept people going after a slip better than an easier goal (5 days). A small Utrecht
-   replication (11 people in the reserve group) did not confirm it. Mobbin (a secondary source) reports Duolingo got
-   about 200,000 more daily returners by letting people hold two streak freezes.
-4. **Implementation intentions** ("when X, I will Y"): d = 0.65 over 94 tests (Gollwitzer and Sheeran 2006); a 2024
-   meta-analysis of 642 tests says the effect depends on the plan's format and the person's motivation.
-5. **Day boundary:** few apps let the day end after midnight (one allows up to 06:00); Habitify and Day One users
-   keep asking for it; a night-shift guide suggests counting from waking to sleep. Uplan has his shift data, so it
-   can do better.
-6. **Loop Habit Tracker's strength** (GPLv3: we write our own, never copy): `score = prev × m + checkmark × (1 − m)`,
-   `m = 0.5^(√f / 13)`, f = repetitions per day (daily: m ≈ 0.948, a half-life of 13 days). Read from
-   `uhabits-core/.../models/Score.kt` on its `master` branch.
-7. **Landscape:** Loop (Android, clean, strength score), HabitKit (history grids), Streaks (round tiles, iOS),
-   Habitify (time-of-day sections, analytics). Each look borrows one idea.
+### Research (sources in section 11)
+1. Lally 2010: habits took 18–254 days to become automatic (about 66 typical); one missed day had little effect,
+   many misses lowered the plateau.
+2. The "what-the-hell" effect: after a slip people drop the goal; pointing at a broken streak loses more people.
+3. Emergency reserves (Sharif and Shu 2021): a goal with a couple of spare days kept people going after a slip
+   better than an easier goal (one small replication did not confirm it).
+4. "When X, I will Y" plans: d = 0.65 over 94 tests (Gollwitzer and Sheeran 2006).
+5. Few apps let the day end after midnight, and users ask for it; night-shift guides say count from waking to sleep.
+6. Loop's strength score is a moving average (`score = prev × m + checkmark × (1 − m)`); Loop is GPLv3, so we write
+   our own rule (section 4.5) and copy no code.
 
-Sources: [Lally summary](https://bps.org.uk/research-digest/how-form-habit) ·
+## 3. Decisions
+| Decision | Who |
+|---|---|
+| Look A, the day list, for the Habits screen; the same rows on Today and Home | Ahmed, 2026-11-04 |
+| Tapping a row opens the habit's page; the round button ticks; long-press edits; swipe left archives with Undo | Claude's call (round table finding 6: the same tap-for-details as tasks) |
+| The habit day starts at 04:00; after a night shift it starts 3 h after the shift ends. Both in Settings | Claude's call |
+| Spare days: new every-day habits get 1 a week, other kinds 0; he can pick 0, 1 or 2 | Claude's call (research point 3) |
+| Gym ticks itself on any day with a logged workout, by the workout log's own rule, history included | Claude's call |
+| Weeks follow the app's week-start setting (Sunday or Monday); the numbers in this file use Sunday weeks | Claude's call |
+| Existing data: "H" stays archived; `targetPerWeek` 7 → every day, 1–6 → "N a week" | Claude's call |
+| A habit's past days are judged by its current schedule (no schedule history) | Claude's call (simpler; a change of schedule re-scores the past) |
+| The Habits block is offered for Home once, when his first habit is saved; never added silently | Claude's call |
+
+## 4. The rules (pure Dart, `lib/features/habits/domain/`, written test-first)
+### 4.1 The habit day (`habit_day.dart`)
+- A moment belongs to the calendar date of (moment − day start). Day start defaults to 04:00, so 02:30 on Thursday
+  counts for Wednesday.
+- **Night shifts** (switch, on by default): for a shift whose end time is not after its start time (it crosses
+  midnight), every moment on the next calendar day before *end time + 3 h* belongs to the shift's date, when that is
+  later than the day start. A night 19:00 → 07:00 on Thursday keeps "Thursday" until Friday 10:00.
+- No shift entered = a normal day.
+
+### 4.2 When a habit is due (`schedule.dart`)
+- **Every day** · **Chosen days** (a weekday mask) · **N a week** (1–6; due every day of the week until the week's
+  count reaches N, then "done for the week") · **By shift** (any of: day off, day shift, night shift; read from
+  `work_shifts` for the habit day; no entry = day off).
+- A day before the habit was created, or not due, never counts.
+
+### 4.3 What each day is
+For a due day: **kept** (ticked, or a count that reached its goal, or a logged workout for a Gym-linked habit),
+**partial** (a count above 0 but under its goal), **missed**, **rest** or **sick** (a planned break for one habit),
+**away** (inside an Away range, all habits), **pending** (today, not kept yet). A tick on an away, rest or sick day
+still counts as kept.
+
+### 4.4 Streak (`habit_stats.dart`)
+- Day-based habits: walk back from today over due days. Kept: +1. Pending today, rest, sick, away, not due: skip
+  (neither counts nor breaks). Partial or missed: use a spare day if that week still has one left (the day doesn't
+  count, the streak goes on); otherwise stop.
+- N-a-week habits: the same walk over weeks; a week counts once its N is reached; the current week counts only once
+  reached and never breaks the streak while it's running; a week entirely away is skipped.
+- Shown as "🔥 6 days" or "🔥 3 weeks"; hidden when 0 (no "streak lost" anywhere).
+
+### 4.5 Strength (`habit_stats.dart`)
+- 0 % on the habit's first day, then for each finished due day: `s += (v − s) / 20`, v = 1 kept, 0 missed,
+  `min(1, amount / goal)` for a count. Rest, sick, away and not-due days change nothing; a spare-covered miss still
+  lowers it. N-a-week habits move once per finished week: `s += (v − s) / 6`, `v = min(1, count / N)`.
+- Shown as a whole percent. Check against his log as a Gym habit at 2 a week: 76 % at the peak (the week of 27 Sep),
+  45 % now (section 9's fixture).
+
+### 4.6 Page numbers
+This week (`1 of 2`), days or weeks kept (`9 of 18 weeks`), best run (`4 weeks, 6 Sep – 3 Oct`), streak, and a count
+of kept days by shift kind.
+
+## 5. Look A: the screens
+### 5.1 The Habits screen (`/habits`)
+- **Top:** "Habits" and a menu (Away…, Archived habits, Habit settings). Under it the date, a chip for the day's
+  shift (Day off, Day shift 07:00–19:00, Night shift 19:00–07:00) and "2 of 6 done".
+- **Week strip:** the 7 days of the current week; each a ring (share of that day's due habits kept), the date
+  inside, a sun or moon for a day or night shift. Tapping a day shows that day's list: past days of this week can be
+  fixed (tick, untick, rest, sick); future days are read-only. Today is highlighted.
+- **Sections**, in this order, each shown only while something in it is left: **Wake-up**, **Any time**, **Daytime**,
+  **Before sleep**. A habit sits in the section picked in its editor (Any time by default).
+- **Row:** the habit's icon in its colour, the name, and one line made of the cue ("After dinner"), the streak
+  ("🔥 6 days") and, for habits with spare days, "1 spare left"; for N-a-week habits "1 of 2 this week"; for a
+  Gym-linked habit a small bolt on the icon. On the right a round tick button (44 dp). A count habit shows
+  "5 of 8 glasses", a + button (long-press it to type an amount) and a thin progress line along the row's bottom.
+- **Done today:** a kept row shows its tick, then after about 0.4 s folds into a collapsed "Done today · 2" line at
+  the bottom; opening it shows the done rows (no strike-through), where a tap on the tick unticks.
+- **Not due today · n:** a collapsed line under it for habits not due ("Days off only", "Done for the week").
+- **Away banner:** "Away until Fri 8 Nov · End now" while an Away range covers today.
+- **Empty state:** "Add your first habit" with starter chips (Water ×8, Stretch 5 min, Read 20 min, Walk 20 min, Gym
+  from workouts); a chip fills the editor.
+- **+ button** opens the editor.
+
+### 5.2 A habit's page (`/habits/:id`)
+As on the looks page: strength % big, chips (its schedule, "Ticks itself from workouts"), a strength line by week
+(up to 26 weeks), four tiles (This week, kept, best run, streak), a grid of its days since it started (up to 26
+weeks; shift days dotted), "When you do it" by shift kind (only when shift data exists), and Edit and Archive.
+Tapping a past day in the grid opens a small sheet: Done, Rest, Sick, Clear. The menu adds Delete.
+
+### 5.3 The editor (`/habits/add`, `/habits/edit`)
+Name · icon and colour (about 24 icons, 8 colours) · kind: Tick or Count (goal, unit, step) · When: Every day, Chosen
+days, N a week, By shift · Spare days 0/1/2 (hidden for N a week) · Part of day · Cue ("After I …", optional) ·
+Reminder time (optional) · "Tick when I log a workout" (switch) · Delete in the menu when editing.
+
+### 5.4 Breaks and settings
+- The habit page menu: "Rest today", "Sick today". The Habits screen menu: "Away…" (a date range for all habits).
+- **Settings › Habits:** "New day starts at" (04:00), "After a night shift, the day starts 3 h after it ends" (on),
+  "Quiet during shifts" (on).
+
+## 6. Other places that show habits
+- **Today:** the habits section uses the Look A row and folds, due-today habits only.
+- **Home:** the Habits block shows due-today rows not yet done plus "2 done". When his first habit is saved and Home
+  has no Habits block, a one-time prompt offers "Show today's habits on Home?" (Add · Not now).
+- **Planner:** each day lists the habits due that day with their state; the day dots count due habits only.
+- **Widget:** "habits left" counts due-today habits not yet kept, by the habit day.
+- **Live dashboard:** only due-today habits not yet kept; a tick from the notification uses the same rules.
+- **Reminders:** one per habit, booked as single alarms for its next 7 due days (not a daily repeat), skipping times
+  inside a shift when "Quiet during shifts" is on, re-booked at app start, after any habit, tick or shift change, and
+  by the existing midnight refresh. New notification ids `1000000 + habitId × 8 + k` (k 0–6), clear of the task
+  ranges (10000+, 40000+); the old daily id (= habit id) is cancelled once.
+- **Archive and Recently deleted:** unchanged; history is kept on restore.
+- **Backup:** exports the new columns and table; importing an older backup fills defaults for any missing habit key
+  before reading it (the same kind of gap as the v1.18 old-backup bug under "Noticed" in `docs/_Current_Task.md`).
+- **Coach tips and Codex:** habit texts updated to the new rules.
+
+## 7. Data (schema 27)
+- **`habits`** gains: `kind` ('tick' | 'count', default 'tick'), `goal` (int, 1), `unit` (text, null), `step`
+  (int, 1), `icon` (text, a Material icon name), `color` (int), `schedule` ('daily' | 'weekdays' | 'per_week' |
+  'shifts', default 'daily'), `weekday_mask` (int, 127), `per_week` (int, null), `shift_mask` (int: off 1, day 2,
+  night 4; default 7), `spares_per_week` (int, 0; the editor proposes 1 for a new every-day habit), `section` ('wake' | 'any' | 'day' | 'sleep', default 'any'), `cue`
+  (text, null), `sort_order` (int, 0), `auto_source` ('workout' or null). `target_per_week` stays (unused) so no table
+  rebuild is needed.
+- **`habit_completions`** gains: `value` (int, 1), `status` ('done' | 'rest' | 'sick', default 'done'), `note`
+  (text, null), `created_at` (date-time, null). Migration deletes duplicate `(habit_id, date)` rows (keeping the
+  lowest id), then adds a unique index on `(habit_id, date)`.
+- **`habit_pauses`** (new): `id`, `start_date`, `end_date` (inclusive, 'yyyy-MM-dd'), `created_at`.
+- Gym ticks are not stored: a Gym-linked habit's day is kept when a manual tick exists or a logged workout has that
+  date, so deleting a workout removes its tick.
+- **Settings** (SharedPreferences): `habit_day_start_minutes` (240), `habit_night_shift_rule` (true),
+  `habit_quiet_during_shifts` (true).
+- **Queries:** one query per screen for the habits and their completions of the last 400 days; the workout days come
+  from a read-only query in the habits DAO (`customSelect`, reading `workout_sessions` and `workout_sets`), so the
+  workout files are not touched.
+
+## 8. Files
+- **Habits (this chat's files):** `domain/` (new: `habit_day.dart`, `schedule.dart`, `habit_stats.dart`,
+  `day_state.dart`); `data/tables/` (both tables changed, `habit_pauses_table.dart` new); `data/dao/habits_dao.dart`
+  (rewritten queries); `data/repositories/habits_repository.dart`; `data/models/` (extended); `presentation/`:
+  `habit_list_screen.dart` (Look A), `habit_page_screen.dart` (new), `habit_editor_screen.dart` (replaces
+  `add_habit_screen.dart`), widgets (`habit_row.dart`, `habits_week_strip.dart`, `habit_section.dart`,
+  `habits_fold.dart`, `habit_grid.dart`, `strength_chart.dart`, `icon_colour_picker.dart`, `starter_chips.dart`),
+  providers.
+- **Shared, announced to the Uplan chat before each edit:** `lib/core/database/app_database.dart` (schema 27 and its
+  migration), `lib/core/router/app_router.dart` (`/habits/:id`), `lib/core/settings/` (three settings) and the
+  settings screen, `lib/core/notifications/notification_service.dart`, `lib/core/widget/home_widget_service.dart`,
+  `lib/core/notifications/live_dashboard_service.dart`, `lib/core/backup/backup_service.dart`,
+  `lib/features/archive/domain/archive_service.dart`, `lib/features/today/presentation/screens/today_screen.dart`,
+  `lib/features/home/presentation/widgets/habits_block.dart`, the planner's habit providers and day views, the coach
+  and Codex texts. **Not touched:** anything under `lib/features/workout/`.
+
+## 9. Testing
+- **Rules, test-first:** the habit day (04:00; a night shift until 10:00; two nights in a row; no shift data; the
+  switch off); due days for each schedule (by shift with and without entries; N a week before and after reaching N);
+  streak (today pending; a spare used and none left; rest, sick, away and not-due gaps; weeks); strength (the formula,
+  a partial count, a spare-covered miss lowers it, breaks don't); and a **fixture built from his weekly workout
+  counts** (5, 1, 2, 1, 0, 2, 4, 1, 2, 0, 3, 2, 2, 2, 0, 0, 0, 1 for the 18 finished Sunday weeks from 28 Jun) placed
+  on made-up days, because the repo is public and his exact gym dates stay out of it: as a Gym habit at 2 a week,
+  9 of 18 weeks kept, best run 4 weeks ending the week of 27 Sep, strength 76 % at the peak and 45 % now.
+- **Database:** 26 → 27 on a copy of his database (the `tool/migrate_copy_test.dart` way): every table keeps its
+  rows, "H" survives archived, a planted duplicate tick is removed, the unique index exists; an old backup without the
+  new keys imports.
+- **Screens (widget tests):** a tick folds the row into "Done today"; + reaches the goal; an empty section hides; a
+  row tap opens the page; a habit not due today sits under "Not due today".
+- **For real:** the fast build on the emulator with a copy of his data plus demo habits; then his phone under the
+  install rule, his data copied off first.
+
+## 10. Demos (estimate only the next one)
+1. **Demo 1, tick and see:** schema 27 and its migration, the rules (the 04:00 day, every day, chosen days, N a week,
+   spares, streak, strength), the Look A Habits screen (week strip, sections, rows with counts, both folds), the
+   editor (all fields except by-shift and the Gym link), Today and Home rows, backup defaults. Reminders keep
+   today's daily alarm until demo 3. **Guess: 2.5–3.5 h of
+   my work plus about 15 min of builds and tests; about 0.8–1.3 M tokens; no helpers.**
+2. **Demo 2, the page and the breaks:** the habit page, fixing past days, Rest, Sick, Away, starter chips, the Home
+   offer.
+3. **Demo 3, shifts and the gym:** due by shift, the night-shift day, quiet and due-day reminders, Gym ticking itself
+   with its history.
+4. **Demo 4, the rest of the app:** Planner, widget, live dashboard, coach and Codex texts.
+
+## 11. Sources (checked 2026-11-04)
+[Lally summary](https://bps.org.uk/research-digest/how-form-habit) ·
 [Sharif, BBC via CHIBE](https://chibe.upenn.edu/news/bbc-how-emergency-reserves-can-help-you-stick-to-your-goals/) ·
 [Olson Zaltman](https://www.olsonzaltman.com/zfiles/freaky-streaks) ·
 [Sharif and Shu 2021](https://anderson-review.ucla.edu/wp-content/uploads/2021/03/Sharif-Shu_EmergencyReserveFailure_OBHDP2019.pdf) ·
@@ -69,80 +231,16 @@ Sources: [Lally summary](https://bps.org.uk/research-digest/how-form-habit) ·
 [Loop source](https://github.com/iSoron/uhabits) ·
 [2026 app roundup](https://2sync.com/blog/best-habit-tracker-apps)
 
-## 3. The engine (the same under every look; proposed)
-1. **Kinds:** Tick, or Count with a daily goal and unit (8 glasses: tap adds one, long-press types a number).
-2. **When it's due:** every day · chosen weekdays · N times a week · by shift (any of days off, day shifts, night
-   shifts, read from `work_shifts`). A day it isn't due never counts as a miss, and it stays off Today and Home.
-3. **The habit day:** starts at 04:00 (a setting), not midnight; after a night shift it starts 3 hours after the
-   shift ends (07:00 → 10:00), so a 03:00 tick counts for the night's date.
-4. **Spare days:** 0, 1 or 2 per week for day-based habits; a missed due day uses one automatically and the streak
-   continues. N-a-week habits need none.
-5. **Streak:** due days kept in a row (weeks for N-a-week habits). Today not done yet never breaks it.
-6. **Strength (0–100 %),** our own moving average: per due day `s += (v − s) / 20` (v = 1 kept, 0 missed, for a
-   count `min(1, amount / goal)`); per week for N-a-week habits `s += (v − s) / 6` with `v = min(1, count / N)`.
-   A spare-covered miss still lowers strength; a planned break changes nothing. With his gym log at 2 a week: 77 % at
-   the peak (week of 27 Sep), 45 % now; kept 10 of 18 finished weeks; best run 4 weeks (6 Sep – 3 Oct).
-7. **Breaks:** Rest and Sick (a day, one habit or all) and Away (pause everything for a date range).
-8. **Cue:** optional "After I …" text, shown under the name.
-9. **Auto-tick:** a Gym habit linked to workouts: any day with a workout that has a logged set is ticked, history
-   included.
-10. **Reminders:** per habit, only on due days; "Quiet during shifts" (no habit reminder inside a shift's hours).
-11. **No shame:** misses are grey, never red; no "streak lost" message; done habits fold away, no strike-through.
-12. **Speed:** one windowed query per screen (about the last 400 days), a unique index on `(habit_id, date)`, a toggle
-    as insert-or-delete in one transaction.
-
-## 4. The looks (mockups on the page)
-- **A. Day list (recommended):** sections by part of the day (Wake-up, Any time, Daytime, Before sleep, each shown
-  only when something is left); a row = icon, name, a line with the cue, streak, "1 spare left" or "1 of 2 this week",
-  and a round tick; count rows get a + and a thin progress bar; done rows fold under "Done today"; a week strip of
-  day rings with shift icons on top. Fits the Home block and Today as it is.
-- **B. Cards with history:** one card per habit with a 12-week grid, strength %, streak and a tick. About three
-  per screen; Home would need a smaller version.
-- **C. Ring tiles:** a 3-column grid of rings with the icon inside, today's big ring and a week of small rings on top.
-  Short names only, no room for cues or spares.
-- **In every look, each habit gets a page** (like the workout page): strength % big, chips (schedule, auto), a
-  strength line by week, This week / Weeks kept / Best run / Streak, a grid since the start with shift dots, "When you
-  train" by shift, Edit and Archive.
-
-## 5. Data sketch (to firm up after his pick)
-- Schema 27. `habits` gains: kind, goal, unit, icon, colour, schedule type, weekday mask, times per week, shift kinds,
-  spares per week, cue, section, sort order, auto source. Migration: `targetPerWeek` 7 → every day, below 7 → "N a
-  week".
-- `habit_completions` gains: value (1 for a tick, the amount for a count), status (done, rest, sick), note, created
-  at; a unique index on `(habit_id, date)` (remove duplicates first). Away ranges: a small new table.
-- Settings: day start (04:00), the night-shift day rule (on), quiet during shifts (on).
-- The rules as pure Dart in `lib/features/habits/domain/` (due days, the habit day of a moment, streak with spares
-  and breaks, strength), test-first.
-- Backup: export and import the new columns, and keep importing older backups that lack them (see the v1.18
-  old-backup restore bug under "Noticed" in `docs/_Current_Task.md`).
-
-## 6. Build order (guesses, to re-estimate after his pick)
-0. This design rewritten for his OK: 20–30 min.
-1. Demo 1, the engine and his look: schedules (every day, chosen days, N a week), spares, streak and strength, the
-   04:00 day, Rest, Sick and Away, the new Habits screen, the habit page, the add sheet; Today and Home use the new
-   rows. 2–3 h of work plus about 10 min of builds and tests.
-2. Demo 2, shifts and the gym: due by shift, the night-shift day, quiet during shifts, Gym ticking itself. 1–2 h.
-3. Demo 3, the rest of the app: Planner, the live notification, the widget count. 1–1.5 h.
-Each demo: tried on the emulator with a copy of his data; on the phone only after his data is copied off.
-**Parked:** habits to avoid ("no sugar"), a widget with tick buttons, folding Trackers into habits, Health Connect
-auto-ticks (steps, sleep).
-
-## 7. Assumed, to confirm with Ahmed
-- He wants habits he'll tick daily, mostly from Home or Today.
-- His day and night shifts should decide when habits are due.
-- The same standard as the workout history: clean, fast, a page per habit.
-- His gym log may feed a Gym habit.
-- The five example habits on the page (Stretch, Water, Walk, Read, Phone away) are made up; he picks his own.
-
 ## Noticed (not fixing now)
 - Trackers have never held a row either; the round table's "merge checklist trackers into habits" could become
   "retire Trackers". His call, later.
-- Habits isn't one of the default bottom tabs (Home, Lists, Planner). For daily use it may want a tab or the Home
-  block by default; a question for demo 1.
-- His work schedule has nothing after 24 Oct, so shift-aware habits need it filled ahead (the parked "rota photo to
-  shifts" idea would help).
+- Habits isn't one of the default bottom tabs (Home, Lists, Planner); the Home offer (5.1, 6) covers daily use.
+- His work schedule has nothing after 24 Oct, so by-shift habits read every later day as a day off until it's filled
+  in (the parked "rota photo to shifts" idea would help).
 
 ## Status
-- 2026-11-04 19:05: research done, the page published (private), this draft written; asked him which look
-  (A recommended). **Next:** his answer, then this file becomes the approved spec, then a plan
-  (`docs/superpowers/plans/`), then demo 1.
+- 2026-11-04 19:05: research and three looks; draft. About 19:10: he picked Look A; by 19:15 this design was
+  written for his OK.
+  Correction: the draft and the looks page said 30 gym days, 10 of 18 weeks, a 77 % peak and 6 day-shift workouts;
+  by the workout log's own rule (weight or reps filled in) it is 29, 9 of 18, 76 % and 5 (11 Jul had only an empty
+  set). **Next:** his OK, then the plan for demo 1.
