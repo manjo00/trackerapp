@@ -5,8 +5,9 @@ request. It owns the repo's work until it hands back.
 **Now (2026-11-04 19:15): the habits rebuild.** After this chat's fresh start, Ahmed asked it: "i want to rebuild the
 habit tracker research and come back to me with good design". Done: research and three looks on a private page
 (https://claude.ai/artifact/GAkkbPjK3PCQmd6S8hLNid), draft design `docs/superpowers/specs/2026-11-04-habits-rebuild-design.md`
-(`e623e90`). He picked **Look A, the day list** (about 19:10); the design in that file is written and **waits for his
-OK**, then a plan for demo 1 and the demos. Code will go on `tester/speed` in `D:\projects\trackerapp-tester`, merged into master only after
+(`e623e90`). He picked **Look A, the day list** (about 19:10) and approved the design (19:20, "Yes, plan demo 1"); the
+plan `docs/superpowers/plans/2026-11-04-habits-demo-1.md` **waits for his OK**, and schema 27 for the Uplan chat's
+OK (asked 19:20). Code will go on `tester/speed` in `D:\projects\trackerapp-tester`, merged into master only after
 telling the Uplan chat. Install rule agreed with the Uplan chat (2026-11-04): phone builds only from master after a
 pull, with no uncommitted app code and `git merge-base --is-ancestor <phone commit> HEAD`; tell the other chat before
 an install, a schema bump (now 26; the habits rebuild needs 27) or an edit to a shared file. The older pick in step 6

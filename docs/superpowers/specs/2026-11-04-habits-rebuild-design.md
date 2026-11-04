@@ -243,4 +243,6 @@ Reminder time (optional) · "Tick when I log a workout" (switch) · Delete in th
   written for his OK.
   Correction: the draft and the looks page said 30 gym days, 10 of 18 weeks, a 77 % peak and 6 day-shift workouts;
   by the workout log's own rule (weight or reps filled in) it is 29, 9 of 18, 76 % and 5 (11 Jul had only an empty
-  set). **Next:** his OK, then the plan for demo 1.
+  set). About 19:20: his OK ("Yes, plan demo 1"). 19:30: the plan for demo 1,
+  `docs/superpowers/plans/2026-11-04-habits-demo-1.md`. **Next:** his OK on the plan and the Uplan chat's OK on
+  schema 27, then demo 1.
