@@ -109,9 +109,13 @@ Rebuilt on 2026-10-27 from the git log, the public releases, `docs/superpowers/S
 ## Open now ⬜
 - ⬜ **Habits rebuild** (Ahmed, 2026-11-04: "rebuild the habit tracker"): research and three looks done
   (https://claude.ai/artifact/GAkkbPjK3PCQmd6S8hLNid); he picked **Look A, the day list**. The design
-  `docs/superpowers/specs/2026-11-04-habits-rebuild-design.md` is approved ("Yes, plan demo 1"); the plan for demo 1
-  (the engine, the Look A screen and the editor), `docs/superpowers/plans/2026-11-04-habits-demo-1.md`, waits for his
-  OK. Three more demos follow.
+  `docs/superpowers/specs/2026-11-04-habits-rebuild-design.md` is approved.
+  - ✅ Demo 1: the engine, the Look A screen with Today and Home, the editor (plan
+    `docs/superpowers/plans/2026-11-04-habits-demo-1.md`), on `master` since 2026-11-04 (`98eb3d7`, schema 27).
+    ⬜ On his phone (waits for "Phone plugged in").
+  - ⬜ Demo 2: the habit page, fixing past days, Rest, Sick, Away, starter chips, the Home offer.
+  - ⬜ Demo 3: shifts and the gym (due by shift, the night-shift day, quiet reminders, Gym ticking itself).
+  - ⬜ Demo 4: Planner, widget, live notification on the habit day; coach and Codex texts.
 - ⬜ Release v1.16 to v1.18 (see "We are here")
 - ⬜ G4 owed: the inexact-alarm timing on the Z Flip 6
 - ⬜ G6: remove or reword the stale "Coming in Phase 2" drawer tiles (NOTES-ROADMAP, G6)

@@ -2,16 +2,18 @@
 **Date:** 2026-11-01 · **Branch:** master · **Chat:** Tester, a temporary chat the Uplan chat started at Ahmed's
 request. It owns the repo's work until it hands back.
 
-**Now (2026-11-04 19:15): the habits rebuild.** After this chat's fresh start, Ahmed asked it: "i want to rebuild the
-habit tracker research and come back to me with good design". Done: research and three looks on a private page
-(https://claude.ai/artifact/GAkkbPjK3PCQmd6S8hLNid), draft design `docs/superpowers/specs/2026-11-04-habits-rebuild-design.md`
-(`e623e90`). He picked **Look A, the day list** (about 19:10) and approved the design (19:20, "Yes, plan demo 1"); the
-plan `docs/superpowers/plans/2026-11-04-habits-demo-1.md` **waits for his OK**; the Uplan chat OKed schema 27
-(19:30). Code will go on `tester/speed` in `D:\projects\trackerapp-tester`, merged into master only after
-telling the Uplan chat. Install rule agreed with the Uplan chat (2026-11-04): phone builds only from master after a
-pull, with no uncommitted app code and `git merge-base --is-ancestor <phone commit> HEAD`; tell the other chat before
-an install, a schema bump (now 26; the habits rebuild needs 27) or an edit to a shared file. The older pick in step 6
-(the main app's ordinary window, or the hand-back) is still open.
+**Now (2026-11-04 20:45): the habits rebuild, demo 1 done.** After this chat's fresh start, Ahmed asked it: "i want to
+rebuild the habit tracker research and come back to me with good design". He picked **Look A, the day list** (looks
+page https://claude.ai/artifact/GAkkbPjK3PCQmd6S8hLNid), approved the design
+`docs/superpowers/specs/2026-11-04-habits-rebuild-design.md` and the plan
+`docs/superpowers/plans/2026-11-04-habits-demo-1.md`. **Demo 1 is on `master` (`98eb3d7`, schema 27, 479 tests;
+tried on the Flip emulator with a copy of his newest data), not on his phone yet.** Next: when he says "Phone plugged
+in", install from master under the install rule (tell the Uplan chat, copy his data off first, check the phone's
+`241a187` is inside HEAD), then his Manual Test Steps (in the design's Status), then the plan for demo 2. Code goes on
+`tester/speed` in `D:\projects\trackerapp-tester` (its builds carry the debug key: emulator only), merged into master
+only after telling the Uplan chat. Note: the Flip emulator's Uplan now carries the worktree's debug-key build (the old
+emulator data is in this chat's scratchpad), so a master build needs an uninstall there first (emulator only). The
+older pick in step 6 (the main app's ordinary window, or the hand-back) is still open.
 
 ## Goal (Ahmed, 2026-11-01, his words)
 "make the app cleaner and fast and responsive can you download it in multiple sims and ask helpers including yourself

@@ -16,14 +16,20 @@ Every AI working here reads this block first, then the current task (pulled in b
   on the emulator with a copy of his data) and on the phone since 2026-11-04 18:31; the design's Status says what's
   next. Then
   the weekly cardio switch and the progress dashboard.
+- **Habits rebuild (the Tester):** Ahmed picked Look A, the day list (looks page
+  https://claude.ai/artifact/GAkkbPjK3PCQmd6S8hLNid; design `docs/superpowers/specs/2026-11-04-habits-rebuild-design.md`,
+  approved). Demo 1 (the engine, the Look A screen with Today and Home, the editor; plan
+  `docs/superpowers/plans/2026-11-04-habits-demo-1.md`) is on `master` since 2026-11-04 (`98eb3d7`, schema 27,
+  479 tests pass; tried on the Flip emulator with a copy of his newest data). **Not on the phone yet.** Then demos 2–4.
 - **Traps:**
   - **Uplan's own signing key (since 2026-11-01):** `D:\keys\uplan\uplan-release.jks` (RSA 4096, valid until 2054), its password only in the git-ignored `android/key.properties` and Ahmed's own safe place, a copy in `OneDrive\Uplan key backup`. Certificate SHA-256 `5B:26:93:23:CC:1B:3D:FB:3B:16:0A:D5:58:8B:EB:FA:86:28:57:B0:B5:A3:5A:1F:5B:E9:EA:20:10:0C:7A:C5`. Every build on this PC (debug, profile, release) carries it, so `adb install -r` updates the phone in place. A cloud chat or fresh clone has no `key.properties` and falls back to the debug key, which can't update the phone. Never lose or replace this key; the laptop's old key is gone for good.
   - **The phone's Uplan is a fast (profile) build since 2026-11-02, and still debuggable**: `adb shell run-as com.lifetracker.life_tracker` can copy its whole private folder, which is how the 2026-11-01 move worked (`docs/superpowers/plans/2026-11-01-signing-key.md`). Put profile builds on it (`flutter build apk --profile`, about 3 min) to keep it fast; a debug build also updates it in place but runs about twice as slow (the widget's "+" sheet: 3.2–5.9 s against 1.2–2.9 s on the emulator). A release build on the phone closes the `run-as` door, and the app's own backup (Settings > Export data) leaves out photos and Settings. The Z Flip 6 has two screens: `screencap` needs `-d <id>` from `dumpsys SurfaceFlinger --display-id`.
   - **Build tools live in `D:\dev`** (2026-10-31): Flutter 3.44.9 `D:\dev\flutter`, Java 21 `D:\dev\jdk-21`, the Android SDK with adb `D:\dev\android-sdk`, Dart packages `D:\dev\pub-cache`. They're on the user PATH, but a chat sees that only after the Claude app restarts; until then use the full paths in the device skill. After a Windows reinstall, `D:\dev\set-user-env.cmd` puts PATH back.
-  - **Database schema 26 since 2026-11-03** (the workout log): on `master`, and on his phone since 2026-11-04 17:04
-    (upgraded at the first start: every table's rows the same, integrity ok). Before that it was tried on a copy of
-    his database (`tool/migrate_copy_test.dart`). A build from an older commit can't open a schema-26 database, so
-    never put an older build on the phone; copy his data off first, as always.
+  - **Database schema 27 on `master` since 2026-11-04** (the habits rebuild, `98eb3d7`); his phone is still on 26
+    (the workout log, since 2026-11-04 17:04) until the next install from master, which upgrades it at the first start.
+    27 was tried on a copy of his newest database (`tool/migrate_copy_test.dart`, and on the emulator: every table's
+    rows the same, integrity ok). A build from an older commit can't open a newer schema, so never put an older build
+    on the phone; copy his data off first, as always.
   - **Stay on Flutter 3.44** until a planned upgrade: on 3.47 the app's code generators (analyzer 7.6.0) crash. 3.47.9 waits in `D:\dev\flutter-3.47.9`.
   - **After a fresh clone, generate the code files first:** `dart run build_runner build --delete-conflicting-outputs` (the `*.g.dart` and `*.freezed.dart` files are git-ignored).
   - Google's Android CLI (`android.exe`, which now stands behind `sdkmanager`) sends usage counts unless you add `--no-metrics`; always add it.

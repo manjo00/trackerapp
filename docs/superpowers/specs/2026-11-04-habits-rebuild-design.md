@@ -244,5 +244,25 @@ Reminder time (optional) · "Tick when I log a workout" (switch) · Delete in th
   Correction: the draft and the looks page said 30 gym days, 10 of 18 weeks, a 77 % peak and 6 day-shift workouts;
   by the workout log's own rule (weight or reps filled in) it is 29, 9 of 18, 76 % and 5 (11 Jul had only an empty
   set). About 19:20: his OK ("Yes, plan demo 1"). 19:30: the plan for demo 1,
-  `docs/superpowers/plans/2026-11-04-habits-demo-1.md`. 19:30: the Uplan chat OKed schema 27. **Next:** his OK on
-  the plan, then demo 1.
+  `docs/superpowers/plans/2026-11-04-habits-demo-1.md`. 19:30: the Uplan chat OKed schema 27; his OK ("Yes, start
+  demo 1").
+- 2026-11-04 19:35–20:40: **demo 1 built and merged** (test-first on `tester/speed`, `51fb715..5ed813e`, merged as
+  `98eb3d7`, pushed): schema 27 and its migration, the rules, the providers, Look A (row, week strip, sections and
+  folds) on the Habits screen, Today and Home, the editor, older backups importing, and two fixes from the final
+  self-review (the live notification's ✓ now saves the habit day; the Habits tip says the circle ticks). 479 tests pass,
+  analyze clean. Tried for real on the Flip emulator's fast build with a copy of his newest data (2026-11-04-kilos):
+  the app upgraded it to 27 on the device (integrity ok, all 24 tables kept their rows, "H" still archived); with 5
+  made-up demo habits and one added through the editor, ticks folded under "Done today", + counted, streaks and
+  spare days read right, light and dark matched the picked look, Today showed the same sections, a restart kept
+  everything, no duplicate days, no Flutter errors. **Not on his phone yet.**
+- Left for demo 4 (decided in the review): the live notification's done list and the widget's "habits left" still
+  use the calendar day between 00:00 and 04:00 (they pair with the Kotlin side), the Planner's tap on a count habit
+  saves 1, and the widget counts any amount of a count habit as done.
+- **Next:** his phone install when he says "Phone plugged in" (his data copied off first; the install rule), his
+  Manual Test Steps and opinion, then the plan for demo 2 (the habit page, fixing past days, Rest, Sick, Away,
+  starter chips, the Home offer).
+- **Manual Test Steps for Ahmed, after the install:** 1. Menu › Habits: "No habits yet" and "Add your first habit".
+  2. Tap it, name "Water", tap Count, Goal per day 8, Unit "glasses", Save habit. 3. Tap + on Water three times: "3 of 8
+  glasses" and the line under it grows. 4. Add "Read 20 min" (Tick, Every day, Before sleep, cue "After dinner"): its
+  line reads "After dinner · 1 spare left". 5. Tap Read's circle: it fills, then folds under "Done today · 1"; tap that
+  line to see it. 6. Open Today: the same rows. 7. Close Uplan fully and open it again: everything is still there.
