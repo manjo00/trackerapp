@@ -106,6 +106,13 @@ tokens; no helpers. Past twice that, stop and ask.
     of its 24 tables kept its row count, the workout rows' old columns hash the same, the new columns are empty,
     integrity ok, no foreign-key problems. On that copy the history shows 41 of his 77 workouts (34 have no sets, 2
     only empty rows). Not tried on the emulator (the Tester's was in use) or the phone yet.
-- **Next:** demo 1 on his phone before his next workout (his data copied first), so his next ticks are recorded;
-  then demo 2 (step 5), with 2–3 looks of the history row and workout page first. Demo 2 counts logged sets only:
-  20 empty set rows remain in his workouts that were never finished or discarded.
+- **On his phone since 2026-11-04 17:04** (Ahmed: "Phone plugged in"; the Tester did the one install of `b7c92c8`,
+  which also carries its quick-add window; his folder copied first to `D:\backups\uplan\2026-11-04-own-window\`).
+  Checked by the Uplan chat on scratchpad copies of that folder's `check\` (before) and `after\` databases: the
+  before copy is byte for byte yesterday's backup; after the first start, schema 25 → 26, all 24 tables kept their
+  row counts (77 workouts, 308 sets, 35 tasks, 126 notes), the workout rows' old columns hash the same, the new
+  columns are empty, integrity ok, no foreign-key problems. On that copy the history shows 41 of 77 workouts, and the
+  week's count from Sunday 1 Nov goes 6 → 1 (from Monday it stays 1). The screens on his phone: his eyes only.
+- **Next:** his next workout (about 5 Nov) records the first ticks; the one after it is the first smart order that
+  learns from them. Then demo 2 (step 5), with 2–3 looks of the history row and workout page first. Demo 2 counts
+  logged sets only: 20 empty set rows remain in his workouts that were never finished or discarded.
