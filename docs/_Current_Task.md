@@ -7,8 +7,9 @@ rebuild the habit tracker research and come back to me with good design". He pic
 page https://claude.ai/artifact/GAkkbPjK3PCQmd6S8hLNid), approved the design
 `docs/superpowers/specs/2026-11-04-habits-rebuild-design.md` and the plan
 `docs/superpowers/plans/2026-11-04-habits-demo-1.md`. **Demo 1 is on `master` (`98eb3d7`, schema 27, 479 tests;
-tried on the Flip emulator with a copy of his newest data), not on his phone yet.** Next: when he says "Phone plugged
-in", install from master under the install rule (tell the Uplan chat, copy his data off first, check the phone's
+tried on the Flip emulator with a copy of his newest data), on his phone since 20:43 (`b6dbda4`).** Next: his own try
+(Manual Test Steps in the design's Status) and opinion, the LiveBootReceiver crash (see Noticed; his call), then the
+plan for demo 2. For the next install: install from master under the install rule (tell the Uplan chat, copy his data off first, check the phone's
 `241a187` is inside HEAD), then his Manual Test Steps (in the design's Status), then the plan for demo 2. Code goes on
 `tester/speed` in `D:\projects\trackerapp-tester` (its builds carry the debug key: emulator only), merged into master
 only after telling the Uplan chat. Note: the Flip emulator's Uplan now carries the worktree's debug-key build (the old
@@ -450,6 +451,14 @@ plus this chat about 0.9–1.4M; three helpers about 1.1–1.7M; this chat alone
 - `D:\backups\uplan\2026-11-01\` until Ahmed decides.
 
 ## Noticed (not fixing now)
+- **`LiveBootReceiver` crashes once on the first start after a force-stop when the live notification is on** (found
+  2026-11-04 20:43 at the habits install; his phone has `live_enabled` true). Android delivers BOOT_COMPLETED when a
+  force-stopped app starts again; `LiveBootReceiver.onReceive` calls `LiveDashboardService.start`, which Android refuses
+  from the background (`ForegroundServiceStartNotAllowedException`), and the whole process dies: "Uplan keeps stopping"
+  (twice: 20:43:46 and 20:45:19). The next start is normal, and the live notification returns once the app is open.
+  Every install's backup step force-stops Uplan, so every install with the live notification on hits it; a phone
+  restart likely does too. Old code (`dff1fd7`, 2026-08-22). Fix idea: catch the refusal in the receiver and let the
+  app restart the notification when it opens. Asked Ahmed whether to fix it now (2026-11-04 20:48).
 - **The main app no longer needs a see-through window** (found 2026-11-03, building the sheet's own window): only
   the quick-add sheet shows the home screen behind it, and it now has a window of its own. MainActivity is still
   see-through (`windowIsTranslucent` in `LaunchTheme`, `getBackgroundMode()` transparent), which keeps every app

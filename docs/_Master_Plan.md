@@ -112,7 +112,7 @@ Rebuilt on 2026-10-27 from the git log, the public releases, `docs/superpowers/S
   `docs/superpowers/specs/2026-11-04-habits-rebuild-design.md` is approved.
   - ✅ Demo 1: the engine, the Look A screen with Today and Home, the editor (plan
     `docs/superpowers/plans/2026-11-04-habits-demo-1.md`), on `master` since 2026-11-04 (`98eb3d7`, schema 27).
-    ⬜ On his phone (waits for "Phone plugged in").
+    ✅ On his phone since 2026-11-04 20:43 (`b6dbda4`); his own try and opinion still to come.
   - ⬜ Demo 2: the habit page, fixing past days, Rest, Sick, Away, starter chips, the Home offer.
   - ⬜ Demo 3: shifts and the gym (due by shift, the night-shift day, quiet reminders, Gym ticking itself).
   - ⬜ Demo 4: Planner, widget, live notification on the habit day; coach and Codex texts.

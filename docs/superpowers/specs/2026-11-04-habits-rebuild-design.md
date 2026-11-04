@@ -254,7 +254,11 @@ Reminder time (optional) · "Tick when I log a workout" (switch) · Delete in th
   the app upgraded it to 27 on the device (integrity ok, all 24 tables kept their rows, "H" still archived); with 5
   made-up demo habits and one added through the editor, ticks folded under "Done today", + counted, streaks and
   spare days read right, light and dark matched the picked look, Today showed the same sections, a restart kept
-  everything, no duplicate days, no Flutter errors. **Not on his phone yet.**
+  everything, no duplicate days, no Flutter errors. **On his phone since 2026-11-04 20:43** (`b6dbda4`, app code =
+  `98eb3d7`; his data copied first to `D:\backups\uplan\2026-11-04-habits\`, 327 files, integrity ok, 309 photos):
+  upgraded at the first start to 27, integrity ok, 0 foreign-key problems, all 24 tables kept their rows, the same 3
+  booked reminders. The first start after the backup's force-stop crashed once in `LiveBootReceiver` (old code, his
+  live notification on; see "Noticed" in `docs/_Current_Task.md`); the next start was normal.
 - Left for demo 4 (decided in the review): the live notification's done list and the widget's "habits left" still
   use the calendar day between 00:00 and 04:00 (they pair with the Kotlin side), the Planner's tap on a count habit
   saves 1, and the widget counts any amount of a count habit as done.
