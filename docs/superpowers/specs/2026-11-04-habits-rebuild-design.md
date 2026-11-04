@@ -261,6 +261,14 @@ Reminder time (optional) · "Tick when I log a workout" (switch) · Delete in th
 - **Next:** his phone install when he says "Phone plugged in" (his data copied off first; the install rule), his
   Manual Test Steps and opinion, then the plan for demo 2 (the habit page, fixing past days, Rest, Sick, Away,
   starter chips, the Home offer).
+- **Calls made while building demo 1** (Claude's; each with what it costs if wrong): history reads as one object
+  per habit list with the pauses shared (one rename); a day after today is "open", never a miss (one enum value); the
+  + adds in one database statement so two quick taps both count (one extra method); section labels show in capitals
+  as on the looks page (one test line); the old placeholder and completion model were removed with the old screen
+  (none, both in git history); the editor closes with Navigator.maybePop (none); an old backup holding a day twice
+  restores with one row instead of failing (a duplicate tick in an old file is dropped); the plan's rules test had a
+  slip ("Mon 2 Nov kept" where Monday had no tick), corrected in the test. The final review was a self-review (no
+  helper without Ahmed's yes); a fresh reviewer before the phone install costs about 150–250k tokens.
 - **Manual Test Steps for Ahmed, after the install:** 1. Menu › Habits: "No habits yet" and "Add your first habit".
   2. Tap it, name "Water", tap Count, Goal per day 8, Unit "glasses", Save habit. 3. Tap + on Water three times: "3 of 8
   glasses" and the line under it grows. 4. Add "Read 20 min" (Tick, Every day, Before sleep, cue "After dinner"): its
