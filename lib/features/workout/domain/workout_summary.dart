@@ -153,11 +153,11 @@ String _plain(double kg) =>
 int? percentChange(double now, double before) =>
     before <= 0 ? null : ((now - before) / before * 100).round();
 
-/// The history row's big number: tonnes from 1,000 kg up ("5.7 t"), else
-/// kilos ("850 kg").
-String shortKg(double kg) => kg >= 1000
-    ? '${(kg / 1000).toStringAsFixed(1)} t'
-    : '${kg.round()} kg';
+/// The history row's big number, its "kg" shown small beside it (Ahmed's
+/// pick 2026-11-04, over tonnes): thousands as "k" with at most two decimals
+/// ("5.71k", "10.5k"), else whole kilos ("850").
+String shortKgNumber(double kg) =>
+    kg >= 1000 ? '${_plain(kg / 1000)}k' : '${kg.round()}';
 
 /// The workout page's headline: every kilo ("5,712 kg").
 String fullKg(double kg) => '${NumberFormat('#,##0').format(kg.round())} kg';

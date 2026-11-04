@@ -170,9 +170,12 @@ void main() {
       expect(setLabel(set('Row', 50, null)), '50 kg');
     });
 
-    test('the row shows tonnes from 1,000 kg up', () {
-      expect(shortKg(5712), '5.7 t');
-      expect(shortKg(850), '850 kg');
+    test('the row shows thousands as k, with two decimals at most', () {
+      expect(shortKgNumber(5712.5), '5.71k');
+      expect(shortKgNumber(7710), '7.71k');
+      expect(shortKgNumber(10500), '10.5k');
+      expect(shortKgNumber(2000), '2k');
+      expect(shortKgNumber(850), '850');
     });
 
     test('the page shows every kilo', () {

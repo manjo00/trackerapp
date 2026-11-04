@@ -23,7 +23,8 @@ void main() {
   testWidgets('shows the kilos big, then name, date, sets and records',
       (tester) async {
     await pumpTile(tester);
-    expect(find.text('1.9 t'), findsOneWidget);
+    expect(find.text('1.91k'), findsOneWidget);
+    expect(find.text('kg'), findsOneWidget);
     expect(find.text('lifted'), findsOneWidget);
     expect(find.text('Push · Tue, 3 Nov'), findsOneWidget);
     expect(find.text('4 sets · 2 records'), findsOneWidget);

@@ -66,9 +66,14 @@ Rebuilt on 2026-10-27 from the git log, the public releases, `docs/superpowers/S
        against the research ranges, his own "tired penalty". Full design path after the smart order. It replaces the
        Targets system.
      - ⬜ Later: a scheduling tool that puts saved workouts on the schedule; it replaces programs (Ahmed, 2026-11-01).
-     - ⬜ Idea: a Snapchat sticker with a workout's total kg lifted and total sets (Ahmed asked, 2026-11-01): Snap's
-       Creative Kit opens Snapchat's camera with an app's sticker on top; whether Snap must approve it for personal
-       use isn't checked yet. The other way: a photo made in Uplan with the summary on it, shared to any app.
+     - ⬜ **Started (Ahmed, 2026-11-04): a Snapchat snap after a workout**, "so after a workout i can send streak with
+       summary good lookin with current time and all". Checked 2026-11-04 (web, not tried yet): snaps sent from the
+       camera roll or shared in from another app don't count toward streaks (several guides, and Snapchat's own
+       warning as reported by Newsweek), so a picture made in Uplan wouldn't keep a streak. Snap's Creative Kit can
+       open Snapchat's own camera with one sticker on top (`SnapLiveCameraContent`; PNG or JPEG, at most 1 MB), so
+       the snap is taken with Snapchat's camera. An app in Snap's developer portal works unreviewed for up to 30
+       listed Snapchat accounts ("demo users"), so personal use needs no Snap review, only his one-time setup
+       there. Whether such a snap counts toward a streak: to try with one real snap.
   4. ⬜ Release v1.18.0 (it carries 1.16 and 1.17 too). Smart App Control blocks release builds whenever it is on. A
      release build on the phone isn't debuggable, so decide with Ahmed how backups work after that.
   5. ⬜ G4's owed check: time the inexact-alarm path on the Z Flip 6 (recipe in STATUS, G4 section).

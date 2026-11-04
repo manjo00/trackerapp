@@ -40,13 +40,30 @@ class WorkoutHistoryTile extends StatelessWidget {
         child: Row(
           children: [
             SizedBox(
-              width: 68,
+              width: 84,
               child: Column(
                 children: [
-                  Text(
-                    kg > 0 ? shortKg(kg) : '–',
-                    style: theme.textTheme.titleLarge
-                        ?.copyWith(fontWeight: FontWeight.w600),
+                  // "5.71k" with a small "kg" beside it, shrunk to fit.
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Text(
+                          kg > 0 ? shortKgNumber(kg) : '–',
+                          style: theme.textTheme.titleLarge
+                              ?.copyWith(fontWeight: FontWeight.w600),
+                        ),
+                        if (kg > 0) ...[
+                          const SizedBox(width: 2),
+                          Text('kg',
+                              style: theme.textTheme.labelSmall
+                                  ?.copyWith(color: muted)),
+                        ],
+                      ],
+                    ),
                   ),
                   Text('lifted',
                       style: theme.textTheme.labelSmall?.copyWith(color: muted)),
