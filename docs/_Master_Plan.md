@@ -57,7 +57,8 @@ Rebuilt on 2026-10-27 from the git log, the public releases, `docs/superpowers/S
        sketches): each history row has the kilos lifted big and the change since last time, and opens a workout page
        with every exercise in the order done and its change. Tried on the emulator with a copy of his data. ✅ Demo 2
        on his phone since 2026-11-04 18:31 (his data copied first; his database checked after: every table's rows the
-       same). ⬜ His look at it, then his opinion for the retro.
+       same). ✅ "5.71k kg" instead of tonnes (his ask; on his phone since 18:45). ✅ His opinion: "Good" (retro in
+       `D:\projects\claude-setup\workflow\retros.md`, 2026-11-04).
      - ⬜ **Clean-up, on hold (Ahmed, 2026-11-01; "we are still working on it", 2026-11-03):** the smart order only in developer mode; the Targets system and
        Programs removed; quick starts show his recent saved workouts; My Workouts and their editor stay. No database
        change. Design `docs/superpowers/specs/2026-11-01-gym-cleanup-design.md`, waiting for his yes.
