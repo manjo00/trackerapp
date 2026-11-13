@@ -2,7 +2,23 @@
 **Date:** 2026-11-01 · **Branch:** master · **Chat:** Tester, a temporary chat the Uplan chat started at Ahmed's
 request. It owns the repo's work until it hands back.
 
-**Now (2026-11-04 20:33): the habits rebuild, demo 1 done.** After this chat's fresh start, Ahmed asked it: "i want to
+**Now (2026-11-13 21:55): the merge test is next.** At about 18:45 the Uplan chat started two side chats, each in a
+worktree of its own from `afbe668` (no builds, emulator or handover-file edits; heads-ups to this chat): habit-yesterday
+(`claude/habit-yesterday-234c83`, `0561791`: tick a past day from the week strip, and count units) and duaa-counters
+(`claude/duaa-counters-a7d503`, being built; its design `docs/superpowers/specs/2026-11-13-duaa-counters-design.md` sits
+in its worktree). With the Uplan chat's rename (`bd68b39`, on master) they become one new version: the merge, then this
+chat's test, then the install offer (week log, 2026-11-13 about 18:45). The duaa chat's heads-up (21:53): no schema
+change; it touches `lib/core/router/app_router.dart` (route `/habits/adhkar`), `lib/app.dart` (`_reschedule()` adds
+"Morning du'as" and "Night du'as" once, behind a SharedPreferences flag, and keeps their goals equal to the list
+lengths), `UplanEngineSetup.kt` (registers `uplan/haptics` from a new `UplanHaptics.kt`) and `widgets/habit_row.dart`
+(agreed with the habit-yesterday chat). **Its Kotlin was never compiled: the merged build is its first compile.**
+Checked here: the sheet's own window starts on `/quick-add`, which skips `_reschedule()` (`wantsLaunchWork`), so only the
+main window adds the two habits; VIBRATE comes from flutter_local_notifications 19.5.0's manifest (it is in the last
+merged manifests). Asked the duaa chat to put its launch call before `HomeWidgetService.sync(db)`: the "what's new" and
+update dialogs after that line are awaited, and the widgets would miss the new habits until the next sync. At the merge,
+check where the call landed.
+
+**Earlier (2026-11-04 20:33): the habits rebuild, demo 1 done.** After this chat's fresh start, Ahmed asked it: "i want to
 rebuild the habit tracker research and come back to me with good design". He picked **Look A, the day list** (looks
 page https://claude.ai/artifact/GAkkbPjK3PCQmd6S8hLNid), approved the design
 `docs/superpowers/specs/2026-11-04-habits-rebuild-design.md` and the plan
