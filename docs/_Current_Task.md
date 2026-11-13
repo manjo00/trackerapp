@@ -2,8 +2,10 @@
 **Date:** 2026-11-01 · **Branch:** master · **Chat:** Tester, a temporary chat the Uplan chat started at Ahmed's
 request. It owns the repo's work until it hands back.
 
-**Now (2026-11-13 22:58): the merged build passed the emulator test; next, the Uplan chat offers Ahmed the install.**
-The build: master `51a0d5d` (code = merge `5f41815`: the My Workouts rename `bd68b39`, habit-yesterday `0561791`,
+**Now (2026-11-13 23:30): the merged build is on his phone since 23:25** (installed by the Uplan chat after Ahmed's
+"Phone plugged in": his data copied first to `D:\backups\uplan\2026-11-13-new-version\`; no crash on the first start;
+habits 3 → 5, every other table the same rows; any phone build must now contain `51a0d5d`). **Next: his own try of
+the new version and his opinion.** What this chat checked before it, on the emulator (22:58): the build: master `51a0d5d` (code = merge `5f41815`: the My Workouts rename `bd68b39`, habit-yesterday `0561791`,
 duaa-counters `2000cd9` and `62199d4`; schema 27, no change; it contains the phone's `b6dbda4`), APK
 `build\app\outputs\flutter-apk\uplan-51a0d5d-profile.apk` (Uplan's key `5b269323…c7ac5`, checked with apksigner).
 Tested 22:29–22:57 on `uplan_flip_a16` (its debug-key Uplan uninstalled first, emulator only) with his newest copy on
