@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../archive/presentation/archive_providers.dart';
 import '../../data/models/habit_model.dart';
+import '../../domain/adhkar_progress.dart';
 import '../../domain/habit_rules.dart';
 import '../../domain/habit_stats.dart';
 import '../../domain/habit_types.dart';
@@ -21,6 +22,10 @@ import 'habit_palette.dart';
 ///
 /// The row shows [HabitDayView.day] (a past day picked in the week strip) or
 /// today, and its round button, + and typed amount act on that day.
+///
+/// A morning or night du'a habit, today, opens its counter instead: from a
+/// tap on the row or its button (long-press still edits). On a past day it
+/// keeps the + and typed amount, so a forgotten day needs no 300 taps.
 class HabitRow extends ConsumerWidget {
   const HabitRow({required this.view, this.reason, super.key});
 
@@ -36,6 +41,8 @@ class HabitRow extends ConsumerWidget {
     final HabitColorSet colors = HabitColors.of(context, habit.color);
     final bool done = view.state == DayState.kept;
     final bool count = habit.kind == HabitKind.count;
+    final bool counter =
+        view.day == null && AdhkarList.fromSource(habit.autoSource) != null;
 
     return Dismissible(
       key: ValueKey('habit-row-${habit.id}'),
@@ -63,7 +70,9 @@ class HabitRow extends ConsumerWidget {
                 : BorderSide.none,
           ),
           child: InkWell(
-            onTap: () => context.push('/habits/edit', extra: habit),
+            onTap: () => context.push(
+                counter ? '/habits/adhkar' : '/habits/edit',
+                extra: habit),
             onLongPress: () => context.push('/habits/edit', extra: habit),
             child: Stack(
               children: [
@@ -105,7 +114,10 @@ class HabitRow extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      if (count && !done)
+                      if (counter)
+                        _CounterButton(
+                            habit: habit, done: done, solid: colors.solid)
+                      else if (count && !done)
                         _AddButton(view: view)
                       else
                         _TickButton(view: view, solid: colors.solid),
@@ -359,4 +371,42 @@ class _AmountDialogState extends State<_AmountDialog> {
           FilledButton(onPressed: _save, child: const Text('Save')),
         ],
       );
+}
+
+/// A du'a habit's button today: opens its counter. A play arrow while du'as
+/// are left, the filled tick once all are done.
+class _CounterButton extends StatelessWidget {
+  const _CounterButton(
+      {required this.habit, required this.done, required this.solid});
+
+  final HabitModel habit;
+  final bool done;
+  final Color solid;
+
+  @override
+  Widget build(BuildContext context) {
+    void open() => context.push('/habits/adhkar', extra: habit);
+    final String tip = 'Count ${habit.name}';
+    if (!done) {
+      return IconButton.filledTonal(
+        tooltip: tip,
+        icon: const Icon(Icons.play_arrow_rounded),
+        onPressed: open,
+      );
+    }
+    return Tooltip(
+      message: tip,
+      child: InkResponse(
+        radius: 26,
+        onTap: open,
+        child: Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(shape: BoxShape.circle, color: solid),
+          child: Icon(Icons.check_rounded,
+              size: 24, color: Theme.of(context).colorScheme.surface),
+        ),
+      ),
+    );
+  }
 }

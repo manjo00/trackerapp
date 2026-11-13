@@ -14,6 +14,7 @@ import 'core/update/update_service.dart';
 import 'core/theme/app_theme.dart';
 import 'core/widget/home_widget_service.dart';
 import 'features/archive/presentation/archive_providers.dart';
+import 'features/habits/data/adhkar_setup.dart';
 import 'features/habits/presentation/providers/habits_providers.dart';
 import 'features/tasks/presentation/providers/lists_providers.dart';
 import 'features/tasks/presentation/providers/tasks_providers.dart';
@@ -174,6 +175,15 @@ class _LifeTrackerAppState extends ConsumerState<LifeTrackerApp>
     // query on launch — no background worker, and nothing to schedule.
     await ref.read(archiveServiceProvider).purgeExpired(DateTime.now());
     StartupTrace.mark('purged');
+
+    // The morning and night du'a habits: added once, goals kept in step with
+    // their lists. A failure here must not stop the rest of the launch work.
+    try {
+      await ensureAdhkarHabits(ref.read(habitsRepositoryProvider),
+          ref.read(sharedPreferencesProvider));
+    } catch (e, stack) {
+      debugPrint("du'a habits not set up: $e\n$stack");
+    }
 
     // Seed the home-screen widget with today's snapshot on launch, and
     // bring up the live dashboard notification if the user enabled it.

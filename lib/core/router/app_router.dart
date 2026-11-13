@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/habits/data/models/habit_model.dart';
 import '../../features/habits/presentation/screens/habit_list_screen.dart';
 import '../../features/habits/presentation/screens/habit_editor_screen.dart';
+import '../../features/habits/presentation/screens/adhkar_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
 import '../../features/archive/presentation/screens/archived_screen.dart';
 import '../../features/notes/presentation/screens/note_editor_screen.dart';
@@ -48,6 +49,7 @@ import 'shell_scaffold.dart';
 ///    /workout           ← WorkoutHomeScreen  (branch 6)
 ///
 ///  /habits/add                          ← HabitEditorScreen           (outside shell)
+///  /habits/adhkar                       ← AdhkarScreen (du'a counter) (outside shell)
 ///  /tasks/add                           ← AddTaskScreen               (outside shell)
 ///  /trackers/add                        ← AddTrackerScreen            (outside shell)
 ///  /trackers/:id                        ← TrackerDetailScreen         (outside shell)
@@ -268,6 +270,16 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) => HabitEditorScreen(
         habit: state.extra as HabitModel?,
       ),
+    ),
+
+    GoRoute(
+      path: '/habits/adhkar',
+      // state.extra is the morning or night du'a habit whose row was tapped.
+      builder: (context, state) => switch (state.extra) {
+        final HabitModel habit => AdhkarScreen(habit: habit),
+        _ => const Scaffold(
+            body: Center(child: Text("Open the du'as from Habits."))),
+      },
     ),
 
     // ── List detail (full-screen, no bottom nav) ──────────────────────────
