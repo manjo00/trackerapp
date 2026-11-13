@@ -7,6 +7,7 @@ import '../../data/models/program_model.dart';
 import '../../data/models/program_session_model.dart';
 import '../providers/program_providers.dart';
 import '../providers/workout_providers.dart';
+import '../widgets/rename_workout_dialog.dart';
 
 /// Edit the exercises inside one session type.
 ///
@@ -91,6 +92,24 @@ class _SessionEditorViewState
     if (mounted) context.push('/workout/active');
   }
 
+  // ── Rename ──────────────────────────────────────────────────────────────
+
+  /// Asks for a new name (filled in with the current one) and saves it.
+  /// Cancel, an empty name or the same name change nothing. Workouts already
+  /// logged keep the name they were saved with.
+  Future<void> _rename() async {
+    final String? name = await showDialog<String>(
+      context: context,
+      builder: (_) => RenameWorkoutDialog(initialName: session.name),
+    );
+    if (!mounted || name == null || name.isEmpty || name == session.name) {
+      return;
+    }
+    await ref
+        .read(programRepositoryProvider)
+        .updateSession(session.copyWith(name: name));
+  }
+
   // ── Add exercise ────────────────────────────────────────────────────────
 
   Future<void> _addExercise() async {
@@ -172,16 +191,33 @@ class _SessionEditorViewState
 
     return Scaffold(
       appBar: AppBar(
-        title: Row(
-          children: [
-            Container(
-              width: 14, height: 14,
-              decoration: BoxDecoration(
-                  color: color, shape: BoxShape.circle),
+        // Tap the name to rename the workout.
+        title: Tooltip(
+          message: 'Rename',
+          child: InkWell(
+            onTap: _rename,
+            borderRadius: BorderRadius.circular(8),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 14, height: 14,
+                    decoration: BoxDecoration(
+                        color: color, shape: BoxShape.circle),
+                  ),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(session.name, overflow: TextOverflow.ellipsis),
+                  ),
+                  const SizedBox(width: 6),
+                  Icon(Icons.edit_outlined,
+                      size: 16, color: cs.onSurface.withAlpha(140)),
+                ],
+              ),
             ),
-            const SizedBox(width: 8),
-            Text(session.name),
-          ],
+          ),
         ),
         actions: [
           if (widget.program.isWeekly &&
