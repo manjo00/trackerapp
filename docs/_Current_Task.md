@@ -484,6 +484,10 @@ plus this chat about 0.9–1.4M; three helpers about 1.1–1.7M; this chat alone
 - `D:\backups\uplan\2026-11-01\` until Ahmed decides.
 
 ## Noticed (not fixing now)
+- **The "New workout" dialog disposes its text controller right after `showDialog` returns** (`workout_home_screen.dart`
+  `_createMyWorkout`; found 2026-11-13 by the Uplan chat when its rename tests caught the same bug in its own first
+  dialog): the field is still drawn while the dialog closes, which debug builds report as an error. Probably invisible
+  on his fast build (a guess, not checked). Fix: a dialog widget that owns its controller, like `RenameWorkoutDialog`.
 - **A kept count habit's round button is "Untick"** (seen 2026-11-13 in the merge test): a tap takes one step off
   (99,999 → 99,749) and a long-press opens the editor, not the amount box, so retyping a kept day's amount needs an
   untick first. Not a failure; for the habits demo 2 list if Ahmed minds.

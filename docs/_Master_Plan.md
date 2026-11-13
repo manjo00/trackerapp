@@ -47,7 +47,7 @@ Rebuilt on 2026-10-27 from the git log, the public releases, `docs/superpowers/S
        switch per workout. Demo first; design `docs/superpowers/specs/2026-11-01-gym-smart-order-design.md` (he
        approved it). **Built, tested and on the phone 2026-11-01; the order itself waits for his next workout** (the
        design file's Status says what's next).
-     - ⬜ **Now (Ahmed, 2026-11-03): the workout log and history.** Ticks saved with their time so the smart order
+     - ✅ **The workout log and history (Ahmed, 2026-11-03).** Ticks saved with their time so the smart order
        learns what he finished first; empty (discarded) workouts out of history and the week's count; each past
        workout shows its sets, kg lifted and records and opens to every set. One database change (schema 26). Design
        `docs/superpowers/specs/2026-11-03-workout-log-and-history-design.md`, approved ("Looks right").
@@ -58,7 +58,10 @@ Rebuilt on 2026-10-27 from the git log, the public releases, `docs/superpowers/S
        with every exercise in the order done and its change. Tried on the emulator with a copy of his data. ✅ Demo 2
        on his phone since 2026-11-04 18:31 (his data copied first; his database checked after: every table's rows the
        same). ✅ "5.71k kg" instead of tonnes (his ask; on his phone since 18:45). ✅ His opinion: "Good" (retro in
-       `D:\projects\claude-setup\workflow\retros.md`, 2026-11-04).
+       `D:\projects\claude-setup\workflow\retros.md`, 2026-11-04). ✅ In real use: his four workouts 5–12 Nov all saved their
+       finish time, 77 of 78 logged sets their tick time (checked read-only on the 2026-11-13 backup).
+     - ✅ Rename a saved workout (Ahmed, 2026-11-13): tap its name at the top of its ✎ screen (`bd68b39`); on his phone
+       since 2026-11-13 23:25 (`51a0d5d`).
      - ⬜ **Clean-up, on hold (Ahmed, 2026-11-01; "we are still working on it", 2026-11-03):** the smart order only in developer mode; the Targets system and
        Programs removed; quick starts show his recent saved workouts; My Workouts and their editor stay. No database
        change. Design `docs/superpowers/specs/2026-11-01-gym-cleanup-design.md`, waiting for his yes.
@@ -113,6 +116,9 @@ Rebuilt on 2026-10-27 from the git log, the public releases, `docs/superpowers/S
   - ✅ Demo 1: the engine, the Look A screen with Today and Home, the editor (plan
     `docs/superpowers/plans/2026-11-04-habits-demo-1.md`), on `master` since 2026-11-04 (`98eb3d7`, schema 27).
     ✅ On his phone since 2026-11-04 20:43 (`b6dbda4`); his own try and opinion still to come.
+  - ✅ Ahead of demo 2 (Ahmed, 2026-11-13; built by side chats): ticking a past day from the week strip without spending
+    a spare day, with count units (`0561791`), and morning and night du'a counters (`2000cd9`, `62199d4`); merged as
+    `5f41815`, tested by the Tester on the emulator, on his phone since 2026-11-13 23:25 (`51a0d5d`).
   - ⬜ Demo 2: the habit page, fixing past days, Rest, Sick, Away, starter chips, the Home offer.
   - ⬜ Demo 3: shifts and the gym (due by shift, the night-shift day, quiet reminders, Gym ticking itself).
   - ⬜ Demo 4: Planner, widget, live notification on the habit day; coach and Codex texts.

@@ -113,6 +113,9 @@ tokens; no helpers. Past twice that, stop and ask.
   row counts (77 workouts, 308 sets, 35 tasks, 126 notes), the workout rows' old columns hash the same, the new
   columns are empty, integrity ok, no foreign-key problems. On that copy the history shows 41 of 77 workouts, and the
   week's count from Sunday 1 Nov goes 6 → 1 (from Monday it stays 1). The screens on his phone: his eyes only.
+- **Checked 2026-11-13 (read-only, on the install's backup):** his four workouts 5–12 Nov all saved `finished_at`,
+  and 77 of 78 logged sets `completed_at`, so the smart order has real ticks to learn from. Next: the weekly cardio
+  switch and the progress dashboard, each after his go.
 - **Next (updated 2026-11-04 19:45; demos 1 and 2 are done and on his phone, his opinion "Good"):** his next
   workout (about 5 Nov) records the first ticks and the first finish time. After it, when the phone is on the cable
   anyway: copy his database off the plan's way and check read-only that its sets have `completed_at` and the
