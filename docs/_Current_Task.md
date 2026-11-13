@@ -8,8 +8,8 @@ page https://claude.ai/artifact/GAkkbPjK3PCQmd6S8hLNid), approved the design
 `docs/superpowers/specs/2026-11-04-habits-rebuild-design.md` and the plan
 `docs/superpowers/plans/2026-11-04-habits-demo-1.md`. **Demo 1 is on `master` (`98eb3d7`, schema 27, 479 tests;
 tried on the Flip emulator with a copy of his newest data), on his phone since 20:43 (`b6dbda4`).** Next: his own try
-(Manual Test Steps in the design's Status) and opinion, the LiveBootReceiver crash (see Noticed; his call), then the
-plan for demo 2. For the next install: install from master under the install rule (tell the Uplan chat, copy his data off first, check the phone's
+(Manual Test Steps in the design's Status) and opinion, then the plan for demo 2
+(the LiveBootReceiver crash stays unfixed on his word, 2026-11-13: "no no crashing"; see Noticed). For the next install: install from master under the install rule (tell the Uplan chat, copy his data off first, check the phone's
 `241a187` is inside HEAD), then his Manual Test Steps (in the design's Status), then the plan for demo 2. Code goes on
 `tester/speed` in `D:\projects\trackerapp-tester` (its builds carry the debug key: emulator only), merged into master
 only after telling the Uplan chat. Note: the Flip emulator's Uplan now carries the worktree's debug-key build (the old
@@ -459,6 +459,9 @@ plus this chat about 0.9–1.4M; three helpers about 1.1–1.7M; this chat alone
   Every install's backup step force-stops Uplan, so every install with the live notification on hits it; a phone
   restart likely does too. Old code (`dff1fd7`, 2026-08-22). Fix idea: catch the refusal in the receiver and let the
   app restart the notification when it opens. Asked Ahmed whether to fix it now (2026-11-04 20:48).
+  **His answer (2026-11-13 18:28, after tapping "Yes, fix it" and stopping it): "no no crashing"** (my reading: he
+  hasn't seen it crash on his phone). So it stays unfixed until he asks. What he would see: "Uplan keeps stopping"
+  once, right after an install or a phone restart; opening Uplan again works.
 - **The main app no longer needs a see-through window** (found 2026-11-03, building the sheet's own window): only
   the quick-add sheet shows the home screen behind it, and it now has a window of its own. MainActivity is still
   see-through (`windowIsTranslucent` in `LaunchTheme`, `getBackgroundMode()` transparent), which keeps every app
