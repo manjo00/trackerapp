@@ -9,7 +9,10 @@ page https://claude.ai/artifact/GAkkbPjK3PCQmd6S8hLNid), approved the design
 `docs/superpowers/plans/2026-11-04-habits-demo-1.md`. **Demo 1 is on `master` (`98eb3d7`, schema 27, 479 tests;
 tried on the Flip emulator with a copy of his newest data), on his phone since 20:43 (`b6dbda4`).** Next: his own try
 (Manual Test Steps in the design's Status) and opinion, then the plan for demo 2
-(the LiveBootReceiver crash stays unfixed on his word, 2026-11-13: "no no crashing"; see Noticed). For the next install: install from master under the install rule (tell the Uplan chat, copy his data off first, check the phone's
+(the LiveBootReceiver crash stays unfixed on his word, 2026-11-13: "no no crashing"; see Noticed). For the habits
+retro (after his opinion), the measured time and tokens are in claude-setup's
+`roundtable/weeks/2026-11-07/inbox/tester-task-list.md` (demo 1: 57 min, 589k tokens; the whole habits evening,
+2026-11-04 from 18:38: 1.42M; counted the Live Tracker's way). For the next install: install from master under the install rule (tell the Uplan chat, copy his data off first, check the phone's
 `241a187` is inside HEAD), then his Manual Test Steps (in the design's Status), then the plan for demo 2. Code goes on
 `tester/speed` in `D:\projects\trackerapp-tester` (its builds carry the debug key: emulator only), merged into master
 only after telling the Uplan chat. Note: the Flip emulator's Uplan now carries the worktree's debug-key build (the old
