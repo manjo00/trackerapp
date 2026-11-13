@@ -15,7 +15,7 @@ all are done; the text comes from him so it is exactly right.
 | The lists are the Instagram post he sent (instagram.com/p/DQULTezDYgG, "أذكار الصباح والمساء", 15 pictures, 27 Oct 2025); Night = its evening (المساء) list | Ahmed, 2026-11-13 ("this post") |
 | Look B, one du'a at a time, tap anywhere | Ahmed, 2026-11-13 ("B") |
 | No moving on by itself: at the count, a strong buzz and a pop-up; extra taps do nothing until he closes it; closing opens the next du'a | Ahmed, 2026-11-13 ("am not gonna look at the screen so the next page wont count extra by mistake") |
-| The post is pictures, so the text is the same du'as typed in Hisn al-Muslim (hisnmuslim.com/api/ar/27.json), cut by a script in the post's order, splits and counts; nothing typed by hand except the post's vowels on one word (وشِركِهِ, picture 10) and its heading الإستغفار (picture 14) | Claude's call (he checks it against the post on the looks page) |
+| The post is pictures, so the text is the same du'as typed in Hisn al-Muslim (hisnmuslim.com/api/ar/27.json), cut by a script in the post's order, splits and counts; nothing typed by hand except the post's vowels on one word (وشِركِهِ, picture 10) and its heading الإستغفار (picture 14) | Claude's call; Ahmed checked the text against his post on the looks page: "It matches" (2026-11-13) |
 | Pictures 13 and 15 (×100) carry no morning/evening label, so both lists have them (the book says the second is for the morning) | Claude's call, flagged to him |
 | The pop-up comes after every du'a, ×1 included (one rule; a ×1 du'a costs one extra tap) | Claude's call, flagged to him |
 | The lists are built into the app; changing a du'a is a code change | Claude's call (no schema change; in-app editing can come later) |
@@ -78,7 +78,9 @@ habit-yesterday chat), `lib/core/router/app_router.dart` (one route), `lib/app.d
   37 new tests (lists and fingerprint 6, rules 8, saving and setup 10, counter screen 9, row 4; each file seen failing
   first, except the jump-list test, written after its code), analyze clean. The generated lists' fingerprint (`ff410dd2`) equals the looks page's data.
   **Not tried yet:** the emulator (the Tester, after the Uplan chat's merge), the Kotlin buzz (first compiled by that
-  build, first felt on his phone), his own check of the text against the post.
+  build, first felt on his phone).
+- 2026-11-13: Ahmed checked both lists' text on the looks page against his post: "It matches". The text in the app is
+  the same (fingerprint `ff410dd2`, pinned by `adhkar_lists_test.dart`).
 - **Manual Test Steps for Ahmed, after the install:** 1. Open Uplan, then Menu › Habits: "Morning du'as" sits under
   Wake-up and "Night du'as" under Before sleep, each "0 of 21" / "0 of 19 du'as". 2. Tap Morning du'as: Ayat
   al-Kursi fills the screen with "0 / 1". 3. Tap anywhere: a strong double buzz and a "Done" pop-up; tap the screen a
