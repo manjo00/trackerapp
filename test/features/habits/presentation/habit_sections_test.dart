@@ -104,4 +104,54 @@ void main() {
     expect(find.byIcon(Icons.light_mode_rounded), findsOneWidget);
     expect(find.bySemanticsLabel(RegExp('Today')), findsOneWidget);
   });
+
+  // ── A past day picked in the week strip (Tue 3 Nov; today Wed 4 Nov) ──
+
+  HabitDayView tue(HabitDayView v) =>
+      v.onDay('2026-11-03', today: '2026-11-04', weekStartsSunday: true);
+
+  testWidgets('a picked day lists what is left and folds what was done or '
+      'not due', (WidgetTester tester) async {
+    await tester.pumpWidget(habitTestApp(
+        HabitSections(dayLabel: 'Tue', views: [
+          tue(testView(id: 1, name: 'Read')), // missed
+          tue(testView(
+              id: 2,
+              name: 'Gym',
+              schedule: HabitSchedule.perWeek,
+              perWeek: 3)), // no tick yet that week: still open
+          tue(testView(
+              id: 3,
+              name: 'Stretch',
+              entries: const {'2026-11-03': HabitEntry(1)})), // kept
+          tue(testView(
+              id: 4,
+              name: 'Walk',
+              schedule: HabitSchedule.weekdays,
+              weekdayMask: 1)), // Mondays only
+        ]),
+        fake));
+    expect(find.text('Read'), findsOneWidget);
+    expect(find.text('Gym'), findsOneWidget);
+    expect(find.text('Stretch'), findsNothing);
+    expect(find.text('Done on Tue · 1'), findsOneWidget);
+    expect(find.text('Walk'), findsNothing);
+    await tester.tap(find.text('Not due on Tue · 1'));
+    await tester.pump();
+    expect(find.textContaining('Not that day', findRichText: true),
+        findsOneWidget);
+  });
+
+  testWidgets('a picked day with nothing due says so',
+      (WidgetTester tester) async {
+    // Tue 29 Sep, before the habit began (1 Oct).
+    await tester.pumpWidget(habitTestApp(
+        HabitSections(dayLabel: 'Tue', views: [
+          testView().onDay('2026-09-29',
+              today: '2026-11-04', weekStartsSunday: true),
+        ]),
+        fake));
+    expect(find.text('Nothing was due on Tue'), findsOneWidget);
+    expect(find.text('Read 20 min'), findsNothing);
+  });
 }

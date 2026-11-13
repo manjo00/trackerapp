@@ -8,6 +8,7 @@ import '../../domain/habit_rules.dart';
 import '../../domain/habit_stats.dart';
 import '../../domain/habit_types.dart';
 import '../models/habit_day_view.dart';
+import '../models/habit_units.dart';
 import '../providers/habits_providers.dart';
 import 'habit_palette.dart';
 
@@ -17,6 +18,9 @@ import 'habit_palette.dart';
 ///
 /// Tap or long-press opens the editor (the habit's own page comes in demo 2);
 /// swipe left archives it, with Undo.
+///
+/// The row shows [HabitDayView.day] (a past day picked in the week strip) or
+/// today, and its round button, + and typed amount act on that day.
 class HabitRow extends ConsumerWidget {
   const HabitRow({required this.view, this.reason, super.key});
 
@@ -30,7 +34,7 @@ class HabitRow extends ConsumerWidget {
     final HabitModel habit = view.habit;
     final ColorScheme cs = Theme.of(context).colorScheme;
     final HabitColorSet colors = HabitColors.of(context, habit.color);
-    final bool done = view.summary.today == DayState.kept;
+    final bool done = view.state == DayState.kept;
     final bool count = habit.kind == HabitKind.count;
 
     return Dismissible(
@@ -116,8 +120,7 @@ class HabitRow extends ConsumerWidget {
                     child: Align(
                       alignment: Alignment.centerLeft,
                       child: FractionallySizedBox(
-                        widthFactor:
-                            (view.summary.todayValue / habit.goal).clamp(0, 1),
+                        widthFactor: (view.value / habit.goal).clamp(0, 1),
                         child: Container(height: 3, color: colors.solid),
                       ),
                     ),
@@ -179,7 +182,7 @@ class _FactsLine extends StatelessWidget {
     if (reason == null && habit.kind == HabitKind.count) {
       final String unit = habit.unit?.trim() ?? '';
       add(TextSpan(
-          text: '${s.todayValue} of ${habit.goal}'
+          text: '${formatAmount(view.value)} of ${formatAmount(habit.goal)}'
               '${unit.isEmpty ? '' : ' $unit'}'));
     }
     if (reason == null && s.streak > 0) {
@@ -219,14 +222,14 @@ class _TickButton extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ColorScheme cs = Theme.of(context).colorScheme;
-    final bool done = view.summary.today == DayState.kept;
+    final bool done = view.state == DayState.kept;
     final HabitModel habit = view.habit;
     void onTap() {
       final HabitActions actions = ref.read(habitActionsProvider);
       if (habit.kind == HabitKind.count && done) {
-        actions.addAmount(habit.id, -habit.step);
+        actions.addAmount(habit.id, -habit.step, day: view.day);
       } else {
-        actions.tick(habit.id);
+        actions.tick(habit.id, day: view.day);
       }
     }
 
@@ -268,58 +271,92 @@ class _AddButton extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final HabitModel habit = view.habit;
-    return GestureDetector(
+    final String unit = habit.unit?.trim() ?? '';
+    // The button's own long-press: around it, a GestureDetector lost the
+    // press to the tooltip, which then showed instead of the amount box.
+    return IconButton.filledTonal(
+      tooltip: 'Add ${formatAmount(habit.step)}'
+          '${unit.isEmpty ? '' : ' $unit'}',
+      icon: const Icon(Icons.add_rounded),
+      onPressed: () => ref
+          .read(habitActionsProvider)
+          .addAmount(habit.id, habit.step, day: view.day),
       onLongPress: () => _typeAmount(context, ref),
-      child: IconButton.filledTonal(
-        tooltip: 'Add ${habit.step}',
-        icon: const Icon(Icons.add_rounded),
-        onPressed: () =>
-            ref.read(habitActionsProvider).addAmount(habit.id, habit.step),
-      ),
     );
   }
 
-  Future<void> _typeAmount(BuildContext context, WidgetRef ref) async {
-    final TextEditingController controller =
-        TextEditingController(text: '${view.summary.todayValue}');
-    final String day = ref.read(habitTodayProvider);
-    String? error;
-    await showDialog<void>(
+  Future<void> _typeAmount(BuildContext context, WidgetRef ref) {
+    // Read once here: the row may be rebuilt while the box is open.
+    final HabitActions actions = ref.read(habitActionsProvider);
+    final String day = view.day ?? ref.read(habitTodayProvider);
+    return showDialog<void>(
       context: context,
-      builder: (BuildContext dialogContext) => StatefulBuilder(
-        builder: (BuildContext context, StateSetter setState) => AlertDialog(
-          title: const Text('Amount'),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            keyboardType: TextInputType.number,
-            decoration: InputDecoration(
-              suffixText: view.habit.unit,
-              errorText: error,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () async {
-                final bool saved = await ref
-                    .read(habitActionsProvider)
-                    .setAmount(view.habit.id, day, controller.text);
-                if (saved) {
-                  if (dialogContext.mounted) Navigator.of(dialogContext).pop();
-                } else {
-                  setState(() => error = 'Type a number from 0 to 999');
-                }
-              },
-              child: const Text('Save'),
-            ),
-          ],
-        ),
+      builder: (_) => _AmountDialog(
+        initial: view.value,
+        unit: view.habit.unit,
+        onSave: (String typed) => actions.setAmount(view.habit.id, day, typed),
       ),
     );
-    controller.dispose();
   }
+}
+
+/// "Amount" with a number box. Its own widget, so the box's controller is
+/// thrown away only once the dialog has fully closed (disposing it right
+/// after `showDialog` returned broke the closing animation).
+class _AmountDialog extends StatefulWidget {
+  const _AmountDialog(
+      {required this.initial, required this.unit, required this.onSave});
+
+  final int initial;
+  final String? unit;
+
+  /// Saves what was typed; false when it isn't a number from 0 to the limit.
+  final Future<bool> Function(String typed) onSave;
+
+  @override
+  State<_AmountDialog> createState() => _AmountDialogState();
+}
+
+class _AmountDialogState extends State<_AmountDialog> {
+  late final TextEditingController _controller =
+      TextEditingController(text: '${widget.initial}');
+  String? _error;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final bool saved = await widget.onSave(_controller.text);
+    if (!mounted) return;
+    if (saved) {
+      Navigator.of(context).pop();
+    } else {
+      setState(() => _error =
+          'Type a number from 0 to ${formatAmount(kMaxHabitAmount)}');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+        title: const Text('Amount'),
+        content: TextField(
+          controller: _controller,
+          autofocus: true,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            suffixText: widget.unit,
+            errorText: _error,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(onPressed: _save, child: const Text('Save')),
+        ],
+      );
 }

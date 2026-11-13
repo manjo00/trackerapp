@@ -117,11 +117,39 @@ void main() {
 
     expect(await actions().setAmount(id, '2026-11-04', ''), isFalse);
     expect(await actions().setAmount(id, '2026-11-04', '-2'), isFalse);
-    expect(await actions().setAmount(id, '2026-11-04', '1000'), isFalse);
+    expect(await actions().setAmount(id, '2026-11-04', '100000'), isFalse);
     expect(await values(), isEmpty);
     expect(await actions().setAmount(id, '2026-11-04', '12'), isTrue);
     expect(await values(), [12]);
+    // Up to 99,999, so 2,000 ml or 10,000 steps fit.
+    expect(await actions().setAmount(id, '2026-11-04', '1000'), isTrue);
+    expect(await values(), [1000]);
+    expect(await actions().setAmount(id, '2026-11-04', '99999'), isTrue);
+    expect(await values(), [99999]);
     expect(await actions().setAmount(id, '2026-11-04', '0'), isTrue);
     expect(await values(), isEmpty);
+  });
+
+  test('a tick on a past day saves that day and leaves today alone', () async {
+    final int id = await addHabit();
+    await actions().tick(id, day: '2026-11-03');
+    expect([for (final r in await db.select(db.habitCompletions).get()) r.date],
+        ['2026-11-03']);
+    final HabitDayView v = await viewOf(id, (v) => v.history.entries.isNotEmpty);
+    expect(v.summary.today, DayState.pending);
+    expect(
+        v.onDay('2026-11-03', today: '2026-11-04', weekStartsSunday: true).state,
+        DayState.kept);
+    // Ticking it again takes the tick back.
+    await actions().tick(id, day: '2026-11-03');
+    expect(await db.select(db.habitCompletions).get(), isEmpty);
+  });
+
+  test('+ on a past day adds to that day', () async {
+    final int id = await addHabit(kind: HabitKind.count, goal: 8);
+    await actions().addAmount(id, 3, day: '2026-11-02');
+    final List<HabitCompletion> rows =
+        await db.select(db.habitCompletions).get();
+    expect((rows.single.date, rows.single.value), ('2026-11-02', 3));
   });
 }
