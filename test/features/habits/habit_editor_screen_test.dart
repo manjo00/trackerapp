@@ -121,6 +121,59 @@ void main() {
         (HabitKind.count, 8, 'glasses', 1));
   });
 
+  // ── Count units ──
+
+  Future<void> newCount(WidgetTester tester, String name) async {
+    tallScreen(tester);
+    await tester.pumpWidget(editor());
+    await tester.enterText(find.widgetWithText(TextFormField, 'Name'), name);
+    await tester.tap(find.text('Count'));
+    await tester.pump();
+  }
+
+  testWidgets('the ml chip fills a goal of 2,000 and a step of 250',
+      (WidgetTester tester) async {
+    await newCount(tester, 'Water');
+    await tester.tap(find.byKey(const ValueKey('unit-ml')));
+    await tester.pump();
+    expect(
+        tester.widget<ChoiceChip>(find.byKey(const ValueKey('unit-ml'))).selected,
+        isTrue);
+    await save(tester, 'Save habit');
+    final HabitModel h = fake.saved.single;
+    expect((h.goal, h.unit, h.step), (2000, 'ml', 250));
+  });
+
+  testWidgets('a unit chip keeps a goal already typed',
+      (WidgetTester tester) async {
+    await newCount(tester, 'Duaa');
+    await tester.enterText(
+        find.widgetWithText(TextFormField, 'Goal per day'), '3');
+    await tester.tap(find.byKey(const ValueKey('unit-times')));
+    await tester.pump();
+    await save(tester, 'Save habit');
+    final HabitModel h = fake.saved.single;
+    expect((h.goal, h.unit, h.step), (3, 'times', 1));
+  });
+
+  testWidgets('a goal can go up to 99,999', (WidgetTester tester) async {
+    await newCount(tester, 'Walk');
+    await tester.enterText(
+        find.widgetWithText(TextFormField, 'Goal per day'), '10000');
+    await tester.enterText(find.widgetWithText(TextFormField, 'Unit'), 'steps');
+    await save(tester, 'Save habit');
+    expect((fake.saved.single.goal, fake.saved.single.unit), (10000, 'steps'));
+
+    fake.saved.clear();
+    await tester.pumpWidget(Container());
+    await newCount(tester, 'Walk');
+    await tester.enterText(
+        find.widgetWithText(TextFormField, 'Goal per day'), '100000');
+    await save(tester, 'Save habit');
+    expect(fake.saved, isEmpty);
+    expect(find.text('1 to 99,999'), findsOneWidget);
+  });
+
   testWidgets('editing keeps the id', (WidgetTester tester) async {
     tallScreen(tester);
     await tester.pumpWidget(editor(

@@ -8,6 +8,7 @@ import '../../domain/habit_day.dart';
 import '../../domain/habit_stats.dart';
 import '../../domain/habit_types.dart';
 import '../models/habit_day_view.dart';
+import '../models/habit_units.dart';
 import '../../data/dao/habits_dao.dart';
 import '../../data/models/habit_model.dart';
 import '../../data/repositories/habits_repository.dart';
@@ -158,18 +159,21 @@ class HabitActions {
   HabitsRepository get _repo => _ref.read(habitsRepositoryProvider);
   String get _today => _ref.read(habitTodayProvider);
 
-  /// Ticks or unticks today.
-  Future<void> tick(int habitId) => _repo.toggleTick(habitId, _today);
+  /// Ticks or unticks [day] (a past day picked in the week strip), or today.
+  Future<void> tick(int habitId, {String? day}) =>
+      _repo.toggleTick(habitId, day ?? _today);
 
-  /// Adds [amount] to today's count (the + button adds the habit's step).
-  Future<void> addAmount(int habitId, int amount) =>
-      _repo.addToValue(habitId, _today, amount);
+  /// Adds [amount] to [day]'s count, or today's (the + button adds the
+  /// habit's step).
+  Future<void> addAmount(int habitId, int amount, {String? day}) =>
+      _repo.addToValue(habitId, day ?? _today, amount);
 
   /// Saves a typed amount for [day]. A blank, negative or non-number entry,
-  /// or one above 999, changes nothing and returns false; 0 removes the day.
+  /// or one above [kMaxHabitAmount], changes nothing and returns false; 0
+  /// removes the day.
   Future<bool> setAmount(int habitId, String day, String typed) async {
     final int? value = int.tryParse(typed.trim());
-    if (value == null || value < 0 || value > 999) return false;
+    if (value == null || value < 0 || value > kMaxHabitAmount) return false;
     await _repo.setValue(habitId, day, value);
     return true;
   }

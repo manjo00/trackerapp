@@ -11,12 +11,14 @@ import 'package:life_tracker/features/habits/presentation/providers/habits_provi
 class FakeHabitActions implements HabitActions {
   final List<String> calls = [];
 
+  /// "tick 1" for today, "tick 1 2026-11-03" for a picked day.
   @override
-  Future<void> tick(int habitId) async => calls.add('tick $habitId');
+  Future<void> tick(int habitId, {String? day}) async =>
+      calls.add('tick $habitId${day == null ? '' : ' $day'}');
 
   @override
-  Future<void> addAmount(int habitId, int amount) async =>
-      calls.add('add $habitId $amount');
+  Future<void> addAmount(int habitId, int amount, {String? day}) async =>
+      calls.add('add $habitId $amount${day == null ? '' : ' $day'}');
 
   @override
   Future<bool> setAmount(int habitId, String day, String typed) async {
@@ -41,8 +43,10 @@ HabitDayView testView({
   String name = 'Read 20 min',
   HabitKind kind = HabitKind.tick,
   int goal = 1,
+  int step = 1,
   String? unit,
   HabitSchedule schedule = HabitSchedule.daily,
+  int weekdayMask = 127,
   int? perWeek,
   int sparesPerWeek = 0,
   HabitSection section = HabitSection.any,
@@ -52,6 +56,7 @@ HabitDayView testView({
   int streak = 0,
   int weekCount = 0,
   int sparesLeft = 0,
+  Map<String, HabitEntry> entries = const {},
 }) =>
     HabitDayView(
       habit: HabitModel(
@@ -60,14 +65,16 @@ HabitDayView testView({
         createdAt: DateTime(2026, 10, 1, 10),
         kind: kind,
         goal: goal,
+        step: step,
         unit: unit,
         schedule: schedule,
+        weekdayMask: weekdayMask,
         perWeek: perWeek,
         sparesPerWeek: sparesPerWeek,
         section: section,
         cue: cue,
       ),
-      history: const HabitHistory(entries: {}),
+      history: HabitHistory(entries: entries),
       summary: HabitSummary(
         today: today,
         todayValue: value,

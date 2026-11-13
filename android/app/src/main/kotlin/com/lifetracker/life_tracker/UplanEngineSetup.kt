@@ -15,6 +15,8 @@ object UplanEngineSetup {
     fun configure(activity: Activity, engine: FlutterEngine): MethodChannel {
         MidnightRefreshReceiver.schedule(activity)
         MidnightRefreshReceiver.clearStaleSelection(activity)
+        // The du'a counter's buzz when a du'a's count is reached.
+        UplanHaptics.register(activity, engine)
 
         // Live dashboard: Flutter drives the foreground service through here.
         return MethodChannel(

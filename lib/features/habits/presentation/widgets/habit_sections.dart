@@ -10,10 +10,16 @@ import 'habit_row.dart';
 /// Look A's list: what is left today, by part of the day, then two folds,
 /// "Done today" and "Not due today". A habit just ticked stays in its section
 /// for a moment, then folds away.
+///
+/// For a past day picked in the week strip the views stand for that day and
+/// [dayLabel] names it: "Done on Tue", "Not due on Tue".
 class HabitSections extends StatefulWidget {
-  const HabitSections({required this.views, super.key});
+  const HabitSections({required this.views, this.dayLabel, super.key});
 
   final List<HabitDayView> views;
+
+  /// The picked day's short name ("Tue"), or null for today.
+  final String? dayLabel;
 
   /// How long a just-ticked habit stays in its section before it folds.
   static const Duration linger = Duration(milliseconds: 400);
@@ -34,11 +40,16 @@ class _HabitSectionsState extends State<HabitSections> {
     HabitSection.sleep: 'Before sleep',
   };
 
-  static bool _isKept(HabitDayView v) => v.summary.today == DayState.kept;
+  static bool _isKept(HabitDayView v) => v.state == DayState.kept;
 
-  static bool _isOpen(HabitDayView v) =>
-      v.summary.today == DayState.pending ||
-      v.summary.today == DayState.partial;
+  /// Still to do: today's pending or partial habits, or on a past day the
+  /// missed ones and a few-times-a-week habit not ticked that day.
+  static bool _isOpen(HabitDayView v) => const {
+        DayState.pending,
+        DayState.partial,
+        DayState.missed,
+        DayState.open,
+      }.contains(v.state);
 
   @override
   void didUpdateWidget(HabitSections old) {
@@ -66,17 +77,18 @@ class _HabitSectionsState extends State<HabitSections> {
     super.dispose();
   }
 
-  String _reason(HabitDayView v) => switch (v.summary.today) {
+  String _reason(HabitDayView v) => switch (v.state) {
         DayState.away => 'Away',
         DayState.rest => 'Rest day',
         DayState.sick => 'Sick day',
         _ when v.habit.schedule == HabitSchedule.perWeek => 'Done for the week',
-        _ => 'Not today',
+        _ => widget.dayLabel == null ? 'Not today' : 'Not that day',
       };
 
   @override
   Widget build(BuildContext context) {
     final List<HabitDayView> views = widget.views;
+    final String? dayLabel = widget.dayLabel;
     final List<HabitDayView> done = [
       for (final HabitDayView v in views)
         if (_isKept(v) && !_lingering.containsKey(v.habit.id)) v,
@@ -84,9 +96,22 @@ class _HabitSectionsState extends State<HabitSections> {
     final List<HabitDayView> notDue = [
       for (final HabitDayView v in views)
         if (const {DayState.notDue, DayState.away, DayState.rest, DayState.sick}
-            .contains(v.summary.today))
+            .contains(v.state))
           v,
     ];
+    if (dayLabel != null &&
+        done.isEmpty &&
+        notDue.isEmpty &&
+        !views.any((v) => _isOpen(v) || _lingering.containsKey(v.habit.id))) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+        child: Text(
+          'Nothing was due on $dayLabel',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant),
+        ),
+      );
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -103,7 +128,8 @@ class _HabitSectionsState extends State<HabitSections> {
           ),
         if (done.isNotEmpty) ...[
           _Fold(
-            label: 'Done today · ${done.length}',
+            label: '${dayLabel == null ? 'Done today' : 'Done on $dayLabel'}'
+                ' · ${done.length}',
             open: _doneOpen,
             onTap: () => setState(() => _doneOpen = !_doneOpen),
           ),
@@ -113,7 +139,8 @@ class _HabitSectionsState extends State<HabitSections> {
         ],
         if (notDue.isNotEmpty) ...[
           _Fold(
-            label: 'Not due today · ${notDue.length}',
+            label: '${dayLabel == null ? 'Not due today' : 'Not due on $dayLabel'}'
+                ' · ${notDue.length}',
             open: _notDueOpen,
             onTap: () => setState(() => _notDueOpen = !_notDueOpen),
           ),

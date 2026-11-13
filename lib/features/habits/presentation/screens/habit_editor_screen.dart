@@ -7,6 +7,7 @@ import '../../../../core/settings/settings_provider.dart';
 import '../../../archive/presentation/archive_providers.dart';
 import '../../data/models/habit_model.dart';
 import '../../domain/habit_types.dart';
+import '../models/habit_units.dart';
 import '../providers/habits_providers.dart';
 import '../widgets/habit_palette.dart';
 
@@ -96,6 +97,16 @@ class _HabitEditorScreenState extends ConsumerState<HabitEditorScreen> {
         // A new habit's spare days follow its schedule until touched: one
         // for every day, none for the others.
         if (!_sparesTouched) _spares = s == HabitSchedule.daily ? 1 : 0;
+      });
+
+  /// A quick unit: fills the Unit field, and a goal and a step while the
+  /// goal is still empty (a goal already typed is kept).
+  void _pickUnit(({String unit, int goal, int step}) preset) => setState(() {
+        _unit.text = preset.unit;
+        if (_goal.text.trim().isEmpty) {
+          _goal.text = '${preset.goal}';
+          _step.text = '${preset.step}';
+        }
       });
 
   Future<void> _save() async {
@@ -253,7 +264,9 @@ class _HabitEditorScreenState extends ConsumerState<HabitEditorScreen> {
                       label: 'Goal per day',
                       validator: (v) {
                         final int? n = int.tryParse(v ?? '');
-                        return n == null || n < 1 || n > 999 ? '1 to 999' : null;
+                        return n == null || n < 1 || n > kMaxHabitAmount
+                            ? '1 to ${formatAmount(kMaxHabitAmount)}'
+                            : null;
                       },
                     ),
                   ),
@@ -264,6 +277,8 @@ class _HabitEditorScreenState extends ConsumerState<HabitEditorScreen> {
                       maxLength: 20,
                       decoration: const InputDecoration(
                           labelText: 'Unit', hintText: 'glasses'),
+                      // Re-marks the matching quick unit as it is typed.
+                      onChanged: (_) => setState(() {}),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -273,13 +288,28 @@ class _HabitEditorScreenState extends ConsumerState<HabitEditorScreen> {
                       label: 'Each + adds',
                       validator: (v) {
                         final int? n = int.tryParse(v ?? '');
-                        final int goal = int.tryParse(_goal.text) ?? 999;
+                        final int goal =
+                            int.tryParse(_goal.text) ?? kMaxHabitAmount;
                         return n == null || n < 1 || n > goal
                             ? '1 to the goal'
                             : null;
                       },
                     ),
                   ),
+                ],
+              ),
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                children: [
+                  for (final preset in kUnitPresets)
+                    ChoiceChip(
+                      key: ValueKey('unit-${preset.unit}'),
+                      label: Text(preset.unit),
+                      selected:
+                          _unit.text.trim().toLowerCase() == preset.unit,
+                      onSelected: (_) => _pickUnit(preset),
+                    ),
                 ],
               ),
             ],
