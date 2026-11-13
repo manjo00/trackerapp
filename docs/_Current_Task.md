@@ -2,21 +2,33 @@
 **Date:** 2026-11-01 · **Branch:** master · **Chat:** Tester, a temporary chat the Uplan chat started at Ahmed's
 request. It owns the repo's work until it hands back.
 
-**Now (2026-11-13 21:55): the merge test is next.** At about 18:45 the Uplan chat started two side chats, each in a
-worktree of its own from `afbe668` (no builds, emulator or handover-file edits; heads-ups to this chat): habit-yesterday
-(`claude/habit-yesterday-234c83`, `0561791`: tick a past day from the week strip, and count units) and duaa-counters
-(`claude/duaa-counters-a7d503`, being built; its design `docs/superpowers/specs/2026-11-13-duaa-counters-design.md` sits
-in its worktree). With the Uplan chat's rename (`bd68b39`, on master) they become one new version: the merge, then this
-chat's test, then the install offer (week log, 2026-11-13 about 18:45). The duaa chat's heads-up (21:53): no schema
-change; it touches `lib/core/router/app_router.dart` (route `/habits/adhkar`), `lib/app.dart` (`_reschedule()` adds
-"Morning du'as" and "Night du'as" once, behind a SharedPreferences flag, and keeps their goals equal to the list
-lengths), `UplanEngineSetup.kt` (registers `uplan/haptics` from a new `UplanHaptics.kt`) and `widgets/habit_row.dart`
-(agreed with the habit-yesterday chat). **Its Kotlin was never compiled: the merged build is its first compile.**
-Checked here: the sheet's own window starts on `/quick-add`, which skips `_reschedule()` (`wantsLaunchWork`), so only the
-main window adds the two habits; VIBRATE comes from flutter_local_notifications 19.5.0's manifest (it is in the last
-merged manifests). Asked the duaa chat to put its launch call before `HomeWidgetService.sync(db)`: the "what's new" and
-update dialogs after that line are awaited, and the widgets would miss the new habits until the next sync. At the merge,
-check where the call landed.
+**Now (2026-11-13 22:58): the merged build passed the emulator test; next, the Uplan chat offers Ahmed the install.**
+The build: master `51a0d5d` (code = merge `5f41815`: the My Workouts rename `bd68b39`, habit-yesterday `0561791`,
+duaa-counters `2000cd9` and `62199d4`; schema 27, no change; it contains the phone's `b6dbda4`), APK
+`build\app\outputs\flutter-apk\uplan-51a0d5d-profile.apk` (Uplan's key `5b269323…c7ac5`, checked with apksigner).
+Tested 22:29–22:57 on `uplan_flip_a16` (its debug-key Uplan uninstalled first, emulator only) with his newest copy on
+the PC (`D:\backups\uplan\2026-11-04-habits\uplan-full.tar` with that folder's schema-27 `after\life_tracker.db`; the
+phone's last 9 days aren't in it). All six of the Uplan chat's checks passed; every step is in its notes folder,
+`merge-test-2026-11-13.md`:
+1. Start: the two du'a habits added once (Morning 21 in Wake-up, Night 19 in Before sleep); a second start and the
+   "+" (warm and cold) added nothing; the launch call sits before `HomeWidgetService.sync(db)` in a try/catch
+   (`lib/app.dart` 179–186). Database then: user_version 27, integrity ok, 0 foreign-key problems, 24 of 25 tables the
+   same rows as his copy (habits 1 → 3).
+2. Counter: the ▶ and the row's name open it for today; the "Done" pop-up held through 6 stray taps and "Next du'a"
+   opened the next at 0; counts survived Back, Home and the icon; 1 of 19 showed partial, all 236 taps gave "All done"
+   and the habit kept (value 19); no `uplan/haptics` error in the log.
+3. Past days (the emulator clock moved to Sat 14 Nov so the du'as had a yesterday, then put back): "Yesterday · Fri
+   13 Nov"; the du'a row shows + (its row opens the editor, no counter); a typed 21 kept that day and today's "No spares
+   left this week" became "1 spare left"; ‹ reaches last week only.
+4. Units: the ml chip fills 2000, ml and 250; the + reads "Add 250 ml"; 99,999 saves as a goal and as a typed amount,
+   100000 is refused in both.
+5. Rename: Pull → "Pull day" on its ✎ screen and in My Workouts; Cancel and an empty name kept the name.
+6. Regression: `tool/emulator/own_window_check.sh` 5 of 5 PASS; the Home habits block (added on the emulator copy;
+   his Home has none) shows "All done today · 2"; the whole log (41,821 lines) has no crash, Flutter error, missing
+   channel or freeze.
+Not covered: the live notification is off in this copy, so the known LiveBootReceiver crash may still show once after
+the phone install if his is on; a real buzz needs the phone. The emulator now carries this Uplan-key build and the test
+copy: a worktree debug build needs an uninstall there first.
 
 **Earlier (2026-11-04 20:33): the habits rebuild, demo 1 done.** After this chat's fresh start, Ahmed asked it: "i want to
 rebuild the habit tracker research and come back to me with good design". He picked **Look A, the day list** (looks
@@ -470,6 +482,9 @@ plus this chat about 0.9–1.4M; three helpers about 1.1–1.7M; this chat alone
 - `D:\backups\uplan\2026-11-01\` until Ahmed decides.
 
 ## Noticed (not fixing now)
+- **A kept count habit's round button is "Untick"** (seen 2026-11-13 in the merge test): a tap takes one step off
+  (99,999 → 99,749) and a long-press opens the editor, not the amount box, so retyping a kept day's amount needs an
+  untick first. Not a failure; for the habits demo 2 list if Ahmed minds.
 - **`LiveBootReceiver` crashes once on the first start after a force-stop when the live notification is on** (found
   2026-11-04 20:43 at the habits install; his phone has `live_enabled` true). Android delivers BOOT_COMPLETED when a
   force-stopped app starts again; `LiveBootReceiver.onReceive` calls `LiveDashboardService.start`, which Android refuses
